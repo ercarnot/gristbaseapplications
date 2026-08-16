@@ -1,0 +1,2439 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dossier de révision</title>
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy: #1c2541;
+  --navy-deep: #12182e;
+  --paper: #f6f3ec;
+  --paper-line: #e2ddce;
+  --burgundy: #7a2530;
+  --burgundy-light: #a5424f;
+  --sage: #5c7a6b;
+  --ink: #232323;
+  --ink-soft: #5a5a54;
+  --gold: #b98b3e;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  font-family:'Source Sans 3', sans-serif;
+  background:var(--navy-deep);
+  color:var(--ink);
+  display:flex;
+  flex-direction:column;
+}
+
+/* ===== HEADER ===== */
+header{
+  background:var(--navy);
+  color:var(--paper);
+  padding:14px 22px;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  border-bottom:3px solid var(--gold);
+  flex:0 0 auto;
+}
+header .seal{
+  width:34px;height:34px;border-radius:50%;
+  border:2px solid var(--gold);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Fraunces', serif;
+  font-size:15px;font-weight:600;
+  color:var(--gold);
+  flex:0 0 auto;
+}
+header h1{
+  font-family:'Fraunces', serif;
+  font-weight:500;
+  font-size:19px;
+  margin:0;
+  letter-spacing:.2px;
+}
+header .sub{
+  font-size:11.5px;
+  color:#aeb4c9;
+  margin-top:1px;
+}
+header .spacer{flex:1;}
+header button{
+  background:transparent;
+  border:1px solid #4a5378;
+  color:var(--paper);
+  padding:7px 12px;
+  border-radius:3px;
+  font-size:12.5px;
+  cursor:pointer;
+  font-family:inherit;
+}
+header button:hover{ background:#2a3358; }
+
+/* ===== LAYOUT ===== */
+.layout{
+  flex:1;
+  display:flex;
+  min-height:0;
+  background:var(--navy-deep);
+}
+
+/* -- Sidebar -- */
+.sidebar{
+  width:290px;
+  flex:0 0 290px;
+  background:var(--navy);
+  color:var(--paper);
+  overflow-y:auto;
+  padding:16px 0 30px;
+  border-right:1px solid #2a3358;
+}
+.sidebar-search{
+  margin:0 16px 14px;
+}
+.sidebar-search input{
+  width:100%;
+  padding:8px 10px;
+  border-radius:3px;
+  border:1px solid #3c4570;
+  background:#232c4d;
+  color:var(--paper);
+  font-size:13px;
+  font-family:inherit;
+}
+.sidebar-search input::placeholder{ color:#8790ac; }
+.theme-group{ margin-bottom:6px; }
+.theme-label{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:10.5px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  color:var(--gold);
+  padding:10px 16px 6px;
+}
+.fiche-item{
+  padding:9px 16px 9px 20px;
+  cursor:pointer;
+  font-size:13.5px;
+  border-left:3px solid transparent;
+  line-height:1.35;
+  color:#d7dae8;
+}
+.fiche-item:hover{ background:#232c4d; }
+.fiche-item.active{
+  background:#232c4d;
+  border-left-color:var(--burgundy-light);
+  color:#fff;
+  font-weight:600;
+}
+.fiche-item .date{
+  display:block;
+  font-family:'IBM Plex Mono', monospace;
+  font-size:10px;
+  color:#8790ac;
+  margin-top:2px;
+}
+.sidebar-empty{
+  padding:20px 16px;
+  font-size:12.5px;
+  color:#8790ac;
+  line-height:1.5;
+}
+
+/* -- Main -- */
+.main{
+  flex:1;
+  overflow-y:auto;
+  background:var(--paper);
+  padding:0 0 60px;
+}
+.welcome{
+  max-width:520px;
+  margin:80px auto;
+  text-align:center;
+  color:var(--ink-soft);
+  padding:0 20px;
+}
+.welcome h2{
+  font-family:'Fraunces', serif;
+  font-weight:500;
+  color:var(--navy);
+  font-size:22px;
+}
+.welcome-seal{
+  width:110px;height:110px;
+  border-radius:50%;
+  border:3px solid var(--gold);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Fraunces', serif;
+  font-size:42px;font-weight:600;
+  color:var(--gold);
+  margin:0 auto 22px;
+}
+
+.dossier{
+  max-width:760px;
+  margin:0 auto;
+  padding:34px 30px 10px;
+}
+.mobile-fiche-bar{ display:none; }
+.dossier-head{
+  border-bottom:2px solid var(--navy);
+  padding-bottom:14px;
+  margin-bottom:6px;
+}
+.dossier-eyebrow{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:11px;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  color:var(--burgundy);
+}
+.dossier-title{
+  font-family:'Fraunces', serif;
+  font-weight:500;
+  font-size:29px;
+  color:var(--navy);
+  margin:4px 0 6px;
+  line-height:1.15;
+}
+.dossier-meta{
+  font-size:12.5px;
+  color:var(--ink-soft);
+  font-family:'IBM Plex Mono', monospace;
+}
+
+/* -- Tabs -- */
+.statut-bandeau{
+  margin:14px 0 0;
+  padding:12px 16px;
+  background:#f2efe4;
+  border:1px solid var(--paper-line);
+  border-radius:6px;
+}
+.statut-ligne1{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-bottom:6px;
+}
+.statut-tag{
+  background:var(--navy);
+  color:#fff;
+  font-family:'IBM Plex Mono', monospace;
+  font-size:11px;
+  padding:3px 9px;
+  border-radius:3px;
+  text-transform:uppercase;
+  letter-spacing:.4px;
+}
+.statut-corpus{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:11.5px;
+  color:var(--ink-soft);
+  align-self:center;
+}
+.statut-actuel{
+  font-size:14px;
+  font-weight:600;
+  color:var(--burgundy);
+}
+.statut-historique-toggle{
+  background:none;
+  border:none;
+  color:var(--sage);
+  font-size:11.5px;
+  text-decoration:underline;
+  cursor:pointer;
+  padding:6px 0 0;
+  font-family:'IBM Plex Mono', monospace;
+}
+.statut-historique-liste{
+  display:none;
+  margin-top:6px;
+  padding-top:6px;
+  border-top:1px dashed var(--paper-line);
+  font-size:12.5px;
+  color:var(--ink-soft);
+  line-height:1.7;
+}
+.statut-historique-liste.open{ display:block; }
+
+.tabbar{
+  display:flex;
+  gap:2px;
+  margin:22px 0 0;
+}
+.tabbar button{
+  font-family:'Fraunces', serif;
+  font-size:14.5px;
+  padding:9px 18px;
+  border:none;
+  background:#e9e4d6;
+  color:var(--ink-soft);
+  cursor:pointer;
+  border-radius:5px 5px 0 0;
+  border:1px solid var(--paper-line);
+  border-bottom:none;
+}
+.tabbar button.active{
+  background:#fff;
+  color:var(--navy);
+  font-weight:600;
+}
+.tab-body{
+  background:#fff;
+  border:1px solid var(--paper-line);
+  border-radius:0 5px 5px 5px;
+  padding:6px 0;
+}
+.tab-body-inner{ display:none; }
+.tab-body-inner.active{ display:block; }
+
+.tab-toolbar{
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  padding:10px 16px 4px;
+}
+.tab-toolbar button{
+  background:none;
+  border:none;
+  color:var(--burgundy);
+  font-size:12px;
+  cursor:pointer;
+  font-family:'IBM Plex Mono', monospace;
+  text-decoration:underline;
+  padding:2px 4px;
+}
+
+/* -- Accordion blocks -- */
+.bloc{
+  border-top:1px solid var(--paper-line);
+}
+.bloc:first-of-type{ border-top:none; }
+.bloc-head{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:14px 18px;
+  cursor:pointer;
+  user-select:none;
+}
+.bloc-head:hover{ background:#faf8f2; }
+.bloc-stamp{
+  width:20px;height:20px;
+  border-radius:50%;
+  border:1.5px solid var(--sage);
+  flex:0 0 auto;
+  transition:background .15s, border-color .15s;
+}
+.bloc.open .bloc-stamp{
+  background:var(--sage);
+}
+.bloc-num{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:11px;
+  color:var(--burgundy);
+  font-weight:600;
+  flex:0 0 auto;
+  min-width:22px;
+}
+.bloc-title{
+  flex:1;
+  font-family:'Fraunces', serif;
+  font-size:15.5px;
+  font-weight:500;
+  color:var(--navy);
+}
+.bloc-chevron{
+  font-size:11px;
+  color:var(--ink-soft);
+  transition:transform .15s;
+  flex:0 0 auto;
+}
+.bloc.open .bloc-chevron{ transform:rotate(90deg); }
+.bloc-content{
+  display:none;
+  padding:0 18px 18px 50px;
+  font-size:14px;
+  line-height:1.6;
+  color:var(--ink);
+}
+.bloc.open .bloc-content{ display:block; }
+.bloc-content p{ margin:0 0 10px; }
+.bloc-content p:last-child{ margin-bottom:0; }
+
+.empty-tab{
+  padding:30px 18px;
+  color:var(--ink-soft);
+  font-size:13.5px;
+  text-align:center;
+}
+
+/* -- Presse : liste cliquable, l'article s'ouvre dans une modale -- */
+.presse-item{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:14px 18px;
+  cursor:pointer;
+  user-select:none;
+  border-top:1px solid var(--paper-line);
+}
+.presse-item:first-of-type{ border-top:none; }
+.presse-item:hover{ background:#faf8f2; }
+.presse-item-date{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:11px;
+  color:var(--burgundy);
+  font-weight:600;
+  flex:0 0 auto;
+  min-width:80px;
+}
+.presse-item-titre{
+  flex:1;
+  font-family:'Fraunces', serif;
+  font-size:15.5px;
+  font-weight:500;
+  color:var(--navy);
+}
+.presse-item-chevron{
+  font-size:15px;
+  color:var(--ink-soft);
+  flex:0 0 auto;
+}
+
+/* -- Notes / remarques (pliable indépendamment du contenu) -- */
+.notes-block{
+  display:none;
+  margin:0 18px 14px 50px;
+  border-left:2px solid var(--sage);
+  border-radius:0 4px 4px 0;
+  background:#f4f7f5;
+}
+.bloc.open .notes-block{ display:block; }
+.notes-block:last-child{ margin-bottom:14px; }
+.notes-head{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  cursor:pointer;
+  user-select:none;
+}
+.notes-head:hover{ background:#eaf0ec; }
+.notes-chevron{
+  font-size:10px;
+  color:var(--sage);
+  transition:transform .15s;
+}
+.notes-block.open .notes-chevron{ transform:rotate(90deg); }
+.notes-label{
+  font-size:12.5px;
+  font-weight:600;
+  color:var(--sage);
+}
+.notes-content{
+  display:none;
+  padding:0 14px 12px 30px;
+  font-size:13.5px;
+  line-height:1.55;
+  color:var(--ink-soft);
+}
+.notes-block.open .notes-content{ display:block; }
+.notes-content p{ margin:0 0 8px; }
+.notes-content p:last-child{ margin-bottom:0; }
+
+/* -- Résumé -- */
+.resume-box{
+  margin:14px 18px;
+  padding:18px 20px;
+  background:#fbf9f3;
+  border-left:3px solid var(--gold);
+  border-radius:0 5px 5px 0;
+  font-size:15px;
+  line-height:1.65;
+  color:var(--ink);
+}
+.resume-box p{ margin:0 0 12px; }
+.resume-box p:last-child{ margin-bottom:0; }
+.resume-auto-tag{
+  margin:14px 18px 0;
+  font-size:11.5px;
+  font-family:'IBM Plex Mono', monospace;
+  color:var(--ink-soft);
+  font-style:italic;
+}
+.ressource-link{
+  color:var(--burgundy);
+  text-decoration:underline;
+  word-break:break-all;
+  font-family:'IBM Plex Mono', monospace;
+  font-size:13px;
+}
+.ressource-link:hover{ color:var(--burgundy-light); }
+
+/* ===== MODE RÉVISION (flashcards) ===== */
+.revision-overlay{
+  position:fixed; inset:0;
+  background:var(--navy-deep);
+  z-index:300;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+}
+.revision-progress{
+  color:#aeb4c9;
+  font-family:'IBM Plex Mono', monospace;
+  font-size:12.5px;
+  margin-bottom:18px;
+  letter-spacing:.5px;
+}
+.revision-card{
+  background:var(--paper);
+  border-radius:10px;
+  max-width:560px;
+  width:100%;
+  min-height:220px;
+  padding:36px 34px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  box-shadow:0 12px 40px rgba(0,0,0,0.35);
+}
+.revision-eyebrow{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:11px;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  color:var(--burgundy);
+  margin-bottom:10px;
+}
+.revision-question{
+  font-family:'Fraunces', serif;
+  font-size:21px;
+  font-weight:500;
+  color:var(--navy);
+  line-height:1.4;
+}
+.revision-answer{
+  margin-top:20px;
+  padding-top:20px;
+  border-top:1px solid var(--paper-line);
+  font-size:15px;
+  line-height:1.6;
+  color:var(--ink);
+}
+.revision-answer p{ margin:0 0 10px; }
+.revision-answer p:last-child{ margin-bottom:0; }
+.revision-actions{
+  display:flex;
+  gap:12px;
+  margin-top:24px;
+  max-width:560px;
+  width:100%;
+}
+.revision-actions button{
+  flex:1;
+  padding:12px;
+  border-radius:6px;
+  border:none;
+  font-size:14px;
+  font-weight:600;
+  cursor:pointer;
+  font-family:inherit;
+}
+.btn-revision-primary{ background:var(--gold); color:var(--navy-deep); }
+.btn-revision-primary:hover{ background:#c99b4a; }
+.btn-revision-secondary{ background:#2a3358; color:var(--paper); }
+.btn-revision-secondary:hover{ background:#333d6e; }
+.revision-close{
+  position:absolute; top:20px; right:24px;
+  background:none; border:none;
+  color:#aeb4c9;
+  font-size:22px;
+  cursor:pointer;
+}
+
+/* ===== CONFIG MODAL ===== */
+.modal-overlay{
+  position:fixed; inset:0;
+  background:rgba(18,24,46,0.72);
+  display:flex; align-items:center; justify-content:center;
+  z-index:200;
+  padding:20px;
+}
+.modal{
+  background:var(--paper);
+  border-radius:6px;
+  max-width:460px;
+  width:100%;
+  padding:26px 26px 22px;
+  border-top:4px solid var(--burgundy);
+}
+.modal h2{
+  font-family:'Fraunces', serif;
+  font-weight:500;
+  color:var(--navy);
+  margin:0 0 4px;
+  font-size:19px;
+}
+.modal p.hint{
+  font-size:12.5px;
+  color:var(--ink-soft);
+  margin:0 0 18px;
+  line-height:1.5;
+}
+.modal label{
+  display:block;
+  font-size:12px;
+  font-weight:600;
+  color:var(--navy);
+  margin:12px 0 4px;
+}
+.modal input{
+  width:100%;
+  padding:8px 9px;
+  border:1px solid var(--paper-line);
+  border-radius:3px;
+  font-size:13px;
+  font-family:'IBM Plex Mono', monospace;
+}
+.modal-actions{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-top:20px;
+}
+.modal-actions .status{
+  font-size:12px;
+  color:var(--ink-soft);
+}
+.modal-actions button{
+  background:var(--navy);
+  color:#fff;
+  border:none;
+  padding:9px 18px;
+  border-radius:3px;
+  cursor:pointer;
+  font-size:13px;
+  font-weight:600;
+  font-family:inherit;
+}
+.modal-actions button:hover{ background:#12182e; }
+.modal-close{
+  position:absolute; top:14px; right:16px;
+  background:none;border:none;cursor:pointer;
+  color:var(--ink-soft);font-size:18px;
+}
+.modal{ position:relative; }
+
+/* ===== FORMULAIRE NOUVELLE FICHE ===== */
+.form-top{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-bottom:20px;
+}
+.form-top .full{ grid-column:1 / -1; }
+.form-field label{
+  display:block;
+  font-size:11.5px;
+  font-weight:700;
+  color:var(--navy);
+  margin-bottom:4px;
+  text-transform:uppercase;
+  letter-spacing:.4px;
+}
+.form-field input, .form-field textarea{
+  width:100%;
+  padding:9px 10px;
+  border:1px solid var(--paper-line);
+  border-radius:3px;
+  font-size:14px;
+  font-family:'Source Sans 3', sans-serif;
+  background:#fff;
+}
+.form-field textarea{ resize:vertical; min-height:60px; line-height:1.5; }
+
+.form-section-block{
+  border:1px solid var(--paper-line);
+  border-radius:5px;
+  padding:14px 16px;
+  margin-bottom:12px;
+  background:#fdfcf9;
+  position:relative;
+}
+.form-section-block .form-block-num{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:10.5px;
+  color:var(--burgundy);
+  letter-spacing:1px;
+  margin-bottom:8px;
+}
+.form-block-actions{
+  display:flex;
+  gap:6px;
+  position:absolute;
+  top:12px; right:14px;
+}
+.form-block-actions button{
+  background:none;
+  border:1px solid var(--paper-line);
+  border-radius:3px;
+  color:var(--ink-soft);
+  font-size:12px;
+  padding:3px 7px;
+  cursor:pointer;
+}
+.form-block-actions button:hover{ background:#eee; }
+.form-add-btn{
+  background:#fff;
+  border:1.5px dashed var(--sage);
+  color:var(--sage);
+  border-radius:5px;
+  padding:10px;
+  width:100%;
+  cursor:pointer;
+  font-size:13px;
+  font-weight:600;
+  margin-bottom:22px;
+}
+.form-add-btn:hover{ background:#f2f6f4; }
+.form-section-title{
+  font-family:'Fraunces', serif;
+  font-size:16px;
+  color:var(--navy);
+  font-weight:500;
+  margin:6px 0 12px;
+}
+
+/* -- Groupes pliables (Résumé / Fiche de cours / Questions du jury) -- */
+.form-group{
+  border:1px solid var(--paper-line);
+  border-radius:6px;
+  margin-bottom:18px;
+  background:#fff;
+  overflow:hidden;
+}
+.form-group-head{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:13px 16px;
+  cursor:pointer;
+  background:#f2efe4;
+  user-select:none;
+}
+.form-group-head:hover{ background:#ece7d8; }
+.form-group-chevron{
+  font-size:12px;
+  color:var(--navy);
+  transition:transform .15s;
+}
+.form-group.open .form-group-chevron{ transform:rotate(90deg); }
+.form-group-title{
+  font-family:'Fraunces', serif;
+  font-size:15.5px;
+  font-weight:600;
+  color:var(--navy);
+  flex:1;
+}
+.form-group-count{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:11px;
+  color:var(--ink-soft);
+}
+.form-group-body{
+  display:none;
+  padding:16px;
+}
+.form-group.open .form-group-body{ display:block; }
+
+/* -- Bloc individuel pliable (section ou question) -- */
+.form-block-head{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
+  user-select:none;
+  padding-right:70px; /* laisse la place aux boutons monter/descendre/supprimer */
+}
+.form-block-chevron{
+  font-size:11px;
+  color:var(--ink-soft);
+  transition:transform .15s;
+  flex:0 0 auto;
+}
+.form-section-block.open .form-block-chevron{ transform:rotate(90deg); }
+.form-block-head-label{
+  font-family:'Fraunces', serif;
+  font-size:14.5px;
+  color:var(--navy);
+  font-weight:500;
+}
+.form-block-body{
+  display:none;
+  margin-top:12px;
+}
+.form-section-block.open .form-block-body{ display:block; }
+.form-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin:24px 0 10px;
+}
+.form-actions button{
+  padding:10px 20px;
+  border-radius:4px;
+  font-size:13.5px;
+  font-weight:600;
+  cursor:pointer;
+  font-family:inherit;
+  border:none;
+}
+.btn-cancel{ background:#e9e4d6; color:var(--ink-soft); }
+.btn-cancel:hover{ background:#ddd7c5; }
+.btn-save{ background:var(--burgundy); color:#fff; }
+.btn-save:hover{ background:var(--burgundy-light); }
+.form-status{
+  font-size:12.5px;
+  color:var(--ink-soft);
+  margin-right:auto;
+  align-self:center;
+}
+
+.mobile-menu-wrap{ position:relative; }
+.mobile-menu{ display:none; }
+
+@media (max-width:720px){
+  /* -- Header : on condense, les boutons secondaires passent dans un menu -- */
+  header{ padding:10px 12px; gap:10px; flex-wrap:nowrap; }
+  header h1{ font-size:16px; }
+  header .sub{ font-size:10px; }
+  header .seal{ width:28px; height:28px; font-size:12px; }
+  #btn-import, #btn-new, #btn-refresh{ display:none; }
+  .mobile-menu-wrap{ position:relative; }
+  #btn-mobile-menu{ display:inline-flex !important; }
+  .mobile-menu{
+    display:none;
+    position:absolute;
+    top:calc(100% + 6px);
+    right:0;
+    background:var(--navy);
+    border:1px solid #3c4570;
+    border-radius:6px;
+    box-shadow:0 8px 24px rgba(0,0,0,.35);
+    min-width:200px;
+    z-index:50;
+    overflow:hidden;
+  }
+  .mobile-menu.open{ display:block; }
+  .mobile-menu button{
+    display:block;
+    width:100%;
+    text-align:left;
+    background:none;
+    border:none;
+    color:var(--paper);
+    padding:12px 16px;
+    font-size:13.5px;
+    cursor:pointer;
+    font-family:inherit;
+    border-bottom:1px solid #2a3358;
+  }
+  .mobile-menu button:last-child{ border-bottom:none; }
+  .mobile-menu button:active{ background:#232c4d; }
+
+  /* -- Layout : la sidebar ne pousse plus le contenu, elle s'ouvre en tiroir plein écran -- */
+  .layout{ flex-direction:column; position:relative; }
+  .sidebar{
+    position:fixed;
+    inset:0;
+    width:100%;
+    max-height:none;
+    z-index:100;
+    padding:16px 0 20px;
+    transform:translateX(-100%);
+    transition:transform .2s ease;
+  }
+  .sidebar.open{ transform:translateX(0); }
+  .sidebar-search{ padding:0 16px; margin-bottom:10px; }
+  .sidebar-close{
+    display:flex !important;
+    justify-content:flex-end;
+    padding:0 16px 10px;
+  }
+
+  /* -- Barre compacte toujours visible en haut du contenu : fiche actuelle + bouton "Changer" -- */
+  .mobile-fiche-bar{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:var(--navy);
+    color:var(--paper);
+    padding:10px 14px;
+    font-size:13px;
+  }
+  .mobile-fiche-bar .lbl{
+    flex:1;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-weight:600;
+  }
+  .mobile-fiche-bar button{
+    flex:0 0 auto;
+    background:var(--burgundy);
+    color:#fff;
+    border:none;
+    border-radius:4px;
+    padding:7px 12px;
+    font-size:12px;
+    font-family:inherit;
+    cursor:pointer;
+  }
+
+  .dossier{ padding:16px 14px 10px; }
+  .dossier-head{ flex-wrap:wrap; }
+  .dossier-title{ font-size:22px; }
+  .dossier-head > div:last-child{ width:100%; }
+  .dossier-head > div:last-child button{ flex:1; }
+
+  /* -- Tabs : défilement horizontal plutôt que retour à la ligne écrasé -- */
+  .tabbar{
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+    margin-top:14px;
+  }
+  .tabbar::-webkit-scrollbar{ display:none; }
+  .tabbar button{
+    flex:0 0 auto;
+    font-size:13px;
+    padding:9px 13px;
+    white-space:nowrap;
+  }
+
+  .bloc-title{ font-size:14px; }
+  .modal{ width:92vw; max-height:85vh; overflow-y:auto; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="seal">RF</div>
+  <div>
+    <h1>Dossier de révision</h1>
+    <div class="sub" id="doc-sub">Chargement du widget…</div>
+  </div>
+  <div class="spacer"></div>
+  <button id="btn-import" title="Importer une fiche depuis un JSON généré par Claude">⇩ Importer JSON</button>
+  <button id="btn-new" title="Créer une nouvelle fiche">+ Nouvelle fiche</button>
+  <button id="btn-refresh" title="Recharger depuis Grist">↻ Actualiser</button>
+  <button id="btn-settings" title="Noms des tables">⚙ Réglages</button>
+  <div class="mobile-menu-wrap">
+    <button id="btn-mobile-menu" title="Menu" style="display:none;">⋮</button>
+    <div class="mobile-menu" id="mobile-menu">
+      <button data-menu-action="import">⇩ Importer JSON</button>
+      <button data-menu-action="new">+ Nouvelle fiche</button>
+      <button data-menu-action="refresh">↻ Actualiser</button>
+      <button data-menu-action="settings">⚙ Réglages</button>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-close" style="display:none;">
+      <button id="btn-sidebar-close" style="background:none;border:1px solid #4a5378;color:var(--paper);border-radius:3px;padding:6px 12px;font-size:13px;cursor:pointer;font-family:inherit;">✕ Fermer</button>
+    </div>
+    <div class="sidebar-search">
+      <label style="display:block;font-size:11px;color:#aeb4c9;margin-bottom:3px;">Thème</label>
+      <select id="select-theme" style="width:100%;padding:8px 9px;border-radius:3px;border:1px solid #3c4570;background:#232c4d;color:#fff;font-size:13px;font-family:inherit;margin-bottom:10px;">
+        <option value="">Tous les thèmes</option>
+      </select>
+      <label style="display:block;font-size:11px;color:#aeb4c9;margin-bottom:3px;">Fiche</label>
+      <select id="select-fiche" style="width:100%;padding:8px 9px;border-radius:3px;border:1px solid #3c4570;background:#232c4d;color:#fff;font-size:13px;font-family:inherit;">
+        <option value="">— Choisir une fiche —</option>
+      </select>
+    </div>
+    <div id="sidebar-list"><div class="sidebar-empty">Connectez-vous à votre base Grist pour charger vos fiches.</div></div>
+  </nav>
+
+  <main class="main" id="main">
+    <div class="mobile-fiche-bar" id="mobile-fiche-bar">
+      <span class="lbl" id="mobile-fiche-bar-lbl">Aucune fiche sélectionnée</span>
+      <button id="btn-mobile-changer">📑 Fiches</button>
+    </div>
+    <div id="main-content">
+      <div class="welcome">
+        <div class="welcome-seal">RF</div>
+        <p>Choisissez une fiche dans la colonne de gauche, ou configurez la connexion à votre base Grist via le bouton « Réglages ».</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ==================================================================
+   WIDGET GRIST — CONFIGURATION (noms des tables uniquement ;
+   la connexion elle-même est gérée par Grist, pas par une clé API)
+   ================================================================== */
+const CFG_KEY = 'dossier_revision_grist_cfg';
+
+function loadCfg(){
+  try{ return JSON.parse(localStorage.getItem(CFG_KEY) || '{}'); }
+  catch(e){ return {}; }
+}
+function saveCfg(cfg){ localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }
+
+let cfg = loadCfg();
+
+// Demande l'accès complet au document dès le chargement du widget.
+// Grist affichera une demande d'autorisation à l'utilisateur la première fois.
+grist.ready({ requiredAccess: 'full' });
+
+let fichesData = []; // [{id, titre, theme, date_maj, sections:[...], questions:[...]}]
+let ficheActiveId = null;
+let activeTab = 'resume';
+
+// Normalisation d'un thème pour comparaison (insensible à la casse et aux espaces superflus)
+function normaliserTheme(str){
+  return String(str || '').trim().toLowerCase();
+}
+
+// Renvoie la graphie déjà utilisée pour ce thème si elle existe (pour éviter les doublons
+// "Sécurité intérieure" / "sécurité intérieure"), sinon la saisie telle quelle.
+function themeCanonique(saisie){
+  const trim = String(saisie || '').trim();
+  if(!trim) return 'Non classé';
+  const existant = fichesData.find(f => normaliserTheme(f.theme) === normaliserTheme(trim));
+  return existant ? existant.theme : trim;
+}
+
+/* ==================================================================
+   APPEL API GRIST — via le plugin API du widget (grist.docApi),
+   PAS via des requêtes REST + clé API. Les signatures sont conservées
+   à l'identique de la version autonome pour ne rien changer ailleurs
+   dans le fichier.
+   ================================================================== */
+
+// Convertit le format colonnaire renvoyé par fetchTable ({id:[...], colA:[...]})
+// en un tableau de lignes {id, fields:{...}}, identique au format REST utilisé
+// partout ailleurs dans l'application.
+async function gristFetch(_cfg, table){
+  const data = await grist.docApi.fetchTable(table);
+  const ids = data.id || [];
+  return ids.map((id, i) => {
+    const fields = {};
+    for(const col in data){
+      if(col === 'id') continue;
+      fields[col] = data[col][i];
+    }
+    return { id, fields };
+  });
+}
+
+async function gristWrite(_cfg, table, records){
+  if(!records.length) return [];
+  const colNames = [...new Set(records.flatMap(r => Object.keys(r.fields)))];
+  const colValues = {};
+  colNames.forEach(k => { colValues[k] = records.map(r => (r.fields[k] !== undefined ? r.fields[k] : null)); });
+  const result = await grist.docApi.applyUserActions([
+    ['BulkAddRecord', table, records.map(()=>null), colValues]
+  ]);
+  const newIds = (result && result.retValues && result.retValues[0]) || [];
+  return newIds.map(id => ({ id }));
+}
+
+async function gristFetchPatch(_cfg, table, records){
+  if(!records.length) return;
+  const ids = records.map(r => r.id);
+  const colNames = [...new Set(records.flatMap(r => Object.keys(r.fields)))];
+  const colValues = {};
+  colNames.forEach(k => { colValues[k] = records.map(r => (r.fields[k] !== undefined ? r.fields[k] : null)); });
+  await grist.docApi.applyUserActions([
+    ['BulkUpdateRecord', table, ids, colValues]
+  ]);
+}
+
+async function gristDelete(_cfg, table, rowIds){
+  if(!rowIds || !rowIds.length) return;
+  await grist.docApi.applyUserActions([
+    ['BulkRemoveRecord', table, rowIds]
+  ]);
+}
+
+function melanger(tableau){
+  const copie = [...tableau];
+  for(let i = copie.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [copie[i], copie[j]] = [copie[j], copie[i]];
+  }
+  return copie;
+}
+
+function ouvrirModeRevision(fiche){
+  const questions = melanger(fiche.quiz);
+  let index = 0;
+  let reponseVisible = false;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'revision-overlay';
+  document.body.appendChild(overlay);
+
+  function rendre(){
+    const q = questions[index];
+    overlay.innerHTML = `
+      <button class="revision-close" id="rev-close" title="Quitter le mode révision">✕</button>
+      <div class="revision-progress">Question ${index+1} / ${questions.length} — ${escHtml(fiche.titre)}</div>
+      <div class="revision-card">
+        <div class="revision-eyebrow">Quiz</div>
+        <div class="revision-question">${paragraphesHtml(q.question)}</div>
+        ${reponseVisible ? `<div class="revision-answer">${paragraphesHtml(q.reponse)}${String(q.notes||'').trim() ? `<p style="margin-top:14px;font-size:13px;color:var(--ink-soft);"><strong>📝 Note :</strong> ${paragraphesHtml(q.notes).replace(/^<p>|<\/p>$/g,'')}</p>` : ''}</div>` : ''}
+      </div>
+      <div class="revision-actions">
+        ${reponseVisible
+          ? `<button class="btn-revision-secondary" id="rev-prec" ${index===0?'disabled style="opacity:.4;cursor:default;"':''}>← Précédente</button>
+             <button class="btn-revision-primary" id="rev-suiv">${index < questions.length-1 ? 'Suivante →' : 'Terminer'}</button>`
+          : `<button class="btn-revision-primary" id="rev-voir" style="flex:1;">Voir la réponse</button>`}
+      </div>
+    `;
+
+    document.getElementById('rev-close').addEventListener('click', () => overlay.remove());
+    if(!reponseVisible){
+      document.getElementById('rev-voir').addEventListener('click', () => { reponseVisible = true; rendre(); });
+    } else {
+      const btnSuiv = document.getElementById('rev-suiv');
+      btnSuiv.addEventListener('click', () => {
+        if(index < questions.length - 1){ index++; reponseVisible = false; rendre(); }
+        else overlay.remove();
+      });
+      const btnPrec = document.getElementById('rev-prec');
+      if(index > 0){
+        btnPrec.addEventListener('click', () => { index--; reponseVisible = true; rendre(); });
+      }
+    }
+  }
+
+  rendre();
+}
+
+// Grist stocke les colonnes de type Date en secondes UNIX (pas en chaîne ISO).
+function dateStringVersEpoch(str){
+  if(!str) return null;
+  const t = new Date(str + 'T00:00:00Z').getTime();
+  return isNaN(t) ? null : Math.floor(t/1000);
+}
+function epochVersDateString(epoch){
+  if(epoch === null || epoch === undefined || epoch === '') return '';
+  const d = new Date(Number(epoch) * 1000);
+  if(isNaN(d.getTime())) return '';
+  return d.toISOString().slice(0,10);
+}
+function formatDateAffichage(epoch){
+  const s = epochVersDateString(epoch);
+  if(!s) return String(epoch || '');
+  const [y,m,day] = s.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+async function chargerDonnees(){
+  document.getElementById('doc-sub').textContent = 'Chargement…';
+  try{
+    const [fiches, sections, questions, ressources, quiz, presse] = await Promise.all([
+      gristFetch(cfg, cfg.tFiches || 'Fiches'),
+      gristFetch(cfg, cfg.tSections || 'Sections'),
+      gristFetch(cfg, cfg.tQuestions || 'Questions_jury'),
+      gristFetch(cfg, cfg.tRessources || 'Ressources'),
+      gristFetch(cfg, cfg.tQuiz || 'Quiz'),
+      gristFetch(cfg, cfg.tPresse || 'Presse'),
+    ]);
+
+    fichesData = fiches.map(f => ({
+      rowId: f.id,
+      titre: f.fields.titre || '(sans titre)',
+      theme: f.fields.theme || 'Non classé',
+      date_maj: f.fields.date_maj || null, // stocké par Grist en secondes UNIX (colonne Date)
+      resume: f.fields.resume || '',
+      nature_texte: f.fields.nature_texte || '',
+      corpus: f.fields.corpus || '',
+      historique_statut: f.fields.historique_statut || '',
+      sections: sections
+        .filter(s => refMatches(s.fields.fiche_id, f.id))
+        .sort((a,b) => (a.fields.ordre||0) - (b.fields.ordre||0))
+        .map(s => ({ rowId: s.id, titre: s.fields.titre_section || '', contenu: s.fields.contenu || '', notes: s.fields.notes || '' })),
+      questions: questions
+        .filter(q => refMatches(q.fields.fiche_id, f.id))
+        .sort((a,b) => (a.fields.ordre||0) - (b.fields.ordre||0))
+        .map(q => ({ rowId: q.id, question: q.fields.question || '', reponse: q.fields.reponse || '', notes: q.fields.notes || '' })),
+      ressources: ressources
+        .filter(r => refMatches(r.fields.fiche_id, f.id))
+        .sort((a,b) => (a.fields.ordre||0) - (b.fields.ordre||0))
+        .map(r => ({ rowId: r.id, titre: r.fields.titre || '', url: r.fields.url || '', notes: r.fields.notes || '' })),
+      quiz: quiz
+        .filter(z => refMatches(z.fields.fiche_id, f.id))
+        .sort((a,b) => (a.fields.ordre||0) - (b.fields.ordre||0))
+        .map(z => ({ rowId: z.id, question: z.fields.question || '', reponse: z.fields.reponse || '', notes: z.fields.notes || '' })),
+      presse: presse
+        .filter(p => refMatches(p.fields.fiche_id, f.id))
+        .sort((a,b) => (b.fields.date||0) - (a.fields.date||0) || (b.fields.ordre||0) - (a.fields.ordre||0))
+        .map(p => ({ rowId: p.id, date: p.fields.date || null, titre: p.fields.titre || '', texte: p.fields.texte || '', notes: p.fields.notes || '' })),
+    }));
+
+    document.getElementById('doc-sub').textContent = `${fichesData.length} fiche(s) chargée(s)`;
+    renderSidebar();
+    if(ficheActiveId){
+      const still = fichesData.find(f => f.rowId === ficheActiveId);
+      renderMain(still || null);
+    }
+  }catch(e){
+    document.getElementById('doc-sub').textContent = 'Erreur de connexion';
+    alert('Erreur lors du chargement depuis Grist : ' + e.message);
+  }
+}
+
+// Une colonne Référence Grist peut renvoyer soit un entier (rowId),
+// soit un tableau ['R', rowId] selon la config. On gère les deux cas.
+function refMatches(fieldVal, targetId){
+  if(Array.isArray(fieldVal)) return fieldVal[1] === targetId;
+  return fieldVal === targetId;
+}
+
+/* ==================================================================
+   RENDU — SIDEBAR
+   ================================================================== */
+let themeSelectionne = '';
+
+function renderSidebar(){
+  const box = document.getElementById('sidebar-list');
+  const themeSelect = document.getElementById('select-theme');
+  const ficheSelect = document.getElementById('select-fiche');
+
+  // -- Peupler le menu des thèmes, en regroupant ceux qui ne diffèrent que par la casse/espaces --
+  const themesParCle = new Map(); // clé normalisée -> libellé d'affichage (première graphie rencontrée)
+  fichesData.forEach(f => {
+    const cle = normaliserTheme(f.theme);
+    if(!themesParCle.has(cle)) themesParCle.set(cle, f.theme);
+  });
+  const themesDistincts = [...themesParCle.entries()].sort((a,b) => a[1].localeCompare(b[1], 'fr'));
+  themeSelect.innerHTML = '<option value="">Tous les thèmes</option>' +
+    themesDistincts.map(([cle,label]) => `<option value="${escHtml(cle)}" ${cle===themeSelectionne?'selected':''}>${escHtml(label)}</option>`).join('');
+
+  // -- Peupler le menu des fiches, filtré par thème (comparaison normalisée) --
+  const fichesFiltrees = fichesData
+    .filter(f => !themeSelectionne || normaliserTheme(f.theme) === themeSelectionne)
+    .sort((a,b) => a.titre.localeCompare(b.titre, 'fr'));
+
+  ficheSelect.innerHTML = '<option value="">— Choisir une fiche —</option>' +
+    fichesFiltrees.map(f => `<option value="${f.rowId}" ${f.rowId===ficheActiveId?'selected':''}>${escHtml(f.titre)}</option>`).join('');
+
+  themeSelect.onchange = () => {
+    themeSelectionne = themeSelect.value;
+    renderSidebar();
+  };
+  ficheSelect.onchange = () => {
+    if(!ficheSelect.value) return;
+    formFiche = null;
+    ficheActiveId = Number(ficheSelect.value);
+    activeTab = 'resume';
+    renderSidebar();
+    renderMain(fichesData.find(f => f.rowId === ficheActiveId));
+    fermerTiroirSidebar();
+  };
+
+  // -- Liste de rappel en dessous, pour un survol rapide --
+  if(fichesFiltrees.length === 0){
+    box.innerHTML = '<div class="sidebar-empty">Aucune fiche dans ce thème.</div>';
+    return;
+  }
+  box.innerHTML = `
+    <div class="theme-group">
+      <div class="theme-label">${fichesFiltrees.length} fiche(s)</div>
+      ${fichesFiltrees.map(f => `
+        <div class="fiche-item ${f.rowId===ficheActiveId?'active':''}" data-rowid="${f.rowId}">
+          ${escHtml(f.titre)}
+          ${f.date_maj ? `<span class="date">${escHtml(formatDateAffichage(f.date_maj))}</span>` : ''}
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  box.querySelectorAll('.fiche-item').forEach(el => {
+    el.addEventListener('click', () => {
+      formFiche = null;
+      ficheActiveId = Number(el.dataset.rowid);
+      activeTab = 'resume';
+      renderSidebar();
+      renderMain(fichesData.find(f => f.rowId === ficheActiveId));
+      fermerTiroirSidebar();
+    });
+  });
+}
+
+/* ==================================================================
+   RENDU — ZONE PRINCIPALE
+   ================================================================== */
+function renderMain(fiche){
+  const main = document.getElementById('main-content');
+  document.getElementById('mobile-fiche-bar-lbl').textContent = fiche ? fiche.titre : 'Aucune fiche sélectionnée';
+  if(!fiche){
+    main.innerHTML = `<div class="welcome"><h2>Fiche introuvable</h2><p>Elle a peut-être été supprimée dans Grist. Actualisez la liste.</p></div>`;
+    return;
+  }
+
+  main.innerHTML = `
+    <div class="dossier">
+      <div class="dossier-head" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+        <div>
+          <div class="dossier-eyebrow">${escHtml(fiche.theme)}</div>
+          <h2 class="dossier-title">${escHtml(fiche.titre)}</h2>
+          ${fiche.date_maj ? `<div class="dossier-meta">Mise à jour : ${escHtml(formatDateAffichage(fiche.date_maj))}</div>` : ''}
+        </div>
+        <div style="flex:0 0 auto;display:flex;gap:8px;">
+          <button id="btn-edit-fiche" title="Modifier cette fiche" style="background:#fff;border:1px solid var(--paper-line);border-radius:4px;padding:8px 12px;cursor:pointer;font-size:13px;color:var(--navy);font-weight:600;">✎ Modifier</button>
+          <button id="btn-delete-fiche" title="Supprimer cette fiche" style="background:#fff;border:1px solid var(--paper-line);border-radius:4px;padding:8px 12px;cursor:pointer;font-size:13px;color:var(--burgundy);font-weight:600;">🗑 Supprimer</button>
+        </div>
+      </div>
+
+      ${(fiche.nature_texte || fiche.corpus || fiche.historique_statut) ? `
+      <div class="statut-bandeau">
+        <div class="statut-ligne1">
+          ${fiche.nature_texte ? `<span class="statut-tag">${escHtml(fiche.nature_texte)}</span>` : ''}
+          ${fiche.corpus ? `<span class="statut-corpus">${escHtml(fiche.corpus)}</span>` : ''}
+        </div>
+        ${(() => {
+          const lignes = String(fiche.historique_statut||'').split('\n').map(l=>l.trim()).filter(Boolean);
+          if(!lignes.length) return '';
+          const dernier = lignes[lignes.length-1];
+          const anterieures = lignes.slice(0, -1);
+          return `
+            <div class="statut-actuel">→ ${escHtml(dernier)}</div>
+            ${anterieures.length ? `
+              <button class="statut-historique-toggle" id="btn-toggle-historique">Voir l'historique (${anterieures.length})</button>
+              <div class="statut-historique-liste" id="statut-historique-liste">
+                ${anterieures.map(l => `<div>${escHtml(l)}</div>`).join('')}
+              </div>` : ''}
+          `;
+        })()}
+      </div>` : ''}
+
+      <div class="tabbar">
+        <button data-tab="resume" class="${activeTab==='resume'?'active':''}">Résumé</button>
+        <button data-tab="fiche" class="${activeTab==='fiche'?'active':''}">Fiche de cours</button>
+        <button data-tab="questions" class="${activeTab==='questions'?'active':''}">Questions du jury</button>
+        <button data-tab="ressources" class="${activeTab==='ressources'?'active':''}">Ressources</button>
+        <button data-tab="presse" class="${activeTab==='presse'?'active':''}">Presse</button>
+        <button data-tab="quiz" class="${activeTab==='quiz'?'active':''}">Quiz</button>
+      </div>
+
+      <div class="tab-body">
+        <div class="tab-body-inner ${activeTab==='resume'?'active':''}" data-panel="resume">
+          ${String(fiche.resume||'').trim()
+            ? `<div class="resume-box">${paragraphesHtml(fiche.resume)}</div>`
+            : (fiche.sections.length
+                ? `<div class="resume-auto-tag">Résumé généré automatiquement à partir des titres de section — modifiable via « ✎ Modifier »</div><div class="resume-box">${paragraphesHtml(resumeAutoDepuisTitres(fiche.sections))}</div>`
+                : '<div class="empty-tab">Pas encore de résumé pour cette fiche. Cliquez sur « ✎ Modifier » pour en ajouter un.</div>')}
+        </div>
+        <div class="tab-body-inner ${activeTab==='fiche'?'active':''}" data-panel="fiche">
+          ${renderToolbar('fiche')}
+          ${fiche.sections.length ? fiche.sections.map((s,i)=>renderBloc('fiche', i, s.titre, s.contenu, s.notes)).join('')
+            : '<div class="empty-tab">Aucune section pour cette fiche.</div>'}
+        </div>
+        <div class="tab-body-inner ${activeTab==='questions'?'active':''}" data-panel="questions">
+          ${renderToolbar('questions')}
+          ${fiche.questions.length ? fiche.questions.map((q,i)=>renderBloc('questions', i, q.question, q.reponse, q.notes)).join('')
+            : '<div class="empty-tab">Aucune question de jury enregistrée pour cette fiche.</div>'}
+        </div>
+        <div class="tab-body-inner ${activeTab==='ressources'?'active':''}" data-panel="ressources">
+          ${renderToolbar('ressources')}
+          ${fiche.ressources.length ? fiche.ressources.map((r,i)=>renderBlocRessource(i, r.titre, r.url, r.notes)).join('')
+            : '<div class="empty-tab">Aucune ressource enregistrée pour cette fiche.</div>'}
+        </div>
+        <div class="tab-body-inner ${activeTab==='presse'?'active':''}" data-panel="presse">
+          <div class="tab-toolbar" style="justify-content:space-between;">
+            <button id="btn-nouvel-article" style="background:var(--burgundy);color:#fff;border:none;border-radius:4px;padding:7px 14px;font-size:12.5px;cursor:pointer;font-weight:600;">＋ Nouvel article</button>
+            <div>
+              <button data-import-open="presse" style="background:none;border:none;color:var(--burgundy);font-size:12px;cursor:pointer;font-family:'IBM Plex Mono', monospace;text-decoration:underline;">＋ Importer JSON</button>
+            </div>
+          </div>
+          ${fiche.presse.length ? fiche.presse.map((p,i)=>renderBlocPresse(i, p)).join('')
+            : '<div class="empty-tab">Aucun article de presse enregistré pour cette fiche.</div>'}
+        </div>
+        <div class="tab-body-inner ${activeTab==='quiz'?'active':''}" data-panel="quiz">
+          <div class="tab-toolbar" style="justify-content:space-between;">
+            ${fiche.quiz.length
+              ? `<button id="btn-mode-revision" style="background:var(--burgundy);color:#fff;border:none;border-radius:4px;padding:7px 14px;font-size:12.5px;cursor:pointer;font-weight:600;">▶ Mode révision</button>`
+              : `<span></span>`}
+            <div>
+              <button data-import-open="quiz" style="background:none;border:none;color:var(--burgundy);font-size:12px;cursor:pointer;font-family:'IBM Plex Mono', monospace;text-decoration:underline;">＋ Importer JSON</button>
+              <button data-fold="open" style="background:none;border:none;color:var(--burgundy);font-size:12px;cursor:pointer;font-family:'IBM Plex Mono', monospace;text-decoration:underline;">Tout déplier</button>
+              <button data-fold="close" style="background:none;border:none;color:var(--burgundy);font-size:12px;cursor:pointer;font-family:'IBM Plex Mono', monospace;text-decoration:underline;">Tout replier</button>
+            </div>
+          </div>
+          ${fiche.quiz.length ? fiche.quiz.map((z,i)=>renderBloc('quiz', i, z.question, z.reponse, z.notes)).join('')
+            : '<div class="empty-tab">Aucune question de quiz pour cette fiche.</div>'}
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('btn-edit-fiche').addEventListener('click', () => ouvrirEditionFiche(fiche));
+  document.getElementById('btn-delete-fiche').addEventListener('click', () => supprimerFiche(fiche));
+  const btnHisto = document.getElementById('btn-toggle-historique');
+  if(btnHisto) btnHisto.addEventListener('click', () => {
+    document.getElementById('statut-historique-liste').classList.toggle('open');
+  });
+  const btnRevision = document.getElementById('btn-mode-revision');
+  if(btnRevision) btnRevision.addEventListener('click', () => ouvrirModeRevision(fiche));
+  const btnNouvelArticle = document.getElementById('btn-nouvel-article');
+  if(btnNouvelArticle) btnNouvelArticle.addEventListener('click', () => ouvrirNouvelArticlePresse(fiche));
+
+  main.querySelectorAll('.tabbar button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeTab = btn.dataset.tab;
+      renderMain(fiche);
+    });
+  });
+
+  main.querySelectorAll('.bloc-head').forEach(head => {
+    head.addEventListener('click', () => {
+      head.closest('.bloc').classList.toggle('open');
+    });
+  });
+
+  main.querySelectorAll('.notes-head').forEach(head => {
+    head.addEventListener('click', (e) => {
+      e.stopPropagation();
+      head.closest('.notes-block').classList.toggle('open');
+    });
+  });
+
+  main.querySelectorAll('[data-fold]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const panel = btn.closest('.tab-body-inner');
+      const open = btn.dataset.fold === 'open';
+      panel.querySelectorAll('.bloc').forEach(b => b.classList.toggle('open', open));
+    });
+  });
+
+  main.querySelectorAll('.presse-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const article = fiche.presse[Number(el.dataset.idx)];
+      if(article) ouvrirArticlePresseModal(fiche, article);
+    });
+  });
+
+  main.querySelectorAll('[data-import-open]').forEach(btn => {
+    btn.addEventListener('click', () => ouvrirImportSection(btn.dataset.importOpen, fiche));
+  });
+}
+
+/* ==================================================================
+   IMPORT CIBLÉ DANS UNE RUBRIQUE D'UNE FICHE EXISTANTE
+   (contrairement à ouvrirImportJSON, n'écrase rien et ne crée pas de
+   nouvelle fiche : ajoute les éléments à la suite de ceux déjà présents)
+   ================================================================== */
+const IMPORT_SECTION_CONFIG = {
+  fiche: {
+    table: 'tSections', tableDefault: 'Sections', dataProp: 'sections', jsonKey: 'sections',
+    label: 'la fiche de cours',
+    mapping: item => ({ titre_section: String(item.titre || '').trim(), contenu: String(item.contenu || '').trim(), notes: String(item.notes || '').trim() }),
+  },
+  questions: {
+    table: 'tQuestions', tableDefault: 'Questions_jury', dataProp: 'questions', jsonKey: 'questions',
+    label: 'les questions du jury',
+    mapping: item => ({ question: String(item.question || '').trim(), reponse: String(item.reponse || '').trim(), notes: String(item.notes || '').trim() }),
+  },
+  ressources: {
+    table: 'tRessources', tableDefault: 'Ressources', dataProp: 'ressources', jsonKey: 'ressources',
+    label: 'les ressources',
+    mapping: item => ({ titre: String(item.titre || '').trim(), url: String(item.url || '').trim(), notes: String(item.notes || '').trim() }),
+  },
+  quiz: {
+    table: 'tQuiz', tableDefault: 'Quiz', dataProp: 'quiz', jsonKey: 'quiz',
+    label: 'le quiz',
+    mapping: item => ({ question: String(item.question || '').trim(), reponse: String(item.reponse || '').trim(), notes: String(item.notes || '').trim() }),
+  },
+  presse: {
+    table: 'tPresse', tableDefault: 'Presse', dataProp: 'presse', jsonKey: 'presse',
+    label: 'les articles de presse',
+    mapping: item => ({ titre: String(item.titre || '').trim(), date: dateStringVersEpoch(item.date || new Date().toISOString().slice(0,10)), texte: String(item.texte || '').trim(), notes: String(item.notes || '').trim() }),
+  },
+};
+
+// Le JSON collé peut être soit le tableau brut de la rubrique, soit l'objet fiche
+// complet produit par Claude (auquel cas on ne lit que la clé qui nous intéresse).
+function extraireListeImport(data, jsonKey){
+  if(Array.isArray(data)) return data;
+  if(data && Array.isArray(data[jsonKey])) return data[jsonKey];
+  return null;
+}
+
+function ouvrirImportSection(panelKey, fiche){
+  const conf = IMPORT_SECTION_CONFIG[panelKey];
+  if(!conf) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:600px;">
+      <button class="modal-close" id="import-sec-close">✕</button>
+      <h2>Importer dans « ${escHtml(fiche.titre)} »</h2>
+      <p class="hint">Collez ici soit le JSON complet produit par Claude (seule la clé <code>"${conf.jsonKey}"</code> sera utilisée), soit directement un tableau JSON pour ${escHtml(conf.label)}. Les éléments seront <strong>ajoutés à la suite</strong> de ce qui existe déjà dans cette rubrique — le reste de la fiche n'est pas modifié.</p>
+      <textarea id="import-sec-json" rows="10" style="width:100%;font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:10px;border:1px solid var(--paper-line);border-radius:4px;" placeholder='[{"...": "..."}]'></textarea>
+      <div class="modal-actions">
+        <span class="status" id="import-sec-status"></span>
+        <button id="import-sec-go">Ajouter à la fiche</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
+  document.getElementById('import-sec-close').onclick = () => overlay.remove();
+
+  document.getElementById('import-sec-go').addEventListener('click', async () => {
+    const status = document.getElementById('import-sec-status');
+    const btnGo = document.getElementById('import-sec-go');
+    let data;
+    try{
+      data = JSON.parse(document.getElementById('import-sec-json').value);
+    }catch(e){
+      status.textContent = 'JSON invalide : ' + e.message;
+      return;
+    }
+
+    const liste = extraireListeImport(data, conf.jsonKey)
+      ? extraireListeImport(data, conf.jsonKey).filter(item => Object.values(conf.mapping(item)).some(v => v))
+      : null;
+
+    if(!liste || !liste.length){
+      status.textContent = `Aucun élément exploitable trouvé (clé "${conf.jsonKey}" absente, vide, ou éléments vides).`;
+      return;
+    }
+
+    status.textContent = 'Ajout en cours…';
+    btnGo.disabled = true;
+    try{
+      const table = cfg[conf.table] || conf.tableDefault;
+      const departOrdre = (fiche[conf.dataProp] || []).length;
+      const records = liste.map((item, i) => ({
+        fields: { fiche_id: fiche.rowId, ordre: departOrdre + i, ...conf.mapping(item) }
+      }));
+      await gristWrite(cfg, table, records);
+      overlay.remove();
+      activeTab = panelKey;
+      await chargerDonnees();
+    }catch(e){
+      status.textContent = 'Erreur : ' + e.message;
+      btnGo.disabled = false;
+    }
+  });
+}
+
+/* ==================================================================
+   AJOUT RAPIDE D'UN ARTICLE DE PRESSE (date du jour pré-remplie,
+   titre, et zone de collage du texte copié depuis la revue de presse)
+   ================================================================== */
+function ouvrirNouvelArticlePresse(fiche){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:600px;">
+      <button class="modal-close" id="article-close">✕</button>
+      <h2>Nouvel article — « ${escHtml(fiche.titre)} »</h2>
+      <label>Date</label>
+      <input type="date" id="article-date" value="${new Date().toISOString().slice(0,10)}" style="margin-bottom:12px;">
+      <label>Titre de l'article</label>
+      <input type="text" id="article-titre" placeholder="Ex : Le Monde — Un nouveau plan pour la sécurité civile" style="margin-bottom:12px;">
+      <label>Texte (collez ici le passage copié depuis la synthèse de revue de presse)</label>
+      <textarea id="article-texte" rows="10" style="width:100%;font-family:inherit;font-size:13.5px;padding:10px;border:1px solid var(--paper-line);border-radius:4px;"></textarea>
+      <div class="modal-actions">
+        <span class="status" id="article-status"></span>
+        <button id="article-go">Ajouter l'article</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
+  document.getElementById('article-close').onclick = () => overlay.remove();
+  document.getElementById('article-titre').focus();
+
+  document.getElementById('article-go').addEventListener('click', async () => {
+    const status = document.getElementById('article-status');
+    const btnGo = document.getElementById('article-go');
+    const dateVal = document.getElementById('article-date').value;
+    const titreVal = document.getElementById('article-titre').value.trim();
+    const texteVal = document.getElementById('article-texte').value.trim();
+
+    if(!titreVal && !texteVal){
+      status.textContent = 'Ajoutez au moins un titre ou un texte.';
+      return;
+    }
+
+    status.textContent = 'Ajout en cours…';
+    btnGo.disabled = true;
+    try{
+      const table = cfg.tPresse || 'Presse';
+      const departOrdre = (fiche.presse || []).length;
+      await gristWrite(cfg, table, [{
+        fields: {
+          fiche_id: fiche.rowId,
+          ordre: departOrdre,
+          date: dateStringVersEpoch(dateVal),
+          titre: titreVal,
+          texte: texteVal,
+          notes: '',
+        }
+      }]);
+      overlay.remove();
+      activeTab = 'presse';
+      await chargerDonnees();
+    }catch(e){
+      status.textContent = 'Erreur : ' + e.message;
+      btnGo.disabled = false;
+    }
+  });
+}
+
+function renderToolbar(panelKey){
+  return `<div class="tab-toolbar">
+    <button data-import-open="${panelKey}">＋ Importer JSON</button>
+    <button data-fold="open">Tout déplier</button>
+    <button data-fold="close">Tout replier</button>
+  </div>`;
+}
+
+// Les titres de section deviennent chacun une phrase/paragraphe du résumé auto-généré
+// (utilisé uniquement si le champ "resume" est vide — un résumé écrit à la main prend toujours le dessus).
+function resumeAutoDepuisTitres(sections){
+  return (sections || [])
+    .map(s => (s.titre || '').trim())
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+function appliquerGras(texteEchappe){
+  return texteEchappe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+
+function paragraphesHtml(texte){
+  return String(texte || '')
+    .split(/\n\s*\n|\n/)
+    .map(p => p.trim())
+    .filter(Boolean)
+    .map(p => `<p>${appliquerGras(escHtml(p))}</p>`)
+    .join('');
+}
+
+function renderBloc(panelKey, idx, titre, contenu, notes){
+  const contentHtml = paragraphesHtml(contenu);
+  const notesTexte = String(notes || '').trim();
+  return `
+    <div class="bloc" data-panel="${panelKey}" data-idx="${idx}">
+      <div class="bloc-head">
+        <div class="bloc-stamp"></div>
+        <div class="bloc-num">${idx+1}.</div>
+        <div class="bloc-title">${escHtml(titre || '(sans titre)')}</div>
+        <div class="bloc-chevron">▸</div>
+      </div>
+      <div class="bloc-content">${contentHtml || '<p><em>Contenu vide.</em></p>'}</div>
+      ${notesTexte ? `
+      <div class="notes-block">
+        <div class="notes-head">
+          <span class="notes-chevron">▸</span>
+          <span class="notes-label">📝 Notes / remarques</span>
+        </div>
+        <div class="notes-content">${paragraphesHtml(notesTexte)}</div>
+      </div>` : ''}
+    </div>
+  `;
+}
+
+function renderBlocRessource(idx, titre, url, notes){
+  const notesTexte = String(notes || '').trim();
+  const urlTexte = String(url || '').trim();
+  const urlHtml = urlTexte
+    ? `<p><a href="${escHtml(urlTexte)}" target="_blank" rel="noopener noreferrer" class="ressource-link">${escHtml(urlTexte)}</a></p>`
+    : '<p><em>Pas de lien renseigné.</em></p>';
+  return `
+    <div class="bloc" data-panel="ressources" data-idx="${idx}">
+      <div class="bloc-head">
+        <div class="bloc-stamp"></div>
+        <div class="bloc-num">${idx+1}.</div>
+        <div class="bloc-title">${escHtml(titre || '(sans titre)')}</div>
+        <div class="bloc-chevron">▸</div>
+      </div>
+      <div class="bloc-content">${urlHtml}</div>
+      ${notesTexte ? `
+      <div class="notes-block">
+        <div class="notes-head">
+          <span class="notes-chevron">▸</span>
+          <span class="notes-label">📝 Notes / remarques</span>
+        </div>
+        <div class="notes-content">${paragraphesHtml(notesTexte)}</div>
+      </div>` : ''}
+    </div>
+  `;
+}
+
+function renderBlocPresse(idx, article){
+  const dateAffichee = article.date ? formatDateAffichage(article.date) : '(sans date)';
+  return `
+    <div class="presse-item" data-idx="${idx}">
+      <div class="presse-item-date">${escHtml(dateAffichee)}</div>
+      <div class="presse-item-titre">${escHtml(article.titre || '(sans titre)')}</div>
+      <div class="presse-item-chevron">›</div>
+    </div>
+  `;
+}
+
+/* ==================================================================
+   MODALE ARTICLE DE PRESSE : lecture, puis modification / suppression
+   ================================================================== */
+function ouvrirArticlePresseModal(fiche, article){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  document.body.appendChild(overlay);
+
+  function fermer(){ overlay.remove(); }
+  overlay.addEventListener('click', e => { if(e.target === overlay) fermer(); });
+
+  function vueLecture(){
+    const notesTexte = String(article.notes || '').trim();
+    const dateAffichee = article.date ? formatDateAffichage(article.date) : '(sans date)';
+    overlay.innerHTML = `
+      <div class="modal" style="max-width:640px;">
+        <button class="modal-close" id="article-view-close">✕</button>
+        <div style="font-family:'IBM Plex Mono', monospace;font-size:11px;color:var(--burgundy);font-weight:600;margin-bottom:6px;">${escHtml(dateAffichee)}</div>
+        <h2 style="margin-top:0;">${escHtml(article.titre || '(sans titre)')}</h2>
+        <div style="font-size:14px;line-height:1.7;color:var(--ink);max-height:52vh;overflow-y:auto;padding-right:4px;margin-top:10px;">
+          ${paragraphesHtml(article.texte) || '<p><em>Article vide.</em></p>'}
+        </div>
+        ${notesTexte ? `
+        <div class="notes-block open" style="margin:14px 0 0;">
+          <div class="notes-head" style="cursor:default;">
+            <span class="notes-label">📝 Notes / remarques</span>
+          </div>
+          <div class="notes-content">${paragraphesHtml(notesTexte)}</div>
+        </div>` : ''}
+        <div class="modal-actions">
+          <button id="article-view-delete" style="background:#8a3b3b;">🗑 Supprimer</button>
+          <button id="article-view-edit">✎ Modifier</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('article-view-close').onclick = fermer;
+    document.getElementById('article-view-edit').onclick = vueEdition;
+    document.getElementById('article-view-delete').onclick = async () => {
+      if(!confirm('Supprimer définitivement cet article de presse ?')) return;
+      try{
+        await gristDelete(cfg, cfg.tPresse || 'Presse', [article.rowId]);
+        fermer();
+        activeTab = 'presse';
+        await chargerDonnees();
+      }catch(e){
+        alert('Erreur lors de la suppression : ' + e.message);
+      }
+    };
+  }
+
+  function vueEdition(){
+    overlay.innerHTML = `
+      <div class="modal" style="max-width:640px;">
+        <button class="modal-close" id="article-edit-close">✕</button>
+        <h2>Modifier l'article</h2>
+        <label>Date</label>
+        <input type="date" id="article-edit-date" value="${article.date ? epochVersDateString(article.date) : new Date().toISOString().slice(0,10)}" style="margin-bottom:12px;">
+        <label>Titre de l'article</label>
+        <input type="text" id="article-edit-titre" value="${escHtml(article.titre||'')}" style="margin-bottom:12px;">
+        <label>Texte — tapez **mot** pour remettre du gras, et une ligne vide entre deux paragraphes pour les sauts de ligne</label>
+        <textarea id="article-edit-texte" rows="11" style="width:100%;font-family:inherit;font-size:13.5px;padding:10px;border:1px solid var(--paper-line);border-radius:4px;margin-bottom:12px;">${escHtml(article.texte||'')}</textarea>
+        <label>Notes (facultatif)</label>
+        <textarea id="article-edit-notes" rows="3" style="width:100%;font-family:inherit;font-size:13px;padding:10px;border:1px solid var(--paper-line);border-radius:4px;">${escHtml(article.notes||'')}</textarea>
+        <div class="modal-actions">
+          <span class="status" id="article-edit-status"></span>
+          <button id="article-edit-cancel" style="background:#e9e4d6;color:var(--ink-soft);">Annuler</button>
+          <button id="article-edit-save">Enregistrer</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('article-edit-close').onclick = fermer;
+    document.getElementById('article-edit-cancel').onclick = vueLecture;
+    document.getElementById('article-edit-save').addEventListener('click', async () => {
+      const status = document.getElementById('article-edit-status');
+      const btnSave = document.getElementById('article-edit-save');
+      const dateVal = document.getElementById('article-edit-date').value;
+      const titreVal = document.getElementById('article-edit-titre').value.trim();
+      const texteVal = document.getElementById('article-edit-texte').value.trim();
+      const notesVal = document.getElementById('article-edit-notes').value.trim();
+      status.textContent = 'Enregistrement…';
+      btnSave.disabled = true;
+      try{
+        await gristFetchPatch(cfg, cfg.tPresse || 'Presse', [{
+          id: article.rowId,
+          fields: { date: dateStringVersEpoch(dateVal), titre: titreVal, texte: texteVal, notes: notesVal }
+        }]);
+        fermer();
+        activeTab = 'presse';
+        await chargerDonnees();
+      }catch(e){
+        status.textContent = 'Erreur : ' + e.message;
+        btnSave.disabled = false;
+      }
+    });
+  }
+
+  vueLecture();
+}
+
+function escHtml(s){
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+/* ==================================================================
+   CRÉATION D'UNE NOUVELLE FICHE
+   ================================================================== */
+let formFiche = null;
+let formEditingRowId = null;
+
+// État de pliage du formulaire, conservé à travers les re-rendus déclenchés par
+// l'ajout/la suppression/le déplacement de blocs (pour ne plus tout refermer à chaque action).
+let formGroupesOuverts = new Set();   // ex: 'resume', 'sections', 'questions', 'ressources', 'quiz'
+let formBlocsOuverts = new Set();     // uids des blocs individuels dépliés
+
+let compteurUid = 1;
+function nouvelUid(){ return 'u' + (compteurUid++); }
+
+function avecUid(item){ return { ...item, _uid: nouvelUid() }; }
+
+function ficheFormVide(){
+  return {
+    titre: '',
+    theme: '',
+    date_maj: new Date().toISOString().slice(0,10),
+    resume: '',
+    nature_texte: '',
+    corpus: '',
+    historique_statut: '',
+    sections: [avecUid({ titre:'', contenu:'', notes:'' })],
+    questions: [avecUid({ question:'', reponse:'', notes:'' })],
+    ressources: [avecUid({ titre:'', url:'', notes:'' })],
+    quiz: [avecUid({ question:'', reponse:'', notes:'' })],
+  };
+}
+
+function ouvrirNouvelleFiche(){
+  formFiche = ficheFormVide();
+  formEditingRowId = null;
+  ficheActiveId = null;
+  formGroupesOuverts = new Set(['resume','sections','questions','ressources','quiz']);
+  formBlocsOuverts = new Set(formFiche.sections.concat(formFiche.questions, formFiche.ressources, formFiche.quiz).map(i => i._uid));
+  renderSidebar();
+  renderFormNouvelleFiche();
+}
+
+function ouvrirEditionFiche(fiche){
+  formFiche = {
+    titre: fiche.titre,
+    theme: fiche.theme,
+    date_maj: epochVersDateString(fiche.date_maj) || new Date().toISOString().slice(0,10),
+    resume: fiche.resume || '',
+    nature_texte: fiche.nature_texte || '',
+    corpus: fiche.corpus || '',
+    historique_statut: fiche.historique_statut || '',
+    sections: fiche.sections.length ? fiche.sections.map(s => avecUid({ titre:s.titre, contenu:s.contenu, notes:s.notes||'' })) : [avecUid({titre:'',contenu:'',notes:''})],
+    questions: fiche.questions.length ? fiche.questions.map(q => avecUid({ question:q.question, reponse:q.reponse, notes:q.notes||'' })) : [avecUid({question:'',reponse:'',notes:''})],
+    ressources: fiche.ressources.length ? fiche.ressources.map(r => avecUid({ titre:r.titre, url:r.url, notes:r.notes||'' })) : [avecUid({titre:'',url:'',notes:''})],
+    quiz: fiche.quiz.length ? fiche.quiz.map(z => avecUid({ question:z.question, reponse:z.reponse, notes:z.notes||'' })) : [avecUid({question:'',reponse:'',notes:''})],
+  };
+  formEditingRowId = fiche.rowId;
+  formGroupesOuverts = new Set(['resume']); // Résumé ouvert par défaut, le reste replié en édition
+  formBlocsOuverts = new Set();
+  ['sections','questions','ressources','quiz'].forEach(cle => {
+    if(formFiche[cle].length === 1) formBlocsOuverts.add(formFiche[cle][0]._uid);
+  });
+  renderFormNouvelleFiche();
+}
+
+async function supprimerFiche(fiche){
+  const confirmation = prompt(
+    `Pour confirmer la suppression définitive de la fiche « ${fiche.titre} » (et de toutes ses sections, questions, ressources, articles de presse et questions de quiz), tapez SUPPRIMER ci-dessous :`
+  );
+  if(confirmation !== 'SUPPRIMER') return;
+
+  try{
+    const sectionIds = fiche.sections.map(s => s.rowId).filter(Boolean);
+    const questionIds = fiche.questions.map(q => q.rowId).filter(Boolean);
+    const ressourceIds = fiche.ressources.map(r => r.rowId).filter(Boolean);
+    const quizIds = fiche.quiz.map(z => z.rowId).filter(Boolean);
+    const presseIds = fiche.presse.map(p => p.rowId).filter(Boolean);
+
+    await gristDelete(cfg, cfg.tSections || 'Sections', sectionIds);
+    await gristDelete(cfg, cfg.tQuestions || 'Questions_jury', questionIds);
+    await gristDelete(cfg, cfg.tRessources || 'Ressources', ressourceIds);
+    await gristDelete(cfg, cfg.tQuiz || 'Quiz', quizIds);
+    await gristDelete(cfg, cfg.tPresse || 'Presse', presseIds);
+    await gristDelete(cfg, cfg.tFiches || 'Fiches', [fiche.rowId]);
+
+    ficheActiveId = null;
+    await chargerDonnees();
+    renderMain(null);
+  }catch(e){
+    alert('Erreur lors de la suppression : ' + e.message);
+  }
+}
+
+function renderFormNouvelleFiche(){
+  const main = document.getElementById('main-content');
+  document.getElementById('mobile-fiche-bar-lbl').textContent = formFiche && formFiche.titre ? formFiche.titre : 'Nouvelle fiche';
+  const f = formFiche;
+
+  const estCreation = !formEditingRowId;
+
+  main.innerHTML = `
+    <div class="dossier">
+      <div class="dossier-head">
+        <div class="dossier-eyebrow">${formEditingRowId ? 'Édition' : 'Création'}</div>
+        <h2 class="dossier-title">${formEditingRowId ? 'Modifier la fiche' : 'Nouvelle fiche'}</h2>
+      </div>
+
+      <div class="form-top" style="margin-top:20px;">
+        <div class="form-field full">
+          <label>Titre de la fiche</label>
+          <input type="text" id="f-titre" value="${escHtml(f.titre)}" placeholder="Ex : Présomption de légitime défense">
+        </div>
+        <div class="form-field">
+          <label>Thème</label>
+          <input type="text" id="f-theme" list="themes-existants" value="${escHtml(f.theme)}" placeholder="Ex : Sécurité intérieure">
+          <datalist id="themes-existants">
+            ${[...new Map(fichesData.map(fi => [normaliserTheme(fi.theme), fi.theme])).values()]
+              .sort((a,b)=>a.localeCompare(b,'fr'))
+              .map(t => `<option value="${escHtml(t)}"></option>`).join('')}
+          </datalist>
+        </div>
+        <div class="form-field">
+          <label>Date</label>
+          <input type="date" id="f-date" value="${escHtml(f.date_maj)}">
+        </div>
+        <div class="form-field">
+          <label>Nature du texte</label>
+          <input type="text" id="f-nature" list="natures-existantes" value="${escHtml(f.nature_texte||'')}" placeholder="Ex : Projet de loi">
+          <datalist id="natures-existantes">
+            ${[...new Set(['Proposition de loi','Projet de loi','Loi','Ordonnance','Décret','Arrêté','Circulaire','Instruction','Plan / Stratégie','Jurisprudence','Traité international', ...fichesData.map(fi=>fi.nature_texte).filter(Boolean)])]
+              .sort((a,b)=>a.localeCompare(b,'fr'))
+              .map(t => `<option value="${escHtml(t)}"></option>`).join('')}
+          </datalist>
+        </div>
+        <div class="form-field">
+          <label>Corpus / code de rattachement</label>
+          <input type="text" id="f-corpus" list="corpus-existants" value="${escHtml(f.corpus||'')}" placeholder="Ex : Code de la sécurité intérieure">
+          <datalist id="corpus-existants">
+            ${[...new Set(['Code pénal','Code de procédure pénale','Code de la sécurité intérieure','Code général de la fonction publique','Code général des collectivités territoriales','Constitution','Texte autonome (hors codification)', ...fichesData.map(fi=>fi.corpus).filter(Boolean)])]
+              .sort((a,b)=>a.localeCompare(b,'fr'))
+              .map(t => `<option value="${escHtml(t)}"></option>`).join('')}
+          </datalist>
+        </div>
+        <div class="form-field full">
+          <label>Historique du statut — une étape par ligne, la dernière ligne = statut actuel affiché en avant</label>
+          <textarea id="f-historique" rows="3" placeholder="07/07/2026 — Adopté par l'Assemblée nationale
+12/09/2026 — Adopté par le Sénat">${escHtml(f.historique_statut||'')}</textarea>
+        </div>
+      </div>
+
+      <div class="form-group ${formGroupesOuverts.has('resume') ? 'open' : ''}" id="groupe-resume" data-group="resume">
+        <div class="form-group-head">
+          <span class="form-group-chevron">▸</span>
+          <span class="form-group-title">Résumé</span>
+        </div>
+        <div class="form-group-body">
+          <div class="form-field">
+            <label>Affiché en premier à l'ouverture de la fiche — entourez un mot de <code>**</code> pour le mettre en gras</label>
+            <textarea id="f-resume" rows="3" placeholder="Laissez vide pour un résumé auto-généré à partir des titres de section, ou rédigez le vôtre…">${escHtml(f.resume)}</textarea>
+            <button type="button" id="btn-gen-resume" style="margin-top:8px;background:none;border:1px solid var(--paper-line);border-radius:3px;color:var(--sage);font-size:12px;padding:6px 10px;cursor:pointer;">↻ Générer depuis les titres de section</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group ${formGroupesOuverts.has('sections') ? 'open' : ''}" id="groupe-sections" data-group="sections">
+        <div class="form-group-head">
+          <span class="form-group-chevron">▸</span>
+          <span class="form-group-title">Fiche de cours</span>
+          <span class="form-group-count">${f.sections.length} section(s)</span>
+        </div>
+        <div class="form-group-body">
+          <div id="form-sections">
+            ${f.sections.map((s,i)=>renderFormBloc('sections', i, s, 'Titre de la section', 'Contenu / réponse')).join('')}
+          </div>
+          <button class="form-add-btn" id="add-section">+ Ajouter une section</button>
+        </div>
+      </div>
+
+      <div class="form-group ${formGroupesOuverts.has('questions') ? 'open' : ''}" id="groupe-questions" data-group="questions">
+        <div class="form-group-head">
+          <span class="form-group-chevron">▸</span>
+          <span class="form-group-title">Questions du jury</span>
+          <span class="form-group-count">${f.questions.length} question(s)</span>
+        </div>
+        <div class="form-group-body">
+          <div id="form-questions">
+            ${f.questions.map((q,i)=>renderFormBloc('questions', i, q, 'Question posée par le jury', 'Éléments de réponse')).join('')}
+          </div>
+          <button class="form-add-btn" id="add-question">+ Ajouter une question</button>
+        </div>
+      </div>
+
+      <div class="form-group ${formGroupesOuverts.has('ressources') ? 'open' : ''}" id="groupe-ressources" data-group="ressources">
+        <div class="form-group-head">
+          <span class="form-group-chevron">▸</span>
+          <span class="form-group-title">Ressources</span>
+          <span class="form-group-count">${f.ressources.length} ressource(s)</span>
+        </div>
+        <div class="form-group-body">
+          <div id="form-ressources">
+            ${f.ressources.map((r,i)=>renderFormBloc('ressources', i, r, 'Titre de la ressource', 'Lien (URL)')).join('')}
+          </div>
+          <button class="form-add-btn" id="add-ressource">+ Ajouter une ressource</button>
+        </div>
+      </div>
+
+      <div class="form-group ${formGroupesOuverts.has('quiz') ? 'open' : ''}" id="groupe-quiz" data-group="quiz">
+        <div class="form-group-head">
+          <span class="form-group-chevron">▸</span>
+          <span class="form-group-title">Quiz</span>
+          <span class="form-group-count">${f.quiz.length} question(s)</span>
+        </div>
+        <div class="form-group-body">
+          <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 12px;">Une question simple = une idée du cours à retenir. Évitez les questions à tiroirs.</p>
+          <div id="form-quiz">
+            ${f.quiz.map((z,i)=>renderFormBloc('quiz', i, z, 'Question de mémorisation', 'Réponse / idée à retenir')).join('')}
+          </div>
+          <button class="form-add-btn" id="add-quiz">+ Ajouter une question de quiz</button>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <span class="form-status" id="form-status"></span>
+        <button class="btn-cancel" id="form-cancel">Annuler</button>
+        <button class="btn-save" id="form-save">${formEditingRowId ? 'Mettre à jour dans Grist' : 'Enregistrer dans Grist'}</button>
+      </div>
+    </div>
+  `;
+
+  wireFormEvents();
+}
+
+function renderFormBloc(listKey, idx, item, labelA, labelB){
+  const mapKeys = { sections:['titre','contenu'], questions:['question','reponse'], ressources:['titre','url'], quiz:['question','reponse'] };
+  const [keyA, keyB] = mapKeys[listKey];
+  const apercu = String(item[keyA] || '').trim();
+  const ouvert = formBlocsOuverts.has(item._uid);
+  return `
+    <div class="form-section-block ${ouvert ? 'open' : ''}" data-list="${listKey}" data-idx="${idx}" data-uid="${item._uid}">
+      <div class="form-block-actions">
+        <button data-action="up" title="Monter">↑</button>
+        <button data-action="down" title="Descendre">↓</button>
+        <button data-action="remove" title="Supprimer">✕</button>
+      </div>
+      <div class="form-block-head" data-toggle-bloc>
+        <span class="form-block-chevron">▸</span>
+        <span class="form-block-head-label">N° ${idx+1} — ${apercu ? escHtml(apercu) : '<em style="color:var(--ink-soft);font-style:italic;">(vide)</em>'}</span>
+      </div>
+      <div class="form-block-body">
+        <div class="form-field" style="margin-bottom:10px;">
+          <label>${labelA}</label>
+          <input type="text" data-field="${keyA}" value="${escHtml(item[keyA])}">
+        </div>
+        <div class="form-field" style="margin-bottom:10px;">
+          ${listKey === 'ressources'
+            ? `<label>${labelB}</label><input type="url" data-field="${keyB}" value="${escHtml(item[keyB])}" placeholder="https://…">`
+            : `<label>${labelB} — <code>**mot**</code> pour le gras</label><textarea data-field="${keyB}" rows="3">${escHtml(item[keyB])}</textarea>`}
+        </div>
+        <div class="form-field">
+          <label>Notes / remarques (facultatif — complément affiché à part)</label>
+          <textarea data-field="notes" rows="2">${escHtml(item.notes||'')}</textarea>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function wireFormEvents(){
+  const main = document.getElementById('main-content');
+
+  // pliage des grands groupes (Résumé / Fiche de cours / Questions du jury / Ressources / Quiz)
+  main.querySelectorAll('.form-group-head').forEach(head => {
+    head.addEventListener('click', () => {
+      const groupe = head.closest('.form-group');
+      const cle = groupe.dataset.group;
+      if(formGroupesOuverts.has(cle)) formGroupesOuverts.delete(cle);
+      else formGroupesOuverts.add(cle);
+      groupe.classList.toggle('open');
+    });
+  });
+
+  // pliage de chaque bloc individuel (section, question, ressource ou quiz)
+  main.querySelectorAll('[data-toggle-bloc]').forEach(head => {
+    head.addEventListener('click', () => {
+      const bloc = head.closest('.form-section-block');
+      const uid = bloc.dataset.uid;
+      if(formBlocsOuverts.has(uid)) formBlocsOuverts.delete(uid);
+      else formBlocsOuverts.add(uid);
+      bloc.classList.toggle('open');
+    });
+  });
+
+  // saisie des champs top
+  document.getElementById('f-titre').addEventListener('input', e => formFiche.titre = e.target.value);
+  document.getElementById('f-theme').addEventListener('input', e => formFiche.theme = e.target.value);
+  document.getElementById('f-date').addEventListener('input', e => formFiche.date_maj = e.target.value);
+  document.getElementById('f-resume').addEventListener('input', e => formFiche.resume = e.target.value);
+  document.getElementById('f-nature').addEventListener('input', e => formFiche.nature_texte = e.target.value);
+  document.getElementById('f-corpus').addEventListener('input', e => formFiche.corpus = e.target.value);
+  document.getElementById('f-historique').addEventListener('input', e => formFiche.historique_statut = e.target.value);
+  document.getElementById('btn-gen-resume').addEventListener('click', () => {
+    if(formFiche.resume.trim() && !confirm('Ceci va remplacer le résumé actuel par la liste des titres de section. Continuer ?')) return;
+    formFiche.resume = resumeAutoDepuisTitres(formFiche.sections);
+    document.getElementById('f-resume').value = formFiche.resume;
+  });
+
+  // saisie des blocs
+  main.querySelectorAll('.form-section-block').forEach(block => {
+    const listKey = block.dataset.list;
+    const idx = Number(block.dataset.idx);
+    block.querySelectorAll('[data-field]').forEach(inputEl => {
+      inputEl.addEventListener('input', e => {
+        formFiche[listKey][idx][e.target.dataset.field] = e.target.value;
+        // met à jour l'aperçu du titre dans l'en-tête du bloc sans tout re-rendre
+        const champTitre = (listKey==='questions' || listKey==='quiz') ? 'question' : 'titre';
+        if(e.target.dataset.field === champTitre){
+          const label = block.querySelector('.form-block-head-label');
+          const val = e.target.value.trim();
+          label.innerHTML = `N° ${idx+1} — ${val ? escHtml(val) : '<em style="color:var(--ink-soft);font-style:italic;">(vide)</em>'}`;
+        }
+      });
+    });
+    block.querySelectorAll('[data-action]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const list = formFiche[listKey];
+        const action = btn.dataset.action;
+        if(action === 'remove'){
+          if(list.length <= 1){
+            const videParListe = { sections:{titre:'',contenu:'',notes:''}, questions:{question:'',reponse:'',notes:''}, ressources:{titre:'',url:'',notes:''}, quiz:{question:'',reponse:'',notes:''} };
+            list[idx] = avecUid(videParListe[listKey]);
+            formBlocsOuverts.add(list[idx]._uid);
+          }
+          else list.splice(idx, 1);
+        } else if(action === 'up' && idx > 0){
+          [list[idx-1], list[idx]] = [list[idx], list[idx-1]];
+        } else if(action === 'down' && idx < list.length-1){
+          [list[idx+1], list[idx]] = [list[idx], list[idx+1]];
+        }
+        renderFormNouvelleFiche();
+      });
+    });
+  });
+
+  document.getElementById('add-section').addEventListener('click', () => {
+    const item = avecUid({ titre:'', contenu:'', notes:'' });
+    formFiche.sections.push(item);
+    formBlocsOuverts.add(item._uid);
+    renderFormNouvelleFiche();
+  });
+  document.getElementById('add-question').addEventListener('click', () => {
+    const item = avecUid({ question:'', reponse:'', notes:'' });
+    formFiche.questions.push(item);
+    formBlocsOuverts.add(item._uid);
+    renderFormNouvelleFiche();
+  });
+  document.getElementById('add-ressource').addEventListener('click', () => {
+    const item = avecUid({ titre:'', url:'', notes:'' });
+    formFiche.ressources.push(item);
+    formBlocsOuverts.add(item._uid);
+    renderFormNouvelleFiche();
+  });
+  document.getElementById('add-quiz').addEventListener('click', () => {
+    const item = avecUid({ question:'', reponse:'', notes:'' });
+    formFiche.quiz.push(item);
+    formBlocsOuverts.add(item._uid);
+    renderFormNouvelleFiche();
+  });
+
+  document.getElementById('form-cancel').addEventListener('click', () => {
+    const retourFicheId = formEditingRowId;
+    formFiche = null;
+    formEditingRowId = null;
+    if(retourFicheId){
+      ficheActiveId = retourFicheId;
+      renderMain(fichesData.find(f => f.rowId === retourFicheId));
+    } else {
+      renderMain(null);
+    }
+  });
+
+  document.getElementById('form-save').addEventListener('click', enregistrerNouvelleFiche);
+}
+
+async function enregistrerNouvelleFiche(){
+  const status = document.getElementById('form-status');
+  if(!formFiche.titre.trim()){
+    status.textContent = 'Le titre est obligatoire.';
+    return;
+  }
+  status.textContent = 'Enregistrement en cours…';
+  document.getElementById('form-save').disabled = true;
+
+  try{
+    let ficheId;
+    if(formEditingRowId){
+      // -- Mode édition : on met à jour la fiche, puis on remplace ses sections/questions --
+      ficheId = formEditingRowId;
+      await gristFetchPatch(cfg, cfg.tFiches || 'Fiches', [{
+        id: ficheId,
+        fields: {
+          titre: formFiche.titre.trim(),
+          theme: themeCanonique(formFiche.theme),
+          date_maj: dateStringVersEpoch(formFiche.date_maj),
+          resume: formFiche.resume.trim(),
+          nature_texte: formFiche.nature_texte.trim(),
+          corpus: formFiche.corpus.trim(),
+          historique_statut: formFiche.historique_statut.trim(),
+        }
+      }]);
+
+      const ancienneFiche = fichesData.find(f => f.rowId === ficheId);
+      const anciensSectionIds = (ancienneFiche?.sections || []).map(s => s.rowId).filter(Boolean);
+      const anciensQuestionIds = (ancienneFiche?.questions || []).map(q => q.rowId).filter(Boolean);
+      const anciensRessourceIds = (ancienneFiche?.ressources || []).map(r => r.rowId).filter(Boolean);
+      const anciensQuizIds = (ancienneFiche?.quiz || []).map(z => z.rowId).filter(Boolean);
+      await gristDelete(cfg, cfg.tSections || 'Sections', anciensSectionIds);
+      await gristDelete(cfg, cfg.tQuestions || 'Questions_jury', anciensQuestionIds);
+      await gristDelete(cfg, cfg.tRessources || 'Ressources', anciensRessourceIds);
+      await gristDelete(cfg, cfg.tQuiz || 'Quiz', anciensQuizIds);
+    } else {
+      // -- Mode création --
+      const ficheRecords = await gristWrite(cfg, cfg.tFiches || 'Fiches', [{
+        fields: {
+          titre: formFiche.titre.trim(),
+          theme: themeCanonique(formFiche.theme),
+          date_maj: dateStringVersEpoch(formFiche.date_maj),
+          resume: formFiche.resume.trim(),
+          nature_texte: formFiche.nature_texte.trim(),
+          corpus: formFiche.corpus.trim(),
+          historique_statut: formFiche.historique_statut.trim(),
+        }
+      }]);
+      ficheId = ficheRecords[0].id;
+    }
+
+    const sectionsPropres = formFiche.sections.filter(s => s.titre.trim() || s.contenu.trim() || (s.notes||'').trim());
+    if(sectionsPropres.length){
+      await gristWrite(cfg, cfg.tSections || 'Sections', sectionsPropres.map((s,i) => ({
+        fields: { fiche_id: ficheId, ordre: i, titre_section: s.titre.trim(), contenu: s.contenu.trim(), notes: (s.notes||'').trim() }
+      })));
+    }
+
+    const questionsPropres = formFiche.questions.filter(q => q.question.trim() || q.reponse.trim() || (q.notes||'').trim());
+    if(questionsPropres.length){
+      await gristWrite(cfg, cfg.tQuestions || 'Questions_jury', questionsPropres.map((q,i) => ({
+        fields: { fiche_id: ficheId, ordre: i, question: q.question.trim(), reponse: q.reponse.trim(), notes: (q.notes||'').trim() }
+      })));
+    }
+
+    const ressourcesPropres = formFiche.ressources.filter(r => r.titre.trim() || r.url.trim() || (r.notes||'').trim());
+    if(ressourcesPropres.length){
+      await gristWrite(cfg, cfg.tRessources || 'Ressources', ressourcesPropres.map((r,i) => ({
+        fields: { fiche_id: ficheId, ordre: i, titre: r.titre.trim(), url: r.url.trim(), notes: (r.notes||'').trim() }
+      })));
+    }
+
+    const quizPropres = formFiche.quiz.filter(z => z.question.trim() || z.reponse.trim() || (z.notes||'').trim());
+    if(quizPropres.length){
+      await gristWrite(cfg, cfg.tQuiz || 'Quiz', quizPropres.map((z,i) => ({
+        fields: { fiche_id: ficheId, ordre: i, question: z.question.trim(), reponse: z.reponse.trim(), notes: (z.notes||'').trim() }
+      })));
+    }
+
+    formFiche = null;
+    formEditingRowId = null;
+    ficheActiveId = ficheId;
+    activeTab = 'resume';
+    await chargerDonnees();
+  }catch(e){
+    status.textContent = 'Erreur : ' + e.message;
+    document.getElementById('form-save').disabled = false;
+  }
+}
+
+/* ==================================================================
+   MODAL DE RÉGLAGES
+   ================================================================== */
+/* ==================================================================
+   IMPORT D'UNE FICHE DEPUIS UN JSON (produit par Claude en fin de conversation)
+   ================================================================== */
+function ouvrirImportJSON(){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:600px;">
+      <button class="modal-close" id="import-close">✕</button>
+      <h2>Importer une fiche (JSON)</h2>
+      <p class="hint">Collez ici le JSON produit par Claude à la fin d'une conversation de synthèse. Le contenu sera chargé comme brouillon — vous pourrez encore le relire et l'ajuster avant d'enregistrer dans Grist.</p>
+      <textarea id="import-json" rows="10" style="width:100%;font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:10px;border:1px solid var(--paper-line);border-radius:4px;" placeholder='{"titre": "...", "theme": "...", "sections": [...], ...}'></textarea>
+      <div class="modal-actions">
+        <span class="status" id="import-status"></span>
+        <button id="import-go">Charger dans le formulaire</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
+  document.getElementById('import-close').onclick = () => overlay.remove();
+
+  document.getElementById('import-go').addEventListener('click', () => {
+    const status = document.getElementById('import-status');
+    let data;
+    try{
+      data = JSON.parse(document.getElementById('import-json').value);
+    }catch(e){
+      status.textContent = 'JSON invalide : ' + e.message;
+      return;
+    }
+    if(!data.titre || !String(data.titre).trim()){
+      status.textContent = 'Le JSON doit contenir au minimum un champ "titre".';
+      return;
+    }
+
+    const normaliserListe = (liste, cles) => {
+      if(!Array.isArray(liste) || !liste.length) return [avecUid(Object.fromEntries(cles.map(c=>[c,''])))];
+      return liste.map(item => avecUid(Object.fromEntries(cles.map(c => [c, String(item[c] || '')]))));
+    };
+
+    formFiche = {
+      titre: String(data.titre || '').trim(),
+      theme: String(data.theme || '').trim(),
+      date_maj: new Date().toISOString().slice(0,10),
+      resume: String(data.resume || '').trim(),
+      nature_texte: String(data.nature_texte || '').trim(),
+      corpus: String(data.corpus || '').trim(),
+      historique_statut: String(data.historique_statut || '').trim(),
+      sections: normaliserListe(data.sections, ['titre','contenu','notes']),
+      questions: normaliserListe(data.questions, ['question','reponse','notes']),
+      ressources: normaliserListe(data.ressources, ['titre','url','notes']),
+      quiz: normaliserListe(data.quiz, ['question','reponse','notes']),
+    };
+    formEditingRowId = null;
+    ficheActiveId = null;
+    formGroupesOuverts = new Set(['resume','sections','questions','ressources','quiz']);
+    formBlocsOuverts = new Set();
+    overlay.remove();
+    renderSidebar();
+    renderFormNouvelleFiche();
+  });
+}
+
+function ouvrirReglages(){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <button class="modal-close" id="modal-close">✕</button>
+      <h2>Noms des tables</h2>
+      <p class="hint">Ce widget est connecté au document Grist qui l'héberge — aucune clé API à saisir. Renseignez ici les noms de tables uniquement s'ils diffèrent des noms par défaut.</p>
+
+      <label>Nom des tables (laisser par défaut si non renommées)</label>
+      <input type="text" id="cfg-tf" value="${escHtml(cfg.tFiches || 'Fiches')}" placeholder="Table Fiches" style="margin-bottom:6px;">
+      <input type="text" id="cfg-ts" value="${escHtml(cfg.tSections || 'Sections')}" placeholder="Table Sections" style="margin-bottom:6px;">
+      <input type="text" id="cfg-tq" value="${escHtml(cfg.tQuestions || 'Questions_jury')}" placeholder="Table Questions_jury" style="margin-bottom:6px;">
+      <input type="text" id="cfg-tr" value="${escHtml(cfg.tRessources || 'Ressources')}" placeholder="Table Ressources" style="margin-bottom:6px;">
+      <input type="text" id="cfg-tz" value="${escHtml(cfg.tQuiz || 'Quiz')}" placeholder="Table Quiz" style="margin-bottom:6px;">
+      <input type="text" id="cfg-tp" value="${escHtml(cfg.tPresse || 'Presse')}" placeholder="Table Presse">
+
+      <div class="modal-actions">
+        <span class="status" id="modal-status"></span>
+        <button id="modal-save">Enregistrer et recharger</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
+  document.getElementById('modal-close').onclick = () => overlay.remove();
+  document.getElementById('modal-save').onclick = async () => {
+    cfg = {
+      tFiches: document.getElementById('cfg-tf').value.trim() || 'Fiches',
+      tSections: document.getElementById('cfg-ts').value.trim() || 'Sections',
+      tQuestions: document.getElementById('cfg-tq').value.trim() || 'Questions_jury',
+      tRessources: document.getElementById('cfg-tr').value.trim() || 'Ressources',
+      tQuiz: document.getElementById('cfg-tz').value.trim() || 'Quiz',
+      tPresse: document.getElementById('cfg-tp').value.trim() || 'Presse',
+    };
+    saveCfg(cfg);
+    document.getElementById('modal-status').textContent = 'Rechargement…';
+    await chargerDonnees();
+    overlay.remove();
+  };
+}
+
+document.getElementById('btn-settings').addEventListener('click', ouvrirReglages);
+document.getElementById('btn-refresh').addEventListener('click', chargerDonnees);
+document.getElementById('btn-new').addEventListener('click', ouvrirNouvelleFiche);
+document.getElementById('btn-import').addEventListener('click', ouvrirImportJSON);
+
+/* ==================================================================
+   ERGONOMIE MOBILE : menu d'actions condensé + tiroir de navigation
+   ================================================================== */
+function fermerTiroirSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+}
+function ouvrirTiroirSidebar(){
+  document.getElementById('sidebar').classList.add('open');
+}
+
+document.getElementById('btn-mobile-changer').addEventListener('click', ouvrirTiroirSidebar);
+document.getElementById('btn-sidebar-close').addEventListener('click', fermerTiroirSidebar);
+
+const btnMobileMenu = document.getElementById('btn-mobile-menu');
+const mobileMenu = document.getElementById('mobile-menu');
+btnMobileMenu.addEventListener('click', (e) => {
+  e.stopPropagation();
+  mobileMenu.classList.toggle('open');
+});
+document.addEventListener('click', (e) => {
+  if(!mobileMenu.contains(e.target) && e.target !== btnMobileMenu) mobileMenu.classList.remove('open');
+});
+mobileMenu.querySelectorAll('[data-menu-action]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    mobileMenu.classList.remove('open');
+    const action = btn.dataset.menuAction;
+    if(action === 'import') ouvrirImportJSON();
+    if(action === 'new') ouvrirNouvelleFiche();
+    if(action === 'refresh') chargerDonnees();
+    if(action === 'settings') ouvrirReglages();
+  });
+});
+
+/* ==================================================================
+   INIT
+   ================================================================== */
+chargerDonnees();
+</script>
+</body>
+</html>
