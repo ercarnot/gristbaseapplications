@@ -19,6 +19,7 @@
   --sage: #5c7a6b;
   --ink: #232323;
   --ink-soft: #5a5a54;
+  --ink-faint: #8a8a80;
   --gold: #b98b3e;
 }
 *{box-sizing:border-box;}
@@ -380,6 +381,109 @@ header button:hover{ background:#2a3358; }
   color:var(--ink-soft);
   font-size:13.5px;
   text-align:center;
+}
+
+/* -- Carte mentale : organigramme (nœuds + connecteurs à angle droit) -- */
+.cm-wrap{
+  position:relative;
+}
+.cm-zoom-controls{
+  position:absolute;
+  top:12px; right:12px;
+  z-index:20;
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  background:rgba(255,255,255,.94);
+  border:1px solid var(--paper-line);
+  border-radius:6px;
+  padding:5px;
+  box-shadow:0 3px 10px rgba(0,0,0,.15);
+}
+.cm-zoom-controls button{
+  width:30px; height:30px;
+  border:1px solid var(--paper-line);
+  background:var(--paper);
+  color:var(--ink);
+  font-size:15px;
+  border-radius:4px;
+  cursor:pointer;
+  font-family:'IBM Plex Mono', monospace;
+}
+.cm-zoom-controls button:active{ background:#e6e0cf; }
+.cm-zoom-controls .cm-fit-btn{ font-size:11px; }
+
+#cm-scroll{
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+  max-height:70vh;
+  padding:18px 0;
+}
+#cm-stage{ position:relative; }
+#cm-canvas{
+  position:relative;
+  transform-origin: top left;
+}
+#cm-canvas svg{ position:absolute; top:0; left:0; overflow:visible; }
+
+.cm-node{
+  position:absolute;
+  transform:translateX(-50%);
+  text-align:center;
+  border-radius:6px;
+  padding:8px 10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.cm-node-sujet{
+  background:var(--ink);
+  color:var(--paper);
+  font-family:'Fraunces', serif;
+  font-weight:600;
+  font-size:13px;
+  line-height:1.25;
+  z-index:4;
+}
+.cm-node-branche{
+  background:var(--paper);
+  border:1.5px solid var(--ink);
+  color:var(--ink);
+  font-family:'Fraunces', serif;
+  font-weight:700;
+  font-size:13px;
+  line-height:1.25;
+  z-index:3;
+}
+.cm-node-item{
+  background:var(--paper);
+  border:1px solid var(--ink-soft);
+  color:var(--ink-soft);
+  font-family:'Fraunces', serif;
+  font-weight:600;
+  font-size:12px;
+  line-height:1.25;
+  z-index:2;
+}
+.cm-node-info{
+  background:#efebe0;
+  border:1px solid var(--paper-line);
+  color:var(--ink-faint);
+  font-family:'Source Sans 3', sans-serif;
+  font-size:10.5px;
+  line-height:1.3;
+  z-index:1;
+}
+.cm-node-tension{
+  background:var(--paper);
+  border:1.5px dashed var(--ink-soft);
+  border-radius:999px;
+  color:var(--ink-soft);
+  font-family:'Source Sans 3', sans-serif;
+  font-style:italic;
+  font-size:10.5px;
+  line-height:1.25;
+  z-index:1;
 }
 
 /* -- Presse : liste cliquable, l'article s'ouvre dans une modale -- */
@@ -1176,6 +1280,7 @@ async function chargerDonnees(){
       nature_texte: f.fields.nature_texte || '',
       corpus: f.fields.corpus || '',
       historique_statut: f.fields.historique_statut || '',
+      carte_mentale: f.fields.carte_mentale || '',
       sections: sections
         .filter(s => refMatches(s.fields.fiche_id, f.id))
         .sort((a,b) => (a.fields.ordre||0) - (b.fields.ordre||0))
@@ -1338,6 +1443,7 @@ function renderMain(fiche){
       <div class="tabbar">
         <button data-tab="resume" class="${activeTab==='resume'?'active':''}">Résumé</button>
         <button data-tab="fiche" class="${activeTab==='fiche'?'active':''}">Fiche de cours</button>
+        <button data-tab="carte" class="${activeTab==='carte'?'active':''}">Carte mentale</button>
         <button data-tab="questions" class="${activeTab==='questions'?'active':''}">Questions du jury</button>
         <button data-tab="ressources" class="${activeTab==='ressources'?'active':''}">Ressources</button>
         <button data-tab="presse" class="${activeTab==='presse'?'active':''}">Presse</button>
@@ -1356,6 +1462,18 @@ function renderMain(fiche){
           ${renderToolbar('fiche')}
           ${fiche.sections.length ? fiche.sections.map((s,i)=>renderBloc('fiche', i, s.titre, s.contenu, s.notes)).join('')
             : '<div class="empty-tab">Aucune section pour cette fiche.</div>'}
+        </div>
+        <div class="tab-body-inner ${activeTab==='carte'?'active':''}" data-panel="carte">
+          ${fiche.carte_mentale && fiche.carte_mentale.trim()
+            ? `<div class="cm-wrap">
+                <div class="cm-zoom-controls">
+                  <button id="cm-zoom-in" title="Zoomer">+</button>
+                  <button id="cm-zoom-fit" class="cm-fit-btn" title="Tout afficher">⤢</button>
+                  <button id="cm-zoom-out" title="Dézoomer">−</button>
+                </div>
+                <div id="cm-scroll"><div id="cm-stage"><div id="cm-canvas"></div></div></div>
+              </div>`
+            : '<div class="empty-tab">Pas encore de carte mentale pour cette fiche. Cliquez sur « ✎ Modifier » pour en écrire une (groupe « Carte mentale »).</div>'}
         </div>
         <div class="tab-body-inner ${activeTab==='questions'?'active':''}" data-panel="questions">
           ${renderToolbar('questions')}
@@ -1444,6 +1562,10 @@ function renderMain(fiche){
   main.querySelectorAll('[data-import-open]').forEach(btn => {
     btn.addEventListener('click', () => ouvrirImportSection(btn.dataset.importOpen, fiche));
   });
+
+  if(activeTab === 'carte' && fiche.carte_mentale && fiche.carte_mentale.trim()){
+    dessinerCarteMentale(fiche.titre, parseCarteMentale(fiche.carte_mentale));
+  }
 }
 
 /* ==================================================================
@@ -1806,6 +1928,208 @@ function ouvrirArticlePresseModal(fiche, article){
   vueLecture();
 }
 
+/* ==================================================================
+   CARTE MENTALE — notation légère : "/" branche de 1er niveau,
+   "//" item de 2e niveau, "///" information (1 à 3 par item),
+   "///#Libellé" pour une bulle de tension ("Tension avec : Libellé")
+   ================================================================== */
+function parseCarteMentale(texte){
+  const racine = [];
+  let brancheCourante = null;
+  let itemCourant = null;
+
+  String(texte || '').split('\n').forEach(ligneBrute => {
+    const ligne = ligneBrute.trim();
+    if(!ligne) return;
+    const match = ligne.match(/^(\/+)\s*(.*)$/);
+    if(!match) return;
+    const niveau = match[1].length;
+    const contenu = match[2].trim();
+    if(!contenu) return;
+
+    if(niveau === 1){
+      brancheCourante = { titre: contenu, items: [] };
+      racine.push(brancheCourante);
+      itemCourant = null;
+    } else if(niveau === 2){
+      if(!brancheCourante){ brancheCourante = { titre: '', items: [] }; racine.push(brancheCourante); }
+      itemCourant = { titre: contenu, infos: [] };
+      brancheCourante.items.push(itemCourant);
+    } else {
+      if(!itemCourant){
+        if(!brancheCourante){ brancheCourante = { titre: '', items: [] }; racine.push(brancheCourante); }
+        itemCourant = { titre: '', infos: [] };
+        brancheCourante.items.push(itemCourant);
+      }
+      if(contenu.startsWith('#')){
+        itemCourant.infos.push({ tension: true, cible: contenu.slice(1).trim() });
+      } else {
+        itemCourant.infos.push({ tension: false, texte: contenu });
+      }
+    }
+  });
+
+  return racine;
+}
+
+/* ==================================================================
+   CARTE MENTALE — mise en page organigramme (top-down, connecteurs à
+   angle droit). Les "feuilles" pour le calcul de largeur sont les
+   ITEMS (2e niveau) : les informations (3e niveau) sont empilées en
+   colonne sous leur item, avec une hauteur mesurée réellement après
+   insertion (pas de valeur fixe), pour ne jamais chevaucher un texte
+   sur plusieurs lignes.
+   ================================================================== */
+const CM_LEAF_SLOT = 148;
+const CM_LEVEL_HEIGHT = 95;
+const CM_INFO_GAP = 14;
+const CM_BOX_W = { sujet:170, branche:145, item:135, info:126 };
+const CM_BOX_H = { sujet:64, branche:46, item:42, info:36 };
+
+let cmNaturalWidth = 0, cmNaturalHeight = 0, cmZoom = 1;
+
+function cmConstruireArbre(sujetTexte, branches){
+  return {
+    type: 'sujet', titre: sujetTexte, infos: [],
+    enfants: branches.map(b => ({
+      type: 'branche', titre: b.titre || '(sans titre)', infos: [],
+      enfants: b.items.map(it => ({
+        type: 'item', titre: it.titre || '(sans titre)',
+        infos: it.infos || [],
+        enfants: []
+      }))
+    }))
+  };
+}
+
+function cmAssignerPositions(racine){
+  let compteurFeuilles = 0;
+
+  function assignerX(noeud){
+    if(noeud.enfants.length === 0){
+      noeud.x = compteurFeuilles * CM_LEAF_SLOT + CM_LEAF_SLOT / 2;
+      compteurFeuilles++;
+      return;
+    }
+    noeud.enfants.forEach(assignerX);
+    const xs = noeud.enfants.map(e => e.x);
+    noeud.x = (Math.min(...xs) + Math.max(...xs)) / 2;
+  }
+  assignerX(racine);
+
+  function assignerY(noeud, profondeur){
+    noeud.y = profondeur * CM_LEVEL_HEIGHT + 40;
+    noeud.enfants.forEach(e => assignerY(e, profondeur + 1));
+  }
+  assignerY(racine, 0);
+
+  return { largeur: Math.max(compteurFeuilles * CM_LEAF_SLOT, 260) };
+}
+
+function dessinerCarteMentale(sujetTexte, branches){
+  const canvas = document.getElementById('cm-canvas');
+  if(!canvas) return;
+  const stage = document.getElementById('cm-stage');
+
+  const racine = cmConstruireArbre(sujetTexte, branches);
+  const { largeur } = cmAssignerPositions(racine);
+  cmNaturalWidth = largeur;
+
+  canvas.style.width = largeur + 'px';
+  canvas.style.height = '3000px';
+  canvas.innerHTML = `<svg width="${largeur}" height="3000" viewBox="0 0 ${largeur} 3000"></svg>`;
+  const svg = canvas.querySelector('svg');
+
+  function connecteur(px, py, cx, cy){
+    const midY = (py + cy) / 2;
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M ${px} ${py} L ${px} ${midY} L ${cx} ${midY} L ${cx} ${cy}`);
+    path.setAttribute('stroke', '#3a3a35');
+    path.setAttribute('stroke-width', '1.5');
+    path.setAttribute('fill', 'none');
+    svg.appendChild(path);
+  }
+
+  function ajouterBoite(cls, x, y, w, texteAffiche){
+    const div = document.createElement('div');
+    div.className = 'cm-node ' + cls;
+    div.style.left = x + 'px';
+    div.style.top = y + 'px';
+    div.style.width = w + 'px';
+    div.textContent = texteAffiche;
+    canvas.appendChild(div);
+    return div;
+  }
+
+  function dessinerNoeud(noeud){
+    const w = CM_BOX_W[noeud.type];
+    const div = ajouterBoite('cm-node-' + noeud.type, noeud.x, noeud.y, w, noeud.titre);
+    div.style.minHeight = CM_BOX_H[noeud.type] + 'px';
+    const hReel = div.offsetHeight;
+
+    if(noeud.type === 'item' && noeud.infos.length){
+      let prevX = noeud.x, prevY = noeud.y + hReel;
+      let curY = prevY + CM_INFO_GAP;
+      noeud.infos.forEach(info => {
+        connecteur(prevX, prevY, noeud.x, curY);
+        if(info.tension){
+          const divT = ajouterBoite('cm-node-tension', noeud.x, curY, CM_BOX_W.info, `Tension avec : ${info.cible}`);
+          divT.style.minHeight = CM_BOX_H.info + 'px';
+          prevY = curY + divT.offsetHeight;
+        } else {
+          const divI = ajouterBoite('cm-node-info', noeud.x, curY, CM_BOX_W.info, info.texte);
+          divI.style.minHeight = CM_BOX_H.info + 'px';
+          prevY = curY + divI.offsetHeight;
+        }
+        curY = prevY + CM_INFO_GAP;
+      });
+    }
+
+    noeud.enfants.forEach(enfant => {
+      connecteur(noeud.x, noeud.y + hReel, enfant.x, enfant.y);
+      dessinerNoeud(enfant);
+    });
+  }
+  dessinerNoeud(racine);
+
+  let maxBottom = 0;
+  canvas.querySelectorAll('.cm-node').forEach(d => {
+    maxBottom = Math.max(maxBottom, d.offsetTop + d.offsetHeight);
+  });
+  cmNaturalHeight = maxBottom + 40;
+  canvas.style.height = cmNaturalHeight + 'px';
+  svg.setAttribute('height', cmNaturalHeight);
+  svg.setAttribute('viewBox', `0 0 ${largeur} ${cmNaturalHeight}`);
+
+  cmAjusterZoom();
+
+  const btnIn = document.getElementById('cm-zoom-in');
+  const btnOut = document.getElementById('cm-zoom-out');
+  const btnFit = document.getElementById('cm-zoom-fit');
+  if(btnIn) btnIn.onclick = () => { cmZoom += 0.15; cmAppliquerZoom(); };
+  if(btnOut) btnOut.onclick = () => { cmZoom -= 0.15; cmAppliquerZoom(); };
+  if(btnFit) btnFit.onclick = cmAjusterZoom;
+}
+
+function cmAppliquerZoom(){
+  const canvas = document.getElementById('cm-canvas');
+  const stage = document.getElementById('cm-stage');
+  if(!canvas || !stage) return;
+  cmZoom = Math.max(0.25, Math.min(2, cmZoom));
+  canvas.style.transform = `scale(${cmZoom})`;
+  stage.style.width = (cmNaturalWidth * cmZoom) + 'px';
+  stage.style.height = (cmNaturalHeight * cmZoom) + 'px';
+}
+
+function cmAjusterZoom(){
+  const scrollWrap = document.getElementById('cm-scroll');
+  if(!scrollWrap || cmNaturalWidth === 0) return;
+  cmZoom = Math.min(scrollWrap.clientWidth / cmNaturalWidth, 1);
+  cmAppliquerZoom();
+  scrollWrap.scrollLeft = 0;
+  scrollWrap.scrollTop = 0;
+}
+
 function escHtml(s){
   return String(s)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -1837,6 +2161,7 @@ function ficheFormVide(){
     nature_texte: '',
     corpus: '',
     historique_statut: '',
+    carte_mentale: '',
     sections: [avecUid({ titre:'', contenu:'', notes:'' })],
     questions: [avecUid({ question:'', reponse:'', notes:'' })],
     ressources: [avecUid({ titre:'', url:'', notes:'' })],
@@ -1863,6 +2188,7 @@ function ouvrirEditionFiche(fiche){
     nature_texte: fiche.nature_texte || '',
     corpus: fiche.corpus || '',
     historique_statut: fiche.historique_statut || '',
+    carte_mentale: fiche.carte_mentale || '',
     sections: fiche.sections.length ? fiche.sections.map(s => avecUid({ titre:s.titre, contenu:s.contenu, notes:s.notes||'' })) : [avecUid({titre:'',contenu:'',notes:''})],
     questions: fiche.questions.length ? fiche.questions.map(q => avecUid({ question:q.question, reponse:q.reponse, notes:q.notes||'' })) : [avecUid({question:'',reponse:'',notes:''})],
     ressources: fiche.ressources.length ? fiche.ressources.map(r => avecUid({ titre:r.titre, url:r.url, notes:r.notes||'' })) : [avecUid({titre:'',url:'',notes:''})],
@@ -1972,6 +2298,26 @@ function renderFormNouvelleFiche(){
             <label>Affiché en premier à l'ouverture de la fiche — entourez un mot de <code>**</code> pour le mettre en gras</label>
             <textarea id="f-resume" rows="3" placeholder="Laissez vide pour un résumé auto-généré à partir des titres de section, ou rédigez le vôtre…">${escHtml(f.resume)}</textarea>
             <button type="button" id="btn-gen-resume" style="margin-top:8px;background:none;border:1px solid var(--paper-line);border-radius:3px;color:var(--sage);font-size:12px;padding:6px 10px;cursor:pointer;">↻ Générer depuis les titres de section</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group ${formGroupesOuverts.has('carte_mentale') ? 'open' : ''}" id="groupe-carte-mentale" data-group="carte_mentale">
+        <div class="form-group-head">
+          <span class="form-group-chevron">▸</span>
+          <span class="form-group-title">Carte mentale</span>
+        </div>
+        <div class="form-group-body">
+          <div class="form-field">
+            <label>Une ligne par élément — <code>/</code> branche de 1er niveau, <code>//</code> item de 2e niveau, <code>///</code> information (1 à 3 par item)</label>
+            <textarea id="f-carte-mentale" rows="8" style="font-family:'IBM Plex Mono', monospace;font-size:12.5px;" placeholder="/Problématique
+//Réguler l'accès des réseaux sociaux aux moins de 15 ans
+/Enjeux
+//Sanitaire
+///Priorité du gouvernement
+///Enferme les jeunes dans des bulles informationnelles
+//Éducatif
+///Action de long terme, peu investie">${escHtml(f.carte_mentale||'')}</textarea>
           </div>
         </div>
       </div>
@@ -2112,6 +2458,7 @@ function wireFormEvents(){
   document.getElementById('f-nature').addEventListener('input', e => formFiche.nature_texte = e.target.value);
   document.getElementById('f-corpus').addEventListener('input', e => formFiche.corpus = e.target.value);
   document.getElementById('f-historique').addEventListener('input', e => formFiche.historique_statut = e.target.value);
+  document.getElementById('f-carte-mentale').addEventListener('input', e => formFiche.carte_mentale = e.target.value);
   document.getElementById('btn-gen-resume').addEventListener('click', () => {
     if(formFiche.resume.trim() && !confirm('Ceci va remplacer le résumé actuel par la liste des titres de section. Continuer ?')) return;
     formFiche.resume = resumeAutoDepuisTitres(formFiche.sections);
@@ -2219,6 +2566,7 @@ async function enregistrerNouvelleFiche(){
           nature_texte: formFiche.nature_texte.trim(),
           corpus: formFiche.corpus.trim(),
           historique_statut: formFiche.historique_statut.trim(),
+          carte_mentale: formFiche.carte_mentale.trim(),
         }
       }]);
 
@@ -2242,6 +2590,7 @@ async function enregistrerNouvelleFiche(){
           nature_texte: formFiche.nature_texte.trim(),
           corpus: formFiche.corpus.trim(),
           historique_statut: formFiche.historique_statut.trim(),
+          carte_mentale: formFiche.carte_mentale.trim(),
         }
       }]);
       ficheId = ficheRecords[0].id;
