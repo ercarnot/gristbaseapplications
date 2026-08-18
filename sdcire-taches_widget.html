@@ -199,7 +199,7 @@ const GristAPI = {
       Dossiers:[
         {id:"Nom", fields:{label:"Nom", type:"Text"}},
         {id:"Categorie", fields:{label:"Categorie", type:"Choice",
-          widgetOptions: JSON.stringify({choices:["Déplacements Préfet","Communication de crise","Relation presse","Production éditoriale","Grands dossiers"]})}},
+          widgetOptions: JSON.stringify({choices:["Déplacements Préfet","Communication de crise","Relation presse","Production éditoriale","Grands dossiers","Représentation de l'État","Veille média"]})}},
         {id:"Statut", fields:{label:"Statut", type:"Choice",
           widgetOptions: JSON.stringify({choices:["Actif","Clos"]})}}
       ],
@@ -207,13 +207,13 @@ const GristAPI = {
         {id:"Nom", fields:{label:"Nom", type:"Text"}},
         {id:"Description", fields:{label:"Description", type:"Text"}},
         {id:"CategorieDefaut", fields:{label:"CategorieDefaut", type:"Choice",
-          widgetOptions: JSON.stringify({choices:["Déplacements Préfet","Communication de crise","Relation presse","Production éditoriale","Grands dossiers"]})}}
+          widgetOptions: JSON.stringify({choices:["Déplacements Préfet","Communication de crise","Relation presse","Production éditoriale","Grands dossiers","Représentation de l'État","Veille média"]})}}
       ],
       Projets:[
         {id:"Nom", fields:{label:"Nom", type:"Text"}},
         {id:"Modele", fields:{label:"Modele", type:"Ref:Modeles"}},
         {id:"Categorie", fields:{label:"Categorie", type:"Choice",
-          widgetOptions: JSON.stringify({choices:["Déplacements Préfet","Communication de crise","Relation presse","Production éditoriale","Grands dossiers"]})}},
+          widgetOptions: JSON.stringify({choices:["Déplacements Préfet","Communication de crise","Relation presse","Production éditoriale","Grands dossiers","Représentation de l'État","Veille média"]})}},
         {id:"DateReference", fields:{label:"DateReference", type:"Date"}},
         {id:"Agent", fields:{label:"Agent", type:"Choice",
           widgetOptions: JSON.stringify({choices:["Frank HAILI","GRAC Amélie","ROMA Élodie","PICHARD-MISTRAL Clémentine"]})}},
@@ -458,7 +458,7 @@ const AGENT_EMAILS = {
   "PICHARD-MISTRAL Clémentine":"clementine.pichard-mistral@alpes-de-haute-provence.gouv.fr"
 };
 function agentInitiales(agent){ return AGENT_INITIALES[agent] || agent || ""; }
-const DOSSIER_CATEGORIES = ["Déplacements Préfet","Communication de crise","Relation presse","Production éditoriale","Grands dossiers"];
+const DOSSIER_CATEGORIES = ["Déplacements Préfet","Communication de crise","Relation presse","Production éditoriale","Grands dossiers","Représentation de l'État","Veille média"];
 
 /* =========================================================
    NAVIGATION
@@ -626,10 +626,23 @@ function renderTaches(){
   });
 
   const today = todayISO();
+  const projetFiltre = tacheFilters.projet ? STATE.projets.find(p=>p.id===Number(tacheFilters.projet)) : null;
 
   view.innerHTML = `
     <h1>Tâches</h1>
     <p class="sub">Saisie, affectation et suivi</p>
+
+    ${projetFiltre ? `
+    <div class="card no-print" style="display:flex;justify-content:space-between;align-items:center;background:#eef2fd;border-color:var(--bleu-accent);">
+      <div>
+        <strong>Projet : ${projetFiltre.fields.Nom}</strong>
+        <span class="muted"> — ${projetFiltre.fields.Statut||""}${projetFiltre.fields.Categorie ? ' · '+projetFiltre.fields.Categorie : ''}</span>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn small secondary" onclick="openEditProjetModal(${projetFiltre.id})">✎ Modifier le projet</button>
+        <button class="btn small ghost" onclick="tacheFilters.projet='';renderTaches();">✕ Retirer le filtre</button>
+      </div>
+    </div>` : ''}
 
     <div class="card no-print">
       <div class="row" style="align-items:flex-end;">
@@ -716,6 +729,7 @@ function openTacheModal(id){
         <div class="col">
           <label>Projet ${f.Projet ? '<span class="muted">(généré automatiquement)</span>' : ''}</label>
           <select id="mProjet"><option value="">— aucun —</option>${STATE.projets.map(p=>`<option value="${p.id}" ${f.Projet===p.id?'selected':''}>${p.fields.Nom}</option>`).join("")}</select>
+          ${f.Projet ? `<button type="button" class="btn small ghost" style="margin-top:6px;" onclick="this.closest('.modal-bg').remove(); openEditProjetModal(${f.Projet});">✎ Modifier le projet</button>` : ''}
         </div>
       </div>
       <div class="row">
