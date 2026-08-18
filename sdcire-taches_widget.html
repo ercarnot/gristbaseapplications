@@ -237,7 +237,8 @@ const GristAPI = {
         {id:"DateCreation", fields:{label:"DateCreation", type:"Date"}},
         {id:"DateCloture", fields:{label:"DateCloture", type:"Date"}},
         {id:"TempsEstime", fields:{label:"TempsEstime", type:"Numeric"}},
-        {id:"Tags", fields:{label:"Tags", type:"Text"}}
+        {id:"Tags", fields:{label:"Tags", type:"Text"}},
+        {id:"Ordre", fields:{label:"Ordre", type:"Int"}}
       ],
       ModeleTaches:[
         {id:"Modele", fields:{label:"Modele", type:"Ref:Modeles"}},
@@ -618,15 +619,27 @@ function renderTaches(){
   if(tacheFilters.projet) list = list.filter(t=>String(t.fields.Projet)===tacheFilters.projet);
   if(tacheFilters.statut) list = list.filter(t=>t.fields.Statut===tacheFilters.statut);
   const PRIORITE_ORDER = {"Urgente":0, "Haute":1, "Normale":2};
-  list.sort((a,b)=>{
-    const pa = PRIORITE_ORDER[a.fields.Priorite] ?? 2;
-    const pb = PRIORITE_ORDER[b.fields.Priorite] ?? 2;
-    if(pa !== pb) return pa - pb;
-    return (a.fields.DateEcheance||9e12) - (b.fields.DateEcheance||9e12);
-  });
+  const projetFiltre = tacheFilters.projet ? STATE.projets.find(p=>p.id===Number(tacheFilters.projet)) : null;
+
+  if(projetFiltre){
+    // Vue projet : ordre manuel (glisser via flèches), fallback sur l'échéance si pas encore d'ordre défini
+    list.sort((a,b)=>{
+      const oa = a.fields.Ordre; const ob = b.fields.Ordre;
+      if(oa!=null && ob!=null && oa!==ob) return oa - ob;
+      if(oa!=null && ob==null) return -1;
+      if(oa==null && ob!=null) return 1;
+      return (a.fields.DateEcheance||9e12) - (b.fields.DateEcheance||9e12);
+    });
+  } else {
+    list.sort((a,b)=>{
+      const pa = PRIORITE_ORDER[a.fields.Priorite] ?? 2;
+      const pb = PRIORITE_ORDER[b.fields.Priorite] ?? 2;
+      if(pa !== pb) return pa - pb;
+      return (a.fields.DateEcheance||9e12) - (b.fields.DateEcheance||9e12);
+    });
+  }
 
   const today = todayISO();
-  const projetFiltre = tacheFilters.projet ? STATE.projets.find(p=>p.id===Number(tacheFilters.projet)) : null;
 
   view.innerHTML = `
     <h1>Tâches</h1>
@@ -671,11 +684,15 @@ function renderTaches(){
     <div class="card">
       ${list.length===0 ? '<p class="empty">Aucune tâche pour ces filtres.</p>' : `
       <table>
-        <tr><th>Titre</th><th>Projet</th><th>Dossier</th><th>Agent</th><th>Priorité</th><th>Échéance</th><th>Statut</th><th></th></tr>
-        ${list.map(t=>{
+        <tr>${projetFiltre?'<th></th>':''}<th>Titre</th><th>Projet</th><th>Dossier</th><th>Agent</th><th>Priorité</th><th>Échéance</th><th>Statut</th><th></th></tr>
+        ${list.map((t,i)=>{
           const ech = fromGristDate(t.fields.DateEcheance);
           const late = ech && ech<today && !["Terminé","Annulé"].includes(t.fields.Statut);
           return `<tr class="${late?'overdue':''}">
+            ${projetFiltre ? `<td style="white-space:nowrap;">
+              <button class="btn small ghost" style="padding:2px 6px;" ${i===0?'disabled':''} onclick="moveTacheOrdre(${t.id},'up')">↑</button>
+              <button class="btn small ghost" style="padding:2px 6px;" ${i===list.length-1?'disabled':''} onclick="moveTacheOrdre(${t.id},'down')">↓</button>
+            </td>` : ''}
             <td>${t.fields.Titre||""}</td>
             <td>${t.fields.Projet ? `<span class="muted">${projetNom(t.fields.Projet)}</span>` : "—"}</td>
             <td>${dossierNom(t.fields.Dossier)}</td>
@@ -696,6 +713,34 @@ function renderTaches(){
   document.getElementById('fDossier').onchange = e=>{ tacheFilters.dossier=e.target.value; renderTaches(); };
   document.getElementById('fProjet').onchange = e=>{ tacheFilters.projet=e.target.value; renderTaches(); };
   document.getElementById('fStatut').onchange = e=>{ tacheFilters.statut=e.target.value; renderTaches(); };
+}
+
+async function moveTacheOrdre(id, direction){
+  if(!tacheFilters.projet) return;
+  const projetId = Number(tacheFilters.projet);
+  let list = STATE.taches.filter(t=>t.fields.Projet===projetId);
+  list.sort((a,b)=>{
+    const oa = a.fields.Ordre; const ob = b.fields.Ordre;
+    if(oa!=null && ob!=null && oa!==ob) return oa - ob;
+    if(oa!=null && ob==null) return -1;
+    if(oa==null && ob!=null) return 1;
+    return (a.fields.DateEcheance||9e12) - (b.fields.DateEcheance||9e12);
+  });
+  // Normaliser les valeurs d'Ordre (0,1,2...) au passage, pour les tâches qui n'en avaient pas encore
+  list.forEach((t,i)=>{ t.fields.Ordre = i; });
+
+  const idx = list.findIndex(t=>t.id===id);
+  const swapIdx = direction==='up' ? idx-1 : idx+1;
+  if(idx<0 || swapIdx<0 || swapIdx>=list.length) return;
+
+  const a = list[idx], b = list[swapIdx];
+  const tmp = a.fields.Ordre; a.fields.Ordre = b.fields.Ordre; b.fields.Ordre = tmp;
+
+  try{
+    await Promise.all(list.map(t=>GristAPI.updateRecord("Taches", t.id, {Ordre: t.fields.Ordre})));
+    await refreshAll();
+    renderTaches();
+  }catch(e){ toast(e.message, true); }
 }
 
 async function deleteTacheQuick(id){
@@ -805,6 +850,10 @@ function openTacheModal(id){
         toast("Tâche mise à jour.");
       } else {
         fields.DateCreation = toGristDate(todayISO());
+        if(fields.Projet){
+          const soeurs = STATE.taches.filter(x=>x.fields.Projet===fields.Projet);
+          fields.Ordre = soeurs.length ? Math.max(...soeurs.map(x=>x.fields.Ordre??-1)) + 1 : 0;
+        }
         await GristAPI.addRecord("Taches", fields);
         toast("Tâche créée.");
       }
@@ -1360,6 +1409,7 @@ function openNewProjetModal(){
         Nom: nom, Modele: modeleId, Categorie: categorie, DateReference: toGristDate(dateRef), Agent: agent, Statut: "Actif"
       });
       const refSec = toGristDate(dateRef);
+      let ordreCpt = 0;
       for(const b of bp){
         await GristAPI.addRecord("Taches", {
           Titre: b.fields.Titre,
@@ -1369,7 +1419,8 @@ function openNewProjetModal(){
           Priorite: b.fields.Priorite || "Normale",
           DateEcheance: refSec + (b.fields.OffsetJours||0)*86400,
           DateCreation: toGristDate(todayISO()),
-          Tags: ""
+          Tags: "",
+          Ordre: ordreCpt++
         });
       }
       await refreshAll();
