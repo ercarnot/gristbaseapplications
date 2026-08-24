@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SDCIRE — Pilotage des tâches</title>
+<title>Pilotage des tâches</title>
 <script src="https://grist.numerique.gouv.fr/grist-plugin-api.js"></script>
 <style>
   :root{
@@ -127,7 +127,7 @@
 
 <div id="shell">
   <nav id="side">
-    <div class="brand">SDCIRE<small>Pilotage des tâches</small></div>
+    <div class="brand">Service<small>Pilotage des tâches</small></div>
     <button class="tab" data-tab="dashboard">Tableau de bord</button>
     <button class="tab" data-tab="taches">Tâches</button>
     <button class="tab" data-tab="projets">Projets</button>
@@ -137,6 +137,7 @@
     <button class="tab" data-tab="film">Film de l'année</button>
     <button class="tab" data-tab="bilansthem">Bilans thématiques</button>
     <button class="tab" data-tab="rapport">Rapport annuel</button>
+    <button class="tab" data-tab="parametres">Paramètres</button>
     <div class="spacer"></div>
     <div class="gear" id="connStatus">● connexion au widget…</div>
     <div class="gear" id="openConfig">⚙ Provisionner les tables Grist</div>
@@ -196,27 +197,36 @@ const GristAPI = {
 
   async createMissingTables(){
     const schema = {
+      Parametres:[
+        {id:"NomService", fields:{label:"NomService", type:"Text"}}
+      ],
+      Agents:[
+        {id:"Nom", fields:{label:"Nom", type:"Text"}},
+        {id:"Initiales", fields:{label:"Initiales", type:"Text"}},
+        {id:"Email", fields:{label:"Email", type:"Text"}},
+        {id:"DestinataireTo", fields:{label:"DestinataireTo", type:"Bool"}},
+        {id:"DestinataireCc", fields:{label:"DestinataireCc", type:"Bool"}}
+      ],
+      Categories:[
+        {id:"Nom", fields:{label:"Nom", type:"Text"}}
+      ],
       Dossiers:[
         {id:"Nom", fields:{label:"Nom", type:"Text"}},
-        {id:"Categorie", fields:{label:"Categorie", type:"Choice",
-          widgetOptions: JSON.stringify({choices:["Déplacements Préfet","Communication de crise","Relation presse","Production éditoriale","Grands dossiers","Représentation de l'État","Veille média"]})}},
+        {id:"Categorie", fields:{label:"Categorie", type:"Text"}},
         {id:"Statut", fields:{label:"Statut", type:"Choice",
           widgetOptions: JSON.stringify({choices:["Actif","Clos"]})}}
       ],
       Modeles:[
         {id:"Nom", fields:{label:"Nom", type:"Text"}},
         {id:"Description", fields:{label:"Description", type:"Text"}},
-        {id:"CategorieDefaut", fields:{label:"CategorieDefaut", type:"Choice",
-          widgetOptions: JSON.stringify({choices:["Déplacements Préfet","Communication de crise","Relation presse","Production éditoriale","Grands dossiers","Représentation de l'État","Veille média"]})}}
+        {id:"CategorieDefaut", fields:{label:"CategorieDefaut", type:"Text"}}
       ],
       Projets:[
         {id:"Nom", fields:{label:"Nom", type:"Text"}},
         {id:"Modele", fields:{label:"Modele", type:"Ref:Modeles"}},
-        {id:"Categorie", fields:{label:"Categorie", type:"Choice",
-          widgetOptions: JSON.stringify({choices:["Déplacements Préfet","Communication de crise","Relation presse","Production éditoriale","Grands dossiers","Représentation de l'État","Veille média"]})}},
+        {id:"Categorie", fields:{label:"Categorie", type:"Text"}},
         {id:"DateReference", fields:{label:"DateReference", type:"Date"}},
-        {id:"Agent", fields:{label:"Agent", type:"Choice",
-          widgetOptions: JSON.stringify({choices:["Frank HAILI","GRAC Amélie","ROMA Élodie","PICHARD-MISTRAL Clémentine"]})}},
+        {id:"Agent", fields:{label:"Agent", type:"Text"}},
         {id:"Dossier", fields:{label:"Dossier", type:"Ref:Dossiers"}},
         {id:"Statut", fields:{label:"Statut", type:"Choice",
           widgetOptions: JSON.stringify({choices:["Actif","Clos"]})}},
@@ -227,8 +237,7 @@ const GristAPI = {
         {id:"Titre", fields:{label:"Titre", type:"Text"}},
         {id:"Dossier", fields:{label:"Dossier", type:"Ref:Dossiers"}},
         {id:"Projet", fields:{label:"Projet", type:"Ref:Projets"}},
-        {id:"Agent", fields:{label:"Agent", type:"Choice",
-          widgetOptions: JSON.stringify({choices:["Frank HAILI","GRAC Amélie","ROMA Élodie","PICHARD-MISTRAL Clémentine"]})}},
+        {id:"Agent", fields:{label:"Agent", type:"Text"}},
         {id:"Statut", fields:{label:"Statut", type:"Choice",
           widgetOptions: JSON.stringify({choices:["À faire","En cours","En attente","Terminé","Annulé"]})}},
         {id:"Priorite", fields:{label:"Priorite", type:"Choice",
@@ -244,8 +253,7 @@ const GristAPI = {
         {id:"Modele", fields:{label:"Modele", type:"Ref:Modeles"}},
         {id:"Titre", fields:{label:"Titre", type:"Text"}},
         {id:"OffsetJours", fields:{label:"OffsetJours", type:"Int"}},
-        {id:"Agent", fields:{label:"Agent", type:"Choice",
-          widgetOptions: JSON.stringify({choices:["","Frank HAILI","GRAC Amélie","ROMA Élodie","PICHARD-MISTRAL Clémentine"]})}},
+        {id:"Agent", fields:{label:"Agent", type:"Text"}},
         {id:"Priorite", fields:{label:"Priorite", type:"Choice",
           widgetOptions: JSON.stringify({choices:["Normale","Haute","Urgente"]})}},
         {id:"Ordre", fields:{label:"Ordre", type:"Int"}}
@@ -318,12 +326,6 @@ const GristAPI = {
     }
     if(colActions.length) await grist.docApi.applyUserActions(colActions);
 
-    try{
-      const catCol = schema.Dossiers.find(c=>c.id==="Categorie");
-      await grist.docApi.applyUserActions([['ModifyColumn', 'Dossiers', 'Categorie', {widgetOptions: catCol.fields.widgetOptions}]]);
-      report.push("Catégories de dossier mises à jour.");
-    }catch(e){ /* non bloquant */ }
-
     // Amorcer des indicateurs par défaut si la table est vide
     try{
       const existingIndics = await this.getRecords("Indicateurs");
@@ -331,12 +333,11 @@ const GristAPI = {
         const defaults = [
           {Label:"Communiqués de presse", Cible:"Taches", MotCle:"communiqué", Ordre:1},
           {Label:"Demandes presse", Cible:"Taches", MotCle:"demande presse", Ordre:2},
-          {Label:"Déplacements préfet", Cible:"Projets", MotCle:"Déplacements Préfet", Ordre:3},
-          {Label:"Discours / EDL", Cible:"Taches", MotCle:"discours", Ordre:4},
-          {Label:"Interviews", Cible:"Taches", MotCle:"interview", Ordre:5}
+          {Label:"Discours / EDL", Cible:"Taches", MotCle:"discours", Ordre:3},
+          {Label:"Interviews", Cible:"Taches", MotCle:"interview", Ordre:4}
         ];
         for(const d of defaults) await this.addRecord("Indicateurs", d);
-        report.push("5 indicateurs par défaut créés (modifiables dans le rapport annuel).");
+        report.push("4 indicateurs par défaut créés (modifiables dans le rapport annuel).");
       }
     }catch(e){ /* non bloquant */ }
 
@@ -388,10 +389,10 @@ function todayISO(){ return new Date().toISOString().slice(0,10); }
 /* =========================================================
    ETAT LOCAL (cache)
 ========================================================= */
-const STATE = { dossiers:[], taches:[], notes:[], modeles:[], modeleTaches:[], projets:[], indicateurs:[], statsManuelles:[], bilansThematiques:[], contacts:[], loaded:false };
+const STATE = { dossiers:[], taches:[], notes:[], modeles:[], modeleTaches:[], projets:[], indicateurs:[], statsManuelles:[], bilansThematiques:[], contacts:[], agents:[], categories:[], parametres:[], loaded:false };
 
 async function refreshAll(){
-  const [dossiers, taches, notes, modeles, modeleTaches, projets, indicateurs, statsManuelles, bilansThematiques, contacts] = await Promise.all([
+  const [dossiers, taches, notes, modeles, modeleTaches, projets, indicateurs, statsManuelles, bilansThematiques, contacts, agents, categories, parametres] = await Promise.all([
     GristAPI.getRecords("Dossiers"),
     GristAPI.getRecords("Taches"),
     GristAPI.getRecords("JournalNotes"),
@@ -401,7 +402,10 @@ async function refreshAll(){
     GristAPI.getRecords("Indicateurs"),
     GristAPI.getRecords("StatsManuelles"),
     GristAPI.getRecords("BilansThematiques"),
-    GristAPI.getRecords("Contacts")
+    GristAPI.getRecords("Contacts"),
+    GristAPI.getRecords("Agents"),
+    GristAPI.getRecords("Categories"),
+    GristAPI.getRecords("Parametres")
   ]);
   STATE.dossiers = dossiers;
   STATE.taches = taches;
@@ -413,8 +417,22 @@ async function refreshAll(){
   STATE.statsManuelles = statsManuelles;
   STATE.bilansThematiques = bilansThematiques;
   STATE.contacts = contacts;
+  STATE.agents = agents;
+  STATE.categories = categories;
+  STATE.parametres = parametres;
   STATE.loaded = true;
+
+  // Repeupler les listes dynamiques (agents/catégories/nom du service) à partir de Grist
+  AGENTS = agents.map(a=>a.fields.Nom).filter(Boolean);
+  AGENT_INITIALES = {}; agents.forEach(a=>{ if(a.fields.Nom) AGENT_INITIALES[a.fields.Nom] = a.fields.Initiales || ""; });
+  AGENT_EMAILS = {}; agents.forEach(a=>{ if(a.fields.Nom && a.fields.Email) AGENT_EMAILS[a.fields.Nom] = a.fields.Email; });
+  DOSSIER_CATEGORIES = categories.map(c=>c.fields.Nom).filter(Boolean);
+  NOM_SERVICE = (parametres[0] && parametres[0].fields.NomService) || "Service";
+  document.title = `${NOM_SERVICE} — Pilotage des tâches`;
+  const brandEl = document.querySelector('#side .brand');
+  if(brandEl) brandEl.innerHTML = `${xmlEscapeHtml(NOM_SERVICE)}<small>Pilotage des tâches</small>`;
 }
+function xmlEscapeHtml(s){ return String(s||"").replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function contactsForProjet(projetId){
   return STATE.contacts.filter(c=>c.fields.Projet===projetId);
 }
@@ -450,16 +468,12 @@ const STATUTS = ["À faire","En cours","En attente","Terminé","Annulé"];
 const STATUT_CLASS = {"À faire":"st-afaire","En cours":"st-encours","En attente":"st-attente","Terminé":"st-termine","Annulé":"st-annule"};
 const PRIORITE_CLASS = {"Normale":"pr-normale","Haute":"pr-haute","Urgente":"pr-urgente"};
 const PRIORITE_ORDER = {"Urgente":0, "Haute":1, "Normale":2};
-const AGENTS = ["Frank HAILI","GRAC Amélie","ROMA Élodie","PICHARD-MISTRAL Clémentine"];
-const AGENT_INITIALES = {"Frank HAILI":"FH","GRAC Amélie":"AG","ROMA Élodie":"ER","PICHARD-MISTRAL Clémentine":"CPM"};
-const AGENT_EMAILS = {
-  "Frank HAILI":"frank.haili@alpes-de-haute-provence.gouv.fr",
-  "GRAC Amélie":"amelie.grac@alpes-de-haute-provence.gouv.fr",
-  "ROMA Élodie":"elodie.roma@alpes-de-haute-provence.gouv.fr",
-  "PICHARD-MISTRAL Clémentine":"clementine.pichard-mistral@alpes-de-haute-provence.gouv.fr"
-};
+let AGENTS = [];
+let AGENT_INITIALES = {};
+let AGENT_EMAILS = {};
 function agentInitiales(agent){ return AGENT_INITIALES[agent] || agent || ""; }
-const DOSSIER_CATEGORIES = ["Déplacements Préfet","Communication de crise","Relation presse","Production éditoriale","Grands dossiers","Représentation de l'État","Veille média"];
+let DOSSIER_CATEGORIES = [];
+let NOM_SERVICE = "Service";
 
 /* =========================================================
    NAVIGATION
@@ -490,6 +504,7 @@ async function render(){
   else if(currentTab==="film") renderFilmAnnee();
   else if(currentTab==="bilansthem") renderBilansThematiques();
   else if(currentTab==="rapport") renderRapport();
+  else if(currentTab==="parametres") renderParametres();
 }
 
 /* =========================================================
@@ -970,7 +985,7 @@ function renderModeles(){
   const view = document.getElementById('view');
   view.innerHTML = `
     <h1>Modèles</h1>
-    <p class="sub">Ensembles de tâches réutilisables pour vos événements récurrents (déplacements préfet, journées du patrimoine...)</p>
+    <p class="sub">Ensembles de tâches réutilisables pour vos événements récurrents (déplacements officiels, journées thématiques...)</p>
     <div class="card no-print">
       <button class="btn" onclick="openModeleEditModal()">+ Nouveau modèle</button>
     </div>
@@ -1003,7 +1018,7 @@ function openModeleEditModal(id){
     <div class="modal">
       <span class="close" onclick="this.closest('.modal-bg').remove()">✕</span>
       <h2>${m ? "Modifier le modèle" : "Nouveau modèle"}</h2>
-      <label>Nom</label><input type="text" id="moNom" value="${f.Nom||""}" placeholder="ex. Déplacement préfet">
+      <label>Nom</label><input type="text" id="moNom" value="${f.Nom||""}" placeholder="ex. Déplacement officiel">
       <label>Description</label><textarea id="moDesc">${f.Description||""}</textarea>
       <label>Catégorie par défaut</label>
       <select id="moCategorie">${DOSSIER_CATEGORIES.map(c=>`<option ${f.CategorieDefaut===c?'selected':''}>${c}</option>`).join("")}</select>
@@ -1147,7 +1162,7 @@ function renderProjets(){
               <strong>${p.fields.Nom}</strong>
               <div class="muted" style="font-size:.82rem;margin-top:2px;">
                 ${fmtDateHuman(fromGristDate(p.fields.DateReference))} · ${p.fields.Agent||""}
-                ${p.fields.Modele ? ' · modèle : '+modeleNom(p.fields.Modele) : ''} · <span class="chip" style="background:var(--bleu-nuit-2)">${p.fields.Categorie||"Déplacements Préfet"}</span>
+                ${p.fields.Modele ? ' · modèle : '+modeleNom(p.fields.Modele) : ''} · <span class="chip" style="background:var(--bleu-nuit-2)">${p.fields.Categorie||""}</span>
               </div>
             </div>
             <div style="display:flex;gap:8px;">
@@ -1369,7 +1384,7 @@ function openNewProjetModal(){
       <label>Modèle</label>
       <select id="pModele">${STATE.modeles.map(m=>`<option value="${m.id}">${m.fields.Nom} (${blueprintForModele(m.id).length} tâches)</option>`).join("")}</select>
       <label>Nom du projet</label>
-      <input type="text" id="pNom" placeholder="ex. Déplacement préfet – Digne – Inauguration crèche">
+      <input type="text" id="pNom" placeholder="ex. Déplacement officiel – Ville – Objet">
       <div class="row">
         <div class="col">
           <label>Date de référence</label>
@@ -1750,16 +1765,158 @@ function downloadBilanThematiqueJson(annee, categorie, sel){
 }
 
 /* =========================================================
+   PARAMÈTRES — nom du service, agents, catégories (rien de codé en dur)
+========================================================= */
+function renderParametres(){
+  const view = document.getElementById('view');
+  view.innerHTML = `
+    <h1>Paramètres</h1>
+    <p class="sub">Configurez le nom du service, les agents et les catégories utilisés dans toute l'application — rien n'est figé dans le code.</p>
+
+    <div class="card">
+      <strong>Nom du service</strong>
+      <p class="sub" style="margin-top:2px;">Affiché dans la barre latérale, les exports (email, ODT, JSON) et le titre de la page.</p>
+      <div class="row" style="align-items:flex-end;margin-top:8px;">
+        <div class="col"><input type="text" id="paNomService" value="${NOM_SERVICE==='Service'?'':NOM_SERVICE}" placeholder="ex. Service communication"></div>
+        <div class="col" style="flex:none;"><button class="btn" id="paSaveService">Enregistrer</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <strong>Agents</strong>
+      <p class="sub" style="margin-top:2px;">Utilisés pour l'affectation des tâches/projets, les initiales à l'export, et les destinataires par défaut de l'email du planning.</p>
+      <div id="paAgentsList" style="margin-top:10px;"></div>
+      <hr style="margin:14px 0;border:none;border-top:1px solid var(--gris-bord)">
+      <div class="row">
+        <div class="col"><label>Nom</label><input type="text" id="paAgNom" placeholder="ex. Marie Dupont"></div>
+        <div class="col"><label>Initiales</label><input type="text" id="paAgInit" placeholder="ex. MD"></div>
+      </div>
+      <div class="row">
+        <div class="col"><label>Email</label><input type="text" id="paAgEmail" placeholder="ex. m.dupont@exemple.fr"></div>
+      </div>
+      <div class="row">
+        <div class="col"><label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" id="paAgTo" style="width:auto;"> Destinataire par défaut (À) du planning 3 semaines</label></div>
+        <div class="col"><label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" id="paAgCc" style="width:auto;"> En copie (Cc) par défaut</label></div>
+      </div>
+      <button class="btn secondary small" id="paAgAdd" style="margin-top:8px;">+ Ajouter l'agent</button>
+    </div>
+
+    <div class="card">
+      <strong>Catégories</strong>
+      <p class="sub" style="margin-top:2px;">Utilisées pour les dossiers, projets, modèles, et pour organiser l'export 3 semaines.</p>
+      <div id="paCatList" style="margin-top:10px;"></div>
+      <hr style="margin:14px 0;border:none;border-top:1px solid var(--gris-bord)">
+      <div class="row">
+        <div class="col"><input type="text" id="paCatNom" placeholder="ex. Communication de crise"></div>
+        <div class="col" style="flex:none;"><button class="btn secondary small" id="paCatAdd">+ Ajouter</button></div>
+      </div>
+    </div>
+  `;
+
+  renderParametresAgents();
+  renderParametresCategories();
+
+  document.getElementById('paSaveService').onclick = async ()=>{
+    const nom = document.getElementById('paNomService').value.trim();
+    try{
+      const rec = STATE.parametres[0];
+      if(rec) await GristAPI.updateRecord("Parametres", rec.id, {NomService: nom});
+      else await GristAPI.addRecord("Parametres", {NomService: nom});
+      await refreshAll();
+      renderParametres();
+      toast("Nom du service enregistré.");
+    }catch(e){ toast(e.message, true); }
+  };
+
+  document.getElementById('paAgAdd').onclick = async ()=>{
+    const nom = document.getElementById('paAgNom').value.trim();
+    if(!nom) return;
+    try{
+      await GristAPI.addRecord("Agents", {
+        Nom: nom,
+        Initiales: document.getElementById('paAgInit').value.trim(),
+        Email: document.getElementById('paAgEmail').value.trim(),
+        DestinataireTo: document.getElementById('paAgTo').checked,
+        DestinataireCc: document.getElementById('paAgCc').checked
+      });
+      await refreshAll();
+      renderParametresAgents();
+      document.getElementById('paAgNom').value = "";
+      document.getElementById('paAgInit').value = "";
+      document.getElementById('paAgEmail').value = "";
+      document.getElementById('paAgTo').checked = false;
+      document.getElementById('paAgCc').checked = false;
+      toast("Agent ajouté.");
+    }catch(e){ toast(e.message, true); }
+  };
+
+  document.getElementById('paCatAdd').onclick = async ()=>{
+    const nom = document.getElementById('paCatNom').value.trim();
+    if(!nom) return;
+    try{
+      await GristAPI.addRecord("Categories", { Nom: nom });
+      await refreshAll();
+      renderParametresCategories();
+      document.getElementById('paCatNom').value = "";
+      toast("Catégorie ajoutée.");
+    }catch(e){ toast(e.message, true); }
+  };
+}
+
+function renderParametresAgents(){
+  const el = document.getElementById('paAgentsList');
+  if(!el) return;
+  el.innerHTML = STATE.agents.length===0 ? '<p class="empty">Aucun agent défini pour l\'instant.</p>' :
+    STATE.agents.map(a=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eef0f5;">
+      <div>
+        <strong>${a.fields.Nom}</strong>${a.fields.Initiales?` (${a.fields.Initiales})`:''}
+        <div class="muted" style="font-size:.8rem;">${a.fields.Email||''}${a.fields.DestinataireTo?' · destinataire À':''}${a.fields.DestinataireCc?' · Cc':''}</div>
+      </div>
+      <button class="btn small ghost" onclick="deleteAgent(${a.id})">✕</button>
+    </div>`).join("");
+}
+
+async function deleteAgent(id){
+  if(!confirm("Supprimer cet agent ?")) return;
+  try{
+    await GristAPI.deleteRecord("Agents", id);
+    await refreshAll();
+    renderParametresAgents();
+    toast("Agent supprimé.");
+  }catch(e){ toast(e.message, true); }
+}
+
+function renderParametresCategories(){
+  const el = document.getElementById('paCatList');
+  if(!el) return;
+  el.innerHTML = STATE.categories.length===0 ? '<p class="empty">Aucune catégorie définie pour l\'instant.</p>' :
+    STATE.categories.map(c=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eef0f5;">
+      <div>${c.fields.Nom}</div>
+      <button class="btn small ghost" onclick="deleteCategorie(${c.id})">✕</button>
+    </div>`).join("");
+}
+
+async function deleteCategorie(id){
+  if(!confirm("Supprimer cette catégorie ?")) return;
+  try{
+    await GristAPI.deleteRecord("Categories", id);
+    await refreshAll();
+    renderParametresCategories();
+    toast("Catégorie supprimée.");
+  }catch(e){ toast(e.message, true); }
+}
+
+/* =========================================================
    EXPORT 3 SEMAINES — format "CR réunion Agenda" + EML
 ========================================================= */
-const EXPORT_DEST_TO = [
-  {nom:"GRAC Amélie", email:"amelie.grac@alpes-de-haute-provence.gouv.fr"},
-  {nom:"ROMA Élodie", email:"elodie.roma@alpes-de-haute-provence.gouv.fr"},
-  {nom:"PICHARD-MISTRAL Clémentine", email:"clementine.pichard-mistral@alpes-de-haute-provence.gouv.fr"}
-];
-const EXPORT_DEST_CC = [
-  {nom:"Frank HAILI", email:"frank.haili@alpes-de-haute-provence.gouv.fr"}
-];
+function exportDestTo(){
+  return STATE.agents.filter(a=>a.fields.DestinataireTo && a.fields.Email)
+    .map(a=>({nom:a.fields.Nom, email:a.fields.Email}));
+}
+function exportDestCc(){
+  return STATE.agents.filter(a=>a.fields.DestinataireCc && a.fields.Email)
+    .map(a=>({nom:a.fields.Nom, email:a.fields.Email}));
+}
 
 function fmtDateDDMM(iso){
   if(!iso) return "";
@@ -1791,7 +1948,7 @@ function buildExportSections(){
   const rowsByCategory = {}; // catégorie -> [rows]
   DOSSIER_CATEGORIES.forEach(c=>rowsByCategory[c]=[]);
 
-  // --- Projets : classés dans la catégorie de leur Dossier rattaché, sinon "Déplacements Préfet" par défaut
+  // --- Projets : classés dans leur propre catégorie (ou la première catégorie disponible, par défaut)
   STATE.projets.filter(p=>p.fields.Statut!=="Clos").forEach(p=>{
     const dref = fromGristDate(p.fields.DateReference);
     const tasksInWindow = activeTasks.filter(t=>t.fields.Projet===p.id);
@@ -1801,7 +1958,7 @@ function buildExportSections(){
       // même celles dont l'échéance dépasse les 3 semaines, pour donner une vue complète du projet.
       const toutesTachesProjet = STATE.taches.filter(t=>t.fields.Projet===p.id && t.fields.Statut!=="Annulé")
         .sort((a,b)=>(a.fields.DateEcheance||0)-(b.fields.DateEcheance||0));
-      const cat = p.fields.Categorie || "Déplacements Préfet";
+      const cat = p.fields.Categorie || (DOSSIER_CATEGORIES[0] || "Non classé");
       if(!rowsByCategory[cat]) rowsByCategory[cat] = [];
       rowsByCategory[cat].push({
         date: dref || earliestDate(tasksInWindow),
@@ -1876,7 +2033,7 @@ function renderExport3(){
     </div>
 
     <div style="font-family:Georgia,serif;">
-      <h1 style="font-size:1.3rem;">Planning des tâches — SDCIRE</h1>
+      <h1 style="font-size:1.3rem;">Planning des tâches — ${NOM_SERVICE}</h1>
       <p class="muted">Période du ${fmtDateHuman(todayISOv)} au ${fmtDateHuman(limiteISO)}</p>
       ${sections.length===0 ? '<p class="empty">Aucune tâche à échéance sur cette période.</p>' : sections.map(sectionHtml).join("")}
     </div>
@@ -2146,11 +2303,11 @@ function buildExportEmailHtml(sections, todayISOv, limiteISO){
 function downloadExportEml(){
   const { sections, todayISOv, limiteISO } = buildExportSections();
   const html = buildExportEmailHtml(sections, todayISOv, limiteISO);
-  const subject = `[Planning tâches SDCIRE] - Semaine du ${fmtDateHuman(todayISOv)}`;
+  const subject = `[Planning tâches ${NOM_SERVICE}] - Semaine du ${fmtDateHuman(todayISOv)}`;
   const subjectB64 = b64EncodeUnicode(subject);
 
-  const to = EXPORT_DEST_TO.map(d=>`${d.nom} <${d.email}>`).join(", ");
-  const cc = EXPORT_DEST_CC.map(d=>`${d.nom} <${d.email}>`).join(", ");
+  const to = exportDestTo().map(d=>`${d.nom} <${d.email}>`).join(", ");
+  const cc = exportDestCc().map(d=>`${d.nom} <${d.email}>`).join(", ");
 
   const eml = [
     `To: ${to}`,
@@ -2439,7 +2596,7 @@ function buildRapportJson(year){
 
   return {
     annee: year,
-    service: "SDCIRE",
+    service: NOM_SERVICE,
     genereLe: new Date().toISOString(),
     kpis: { tachesCreees: taches.length, tachesTerminees: termine, tempsEstimeCumuleHeures: tempsTotal },
     repartitionParDossier: parDossier,
@@ -2474,7 +2631,7 @@ function renderStatsManuellesForm(year){
   const pf = prevRec ? prevRec.fields : {};
 
   const fields = [
-    {id:"ArticlesPresse", label:"Articles de presse sur le préfet"},
+    {id:"ArticlesPresse", label:"Articles de presse"},
     {id:"FollowersFacebook", label:"Followers Facebook"},
     {id:"FollowersLinkedin", label:"Followers LinkedIn"},
     {id:"FollowersTwitter", label:"Followers Twitter / X"},
