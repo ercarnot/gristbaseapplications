@@ -136,6 +136,7 @@
     <button class="tab" data-tab="export3">Export 3 semaines</button>
     <button class="tab" data-tab="film">Film de l'année</button>
     <button class="tab" data-tab="bilansthem">Bilans thématiques</button>
+    <button class="tab" data-tab="plancom">Plan de communication</button>
     <button class="tab" data-tab="rapport">Rapport annuel</button>
     <button class="tab" data-tab="parametres">Paramètres</button>
     <div class="spacer"></div>
@@ -210,6 +211,10 @@ const GristAPI = {
       Categories:[
         {id:"Nom", fields:{label:"Nom", type:"Text"}}
       ],
+      Axes:[
+        {id:"Nom", fields:{label:"Nom", type:"Text"}},
+        {id:"Objectif", fields:{label:"Objectif", type:"Text"}}
+      ],
       Dossiers:[
         {id:"Nom", fields:{label:"Nom", type:"Text"}},
         {id:"Categorie", fields:{label:"Categorie", type:"Text"}},
@@ -225,6 +230,7 @@ const GristAPI = {
         {id:"Nom", fields:{label:"Nom", type:"Text"}},
         {id:"Modele", fields:{label:"Modele", type:"Ref:Modeles"}},
         {id:"Categorie", fields:{label:"Categorie", type:"Text"}},
+        {id:"Axe", fields:{label:"Axe", type:"Ref:Axes"}},
         {id:"DateReference", fields:{label:"DateReference", type:"Date"}},
         {id:"Agent", fields:{label:"Agent", type:"Text"}},
         {id:"Dossier", fields:{label:"Dossier", type:"Ref:Dossiers"}},
@@ -389,10 +395,10 @@ function todayISO(){ return new Date().toISOString().slice(0,10); }
 /* =========================================================
    ETAT LOCAL (cache)
 ========================================================= */
-const STATE = { dossiers:[], taches:[], notes:[], modeles:[], modeleTaches:[], projets:[], indicateurs:[], statsManuelles:[], bilansThematiques:[], contacts:[], agents:[], categories:[], parametres:[], loaded:false };
+const STATE = { dossiers:[], taches:[], notes:[], modeles:[], modeleTaches:[], projets:[], indicateurs:[], statsManuelles:[], bilansThematiques:[], contacts:[], agents:[], categories:[], parametres:[], axes:[], loaded:false };
 
 async function refreshAll(){
-  const [dossiers, taches, notes, modeles, modeleTaches, projets, indicateurs, statsManuelles, bilansThematiques, contacts, agents, categories, parametres] = await Promise.all([
+  const [dossiers, taches, notes, modeles, modeleTaches, projets, indicateurs, statsManuelles, bilansThematiques, contacts, agents, categories, parametres, axes] = await Promise.all([
     GristAPI.getRecords("Dossiers"),
     GristAPI.getRecords("Taches"),
     GristAPI.getRecords("JournalNotes"),
@@ -405,7 +411,8 @@ async function refreshAll(){
     GristAPI.getRecords("Contacts"),
     GristAPI.getRecords("Agents"),
     GristAPI.getRecords("Categories"),
-    GristAPI.getRecords("Parametres")
+    GristAPI.getRecords("Parametres"),
+    GristAPI.getRecords("Axes")
   ]);
   STATE.dossiers = dossiers;
   STATE.taches = taches;
@@ -420,6 +427,7 @@ async function refreshAll(){
   STATE.agents = agents;
   STATE.categories = categories;
   STATE.parametres = parametres;
+  STATE.axes = axes;
   STATE.loaded = true;
 
   // Repeupler les listes dynamiques (agents/catégories/nom du service) à partir de Grist
@@ -433,6 +441,10 @@ async function refreshAll(){
   if(brandEl) brandEl.innerHTML = `${xmlEscapeHtml(NOM_SERVICE)}<small>Pilotage des tâches</small>`;
 }
 function xmlEscapeHtml(s){ return String(s||"").replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function axeNom(id){
+  const a = STATE.axes.find(x=>x.id===id);
+  return a ? a.fields.Nom : "";
+}
 function contactsForProjet(projetId){
   return STATE.contacts.filter(c=>c.fields.Projet===projetId);
 }
@@ -503,6 +515,7 @@ async function render(){
   else if(currentTab==="export3") renderExport3();
   else if(currentTab==="film") renderFilmAnnee();
   else if(currentTab==="bilansthem") renderBilansThematiques();
+  else if(currentTab==="plancom") renderPlanCommunication();
   else if(currentTab==="rapport") renderRapport();
   else if(currentTab==="parametres") renderParametres();
 }
@@ -1235,6 +1248,8 @@ function openEditProjetModal(id){
           <select id="peStatut">${["Actif","Clos"].map(s=>`<option ${f.Statut===s?'selected':''}>${s}</option>`).join("")}</select>
         </div>
       </div>
+      <label>Axe du plan de communication (optionnel)</label>
+      <select id="peAxe"><option value="">— aucun —</option>${STATE.axes.map(a=>`<option value="${a.id}" ${f.Axe===a.id?'selected':''}>${a.fields.Nom}</option>`).join("")}</select>
       <label style="display:flex;align-items:center;gap:6px;margin-top:12px;"><input type="checkbox" id="peMarquant" style="width:auto;" ${f.Marquant?'checked':''}> Marquant — temps fort de l'année (apparaîtra dans le Film de l'année et le rapport annuel)</label>
       <p class="sub">Un projet passé en statut <b>Clos</b> disparaît du planning 3 semaines et de l'onglet Tâches courantes ; retrouvez-le dans l'onglet <b>Film de l'année</b>.</p>
       <p class="sub">Modifier la date de référence ici ne recalcule pas automatiquement les échéances des ${nbTaches} tâche(s) déjà générées — modifiez-les individuellement si besoin.</p>
@@ -1292,6 +1307,7 @@ function openEditProjetModal(id){
       DateReference: toGristDate(document.getElementById('peDate').value),
       Agent: document.getElementById('peAgent').value,
       Categorie: document.getElementById('peCategorie').value,
+      Axe: document.getElementById('peAxe').value ? Number(document.getElementById('peAxe').value) : null,
       Statut: document.getElementById('peStatut').value,
       Marquant: document.getElementById('peMarquant').checked,
       Bilan: document.getElementById('peBilan').value
@@ -1397,6 +1413,8 @@ function openNewProjetModal(){
       </div>
       <label>Catégorie (détermine la section dans l'export 3 semaines)</label>
       <select id="pCategorie">${DOSSIER_CATEGORIES.map(c=>`<option>${c}</option>`).join("")}</select>
+      <label>Axe du plan de communication (optionnel)</label>
+      <select id="pAxe"><option value="">— aucun —</option>${STATE.axes.map(a=>`<option value="${a.id}">${a.fields.Nom}</option>`).join("")}</select>
       <div style="margin-top:16px;"><button class="btn" id="pGenerate">Générer le projet et ses tâches</button></div>
     </div>`;
   document.body.appendChild(bg);
@@ -1421,7 +1439,9 @@ function openNewProjetModal(){
 
     try{
       const projetId = await GristAPI.addRecord("Projets", {
-        Nom: nom, Modele: modeleId, Categorie: categorie, DateReference: toGristDate(dateRef), Agent: agent, Statut: "Actif"
+        Nom: nom, Modele: modeleId, Categorie: categorie,
+        Axe: document.getElementById('pAxe').value ? Number(document.getElementById('pAxe').value) : null,
+        DateReference: toGristDate(dateRef), Agent: agent, Statut: "Actif"
       });
       const refSec = toGristDate(dateRef);
       let ordreCpt = 0;
@@ -1907,6 +1927,162 @@ async function deleteCategorie(id){
 }
 
 /* =========================================================
+   PLAN DE COMMUNICATION — organisé par axes stratégiques
+========================================================= */
+let planComYear = String(new Date().getFullYear());
+
+function renderPlanCommunication(){
+  const view = document.getElementById('view');
+  const years = Array.from(new Set(STATE.projets.map(p=>{
+    const d = fromGristDate(p.fields.DateReference);
+    return d ? d.slice(0,4) : null;
+  }).filter(Boolean))).sort().reverse();
+  if(years.length && !years.includes(planComYear)) planComYear = years[0];
+  const yearsOpts = years.length ? years : [planComYear];
+
+  view.innerHTML = `
+    <h1>Plan de communication</h1>
+    <p class="sub">Vos projets organisés par axe stratégique — objectif, actions, calendrier.</p>
+
+    <div class="card no-print">
+      <div class="row" style="align-items:flex-end;">
+        <div class="col" style="max-width:160px;">
+          <label>Année</label>
+          <select id="pcYear">${yearsOpts.map(y=>`<option ${planComYear===y?'selected':''}>${y}</option>`).join("")}</select>
+        </div>
+        <div class="col" style="flex:none;display:flex;gap:10px;">
+          <button class="btn" onclick="window.print()">🖨 Imprimer / PDF</button>
+          <button class="btn secondary" onclick="downloadPlanComXlsx(document.getElementById('pcYear').value)">📊 Exporter en Excel</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card no-print">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <strong>Axes stratégiques</strong>
+      </div>
+      <div id="pcAxesList" style="margin-top:10px;"></div>
+      <hr style="margin:14px 0;border:none;border-top:1px solid var(--gris-bord)">
+      <div class="row">
+        <div class="col"><label>Nom de l'axe</label><input type="text" id="pcAxeNom" placeholder="ex. Résilience territoriale"></div>
+      </div>
+      <label>Objectif</label>
+      <textarea id="pcAxeObjectif" placeholder="ex. Ancrer une culture de la résilience face aux risques"></textarea>
+      <button class="btn secondary small" id="pcAxeAdd" style="margin-top:8px;">+ Ajouter l'axe</button>
+    </div>
+
+    <div id="pcContent"></div>
+  `;
+
+  document.getElementById('pcYear').onchange = e=>{ planComYear = e.target.value; renderPlanComContent(); };
+  document.getElementById('pcAxeAdd').onclick = async ()=>{
+    const nom = document.getElementById('pcAxeNom').value.trim();
+    if(!nom) return;
+    try{
+      await GristAPI.addRecord("Axes", { Nom: nom, Objectif: document.getElementById('pcAxeObjectif').value });
+      await refreshAll();
+      renderPlanCommunication();
+      toast("Axe ajouté.");
+    }catch(e){ toast(e.message, true); }
+  };
+
+  renderPlanComAxesList();
+  renderPlanComContent();
+}
+
+function renderPlanComAxesList(){
+  const el = document.getElementById('pcAxesList');
+  if(!el) return;
+  el.innerHTML = STATE.axes.length===0 ? '<p class="empty">Aucun axe défini pour l\'instant.</p>' :
+    STATE.axes.map(a=>`<div style="padding:6px 0;border-bottom:1px solid #eef0f5;display:flex;justify-content:space-between;align-items:flex-start;">
+      <div><strong>${a.fields.Nom}</strong><div class="muted" style="font-size:.82rem;">${a.fields.Objectif||''}</div></div>
+      <button class="btn small ghost" onclick="deleteAxe(${a.id})">✕</button>
+    </div>`).join("");
+}
+
+async function deleteAxe(id){
+  if(!confirm("Supprimer cet axe ? Les projets qui lui sont rattachés seront simplement désassociés.")) return;
+  try{
+    const rattaches = STATE.projets.filter(p=>p.fields.Axe===id);
+    for(const p of rattaches) await GristAPI.updateRecord("Projets", p.id, {Axe: null});
+    await GristAPI.deleteRecord("Axes", id);
+    await refreshAll();
+    renderPlanCommunication();
+    toast("Axe supprimé.");
+  }catch(e){ toast(e.message, true); }
+}
+
+function planComProjetsForYear(year){
+  return STATE.projets.filter(p=>{
+    const d = fromGristDate(p.fields.DateReference);
+    return d && d.slice(0,4)===year;
+  }).sort((a,b)=>(a.fields.DateReference||0)-(b.fields.DateReference||0));
+}
+
+function renderPlanComContent(){
+  const el = document.getElementById('pcContent');
+  if(!el) return;
+  const projets = planComProjetsForYear(planComYear);
+  const parAxe = {};
+  const nonClasses = [];
+  projets.forEach(p=>{
+    if(p.fields.Axe){ (parAxe[p.fields.Axe] = parAxe[p.fields.Axe]||[]).push(p); }
+    else nonClasses.push(p);
+  });
+
+  const projetBlock = p=>{
+    const d = fromGristDate(p.fields.DateReference);
+    const mois = d ? MOIS_FR[Number(d.slice(5,7))-1] : "";
+    return `<div style="padding:10px 0;border-bottom:1px solid #eef0f5;">
+      <strong>${p.fields.Nom}</strong> — <span class="muted">${mois} — ${p.fields.Categorie||"Non classé"}</span>
+      <div class="muted" style="font-size:.82rem;margin-top:2px;">Date de référence : ${fmtDateHuman(d)}</div>
+      ${p.fields.Bilan ? `<div style="margin-top:4px;font-size:.9rem;">Bilan : ${p.fields.Bilan}</div>` : ''}
+    </div>`;
+  };
+
+  el.innerHTML = `
+    <div style="font-family:Georgia,serif;">
+      <h1 style="font-size:1.3rem;">Plan de communication — ${NOM_SERVICE}</h1>
+      <p class="muted">Année ${planComYear}</p>
+
+      ${STATE.axes.length===0 ? '<p class="empty">Créez un axe ci-dessus pour commencer à structurer le plan.</p>' : STATE.axes.map(axe=>{
+        const liste = parAxe[axe.id] || [];
+        return `<div class="card" style="margin-top:16px;">
+          <h2 style="font-size:1.05rem;margin:0;">${axe.fields.Nom}</h2>
+          ${axe.fields.Objectif ? `<p class="muted" style="font-style:italic;margin-top:4px;">${axe.fields.Objectif}</p>` : ''}
+          ${liste.length===0 ? '<p class="empty">Aucun projet rattaché pour cette année.</p>' : liste.map(projetBlock).join("")}
+        </div>`;
+      }).join("")}
+
+      ${nonClasses.length ? `<div class="card" style="margin-top:16px;">
+        <h2 style="font-size:1.05rem;margin:0;">Non classés</h2>
+        ${nonClasses.map(projetBlock).join("")}
+      </div>` : ''}
+    </div>
+  `;
+}
+
+function downloadPlanComXlsx(year){
+  const projets = planComProjetsForYear(year);
+  const header = ["Axe","Objectif de l'axe","Action","Mois","Catégorie","Date de référence","Bilan"];
+  const rows = projets.map(p=>{
+    const d = fromGristDate(p.fields.DateReference);
+    const mois = d ? MOIS_FR[Number(d.slice(5,7))-1] : "";
+    const axe = p.fields.Axe ? STATE.axes.find(a=>a.id===p.fields.Axe) : null;
+    return [
+      axe ? axe.fields.Nom : "Non classé",
+      axe ? (axe.fields.Objectif||"") : "",
+      p.fields.Nom || "",
+      mois,
+      p.fields.Categorie || "",
+      fmtDateHuman(d),
+      p.fields.Bilan || ""
+    ];
+  });
+  downloadXlsx(`Plan-communication-${year}.xlsx`, "Plan de communication", header, rows);
+}
+
+/* =========================================================
    EXPORT 3 SEMAINES — format "CR réunion Agenda" + EML
 ========================================================= */
 function exportDestTo(){
@@ -2127,6 +2303,80 @@ function buildZipBlob(files, mimeType){
 
 function xmlEscape(str){
   return String(str||"").replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* =========================================================
+   EXPORT XLSX (Excel) — générique, pure JS, sans dépendance
+========================================================= */
+function colLetter(idx){
+  let s = "";
+  idx++;
+  while(idx>0){ const r=(idx-1)%26; s=String.fromCharCode(65+r)+s; idx=Math.floor((idx-1)/26); }
+  return s;
+}
+
+function buildXlsxSheetXml(headerRow, dataRows){
+  const allRows = [headerRow, ...dataRows];
+  const rowsXml = allRows.map((row, ri)=>{
+    const cellsXml = row.map((val, ci)=>{
+      const ref = `${colLetter(ci)}${ri+1}`;
+      if(typeof val === "number"){
+        return `<c r="${ref}"><v>${val}</v></c>`;
+      }
+      return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xmlEscape(val)}</t></is></c>`;
+    }).join("");
+    return `<row r="${ri+1}">${cellsXml}</row>`;
+  }).join("");
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetData>${rowsXml}</sheetData>
+</worksheet>`;
+}
+
+const XLSX_CONTENT_TYPES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+</Types>`;
+
+const XLSX_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`;
+
+function buildXlsxWorkbookXml(sheetName){
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets><sheet name="${xmlEscape(sheetName)}" sheetId="1" r:id="rId1"/></sheets>
+</workbook>`;
+}
+
+const XLSX_WORKBOOK_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+</Relationships>`;
+
+function downloadXlsx(filename, sheetName, headerRow, dataRows){
+  const enc = new TextEncoder();
+  const files = [
+    {name:"[Content_Types].xml", data: enc.encode(XLSX_CONTENT_TYPES)},
+    {name:"_rels/.rels", data: enc.encode(XLSX_RELS)},
+    {name:"xl/workbook.xml", data: enc.encode(buildXlsxWorkbookXml(sheetName))},
+    {name:"xl/_rels/workbook.xml.rels", data: enc.encode(XLSX_WORKBOOK_RELS)},
+    {name:"xl/worksheets/sheet1.xml", data: enc.encode(buildXlsxSheetXml(headerRow, dataRows))}
+  ];
+  const blob = buildZipBlob(files, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  toast("Fichier Excel généré.");
 }
 
 function odtParas(text){
