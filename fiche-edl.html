@@ -42,7 +42,13 @@
   .meta-line{font-size:12px; color:var(--text-muted); border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:14px;}
   .rubrique{margin-bottom:16px;}
   .rubrique h3{font-size:14px; font-weight:600; margin:0 0 6px;}
-  .subtitle{font-size:12px; font-weight:600; color:var(--text-secondary); margin:8px 0 2px 4px;}
+  .subtitle{font-size:12px; font-weight:600; color:var(--text-secondary); margin:8px 0 2px 4px; padding:2px 4px; border-radius:4px; outline:none;}
+  .subtitle:focus{background:#fff; box-shadow:0 0 0 2px #0c447c33; color:var(--text-primary);}
+  .add-subtitle-btn{display:block; border:none; background:none; color:var(--text-muted); font-size:11px;
+    margin:6px 0 2px 4px; padding:2px 4px; cursor:pointer; opacity:0; transition:opacity .1s;}
+  .rubrique:hover .add-subtitle-btn{opacity:1;}
+  .add-subtitle-btn:hover{color:var(--text-accent); text-decoration:underline;}
+  .subtitle-input{font-size:12px; font-weight:600; margin:8px 0 2px 4px; padding:2px 4px; border:1px solid var(--border-strong); border-radius:4px; width:200px;}
   .item-row{display:flex; gap:8px; padding:5px 6px; border-radius:6px; align-items:flex-start;}
   .item-row.chiffre{background:var(--bg-accent);}
   .item-row:hover{background:var(--surface-1);}
@@ -280,13 +286,17 @@ function render() {
       <h3>${RUBRIQUE_LABELS[rub]}</h3>
       <div class="sortable-zone" data-rubrique="${rub}">`;
 
-    let lastSousTitre = undefined;
-    for (const it of rubItems) {
-      if (it.Sous_titre && it.Sous_titre !== lastSousTitre) {
-        html += `<p class="subtitle">${esc(it.Sous_titre)}</p>`;
+    for (const group of groupBySousTitre(rubItems)) {
+      const ids = group.items.map(i => i.id).join(',');
+      if (group.key) {
+        html += `<p class="subtitle" contenteditable="true" spellcheck="false"
+          data-item-ids="${ids}"
+          onblur="saveSubtitle(this)"
+          onkeydown="handleSubtitleKeydown(event, this)">${esc(group.key)}</p>`;
+      } else {
+        html += `<button class="add-subtitle-btn" data-item-ids="${ids}" onclick="startAddSubtitle(this)">+ ajouter un sous-titre</button>`;
       }
-      lastSousTitre = it.Sous_titre || lastSousTitre;
-      html += renderItemRow(it);
+      for (const it of group.items) html += renderItemRow(it);
     }
     html += `</div>`;
     html += `<button class="ghost-add" onclick="toggleAddForm(this)">+ Ajouter un item</button>
@@ -351,6 +361,68 @@ function render() {
       }
     });
   });
+}
+
+// Regroupe une liste d'items (déjà triés par Ordre) en tronçons consécutifs
+// partageant le même Sous_titre — un sous-titre reste ainsi toujours attaché
+// physiquement aux items qui le suivent, y compris après un glisser-déposer.
+function groupBySousTitre(sortedItems) {
+  const groups = [];
+  let current = null;
+  for (const it of sortedItems) {
+    const key = it.Sous_titre || '';
+    if (!current || current.key !== key) {
+      current = { key, items: [] };
+      groups.push(current);
+    }
+    current.items.push(it);
+  }
+  return groups;
+}
+
+async function saveSubtitle(el) {
+  const ids = el.dataset.itemIds.split(',').map(Number);
+  const first = state.items.find(i => i.id === ids[0]);
+  if (!first) return;
+  const newValue = el.textContent.trim();
+  if (newValue === (first.Sous_titre || '')) return; // rien n'a change
+  const actions = ids.map(id => ['UpdateRecord', 'Items', id, {
+    Sous_titre: newValue, Date_modif: Date.now() / 1000, Auteur: state.currentUserEmail || null
+  }]);
+  await grist.docApi.applyUserActions(actions);
+  await loadAll();
+  render();
+}
+
+function handleSubtitleKeydown(event, el) {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    el.blur();
+  }
+}
+
+function startAddSubtitle(btn) {
+  const ids = btn.dataset.itemIds;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'subtitle-input';
+  input.placeholder = 'Nom du sous-titre…';
+  input.onblur = () => commitNewSubtitle(input, ids);
+  input.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); input.blur(); } };
+  btn.replaceWith(input);
+  input.focus();
+}
+
+async function commitNewSubtitle(input, idsStr) {
+  const value = input.value.trim();
+  if (!value) { render(); return; } // rien tape : on annule simplement, pas d'appel Grist
+  const ids = idsStr.split(',').map(Number);
+  const actions = ids.map(id => ['UpdateRecord', 'Items', id, {
+    Sous_titre: value, Date_modif: Date.now() / 1000, Auteur: state.currentUserEmail || null
+  }]);
+  await grist.docApi.applyUserActions(actions);
+  await loadAll();
+  render();
 }
 
 function renderItemRow(it) {
@@ -690,7 +762,7 @@ async function exportFicheWord(ficheId) {
           spacing: { before: 120, after: 70 }
         }));
       }
-      lastSousTitre = it.Sous_titre || lastSousTitre;
+      lastSousTitre = it.Sous_titre || undefined; // se réinitialise dès qu'un item sans sous-titre s'intercale
 
       const runs = [];
       if (it.Chiffre_cle) runs.push(new TextRun({ text: '★ ', bold: true, color: NAVY }));
