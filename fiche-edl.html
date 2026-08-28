@@ -53,9 +53,16 @@
   .indent-controls button:disabled{opacity:.3; cursor:default;}
   .item-text{flex:1; font-size:14px; line-height:1.5; padding:1px 4px; border-radius:4px; outline:none;}
   .item-text:focus{background:#fff; box-shadow:0 0 0 2px #0c447c33;}
-  .item-text.niveau-1{margin-left:16px;}
-  .item-text.niveau-2{margin-left:32px;}
-  .item-actions{display:flex; gap:4px; opacity:0; transition:opacity .1s; padding-top:1px;}
+  .item-text.niveau-1{margin-left:4px;}
+  .item-text.niveau-2{margin-left:20px;}
+  .connector{color:var(--text-muted); font-size:13px; padding-top:2px; user-select:none;}
+  .connector.niveau-1{margin-left:12px;}
+  .connector.niveau-2{margin-left:28px;}
+  .type-tag{font-size:10px; text-transform:uppercase; letter-spacing:.03em; color:var(--text-secondary);
+    background:var(--surface-1); border:1px solid var(--border); padding:2px 6px; border-radius:4px;
+    white-space:nowrap; margin-top:2px; align-self:flex-start;}
+  .type-select{font-size:11px; padding:1px 3px; border:1px solid var(--border-strong); border-radius:4px; background:#fff;}
+  .item-actions{display:flex; gap:4px; opacity:0; transition:opacity .1s; padding-top:1px; align-items:center;}
   .item-row:hover .item-actions{opacity:1;}
   .item-actions button{padding:2px 6px; font-size:11px;}
   .star{color:#0c447c; font-size:13px; padding-top:3px;}
@@ -81,6 +88,7 @@ const RUBRIQUE_LABELS = {
   "Perspectives": "Perspectives"
 };
 const STATUT_CHOICES = ["Brouillon", "Proposé", "Validé"];
+const TYPE_INFO_CHOICES = ["Chiffre", "Évolution", "Alerte"];
 
 let state = {
   services: [],
@@ -132,6 +140,7 @@ async function ensureSchema() {
       { id: 'Niveau', type: 'Int' },
       { id: 'Texte', type: 'Text' },
       { id: 'Chiffre_cle', type: 'Bool' },
+      { id: 'Type_info', type: 'Choice', widgetOptions: JSON.stringify({ choices: TYPE_INFO_CHOICES }) },
       { id: 'Auteur', type: 'Ref:Services' },
       { id: 'Date_modif', type: 'DateTime' },
       { id: 'Origine', type: 'Text' },
@@ -147,9 +156,16 @@ async function ensureSchema() {
   // Synchronise la liste des choix (utile si les tables existaient deja
   // avant l'ajout de "Message cle", ou si RUBRIQUES/STATUT_CHOICES evolue)
   if (existing.includes('Items')) {
+    // Ajoute la colonne Type_info si elle n'existe pas encore (documents crees avant cette version)
+    await grist.docApi.applyUserActions([
+      ['AddColumn', 'Items', 'Type_info', { type: 'Choice', widgetOptions: JSON.stringify({ choices: TYPE_INFO_CHOICES }) }]
+    ]).catch(() => {}); // ignore si la colonne existe deja
     await grist.docApi.applyUserActions([
       ['ModifyColumn', 'Items', 'Rubrique', { widgetOptions: JSON.stringify({ choices: RUBRIQUES }) }]
     ]).catch(() => {}); // silencieux si la colonne n'existe pas encore sous cette forme
+    await grist.docApi.applyUserActions([
+      ['ModifyColumn', 'Items', 'Type_info', { widgetOptions: JSON.stringify({ choices: TYPE_INFO_CHOICES }) }]
+    ]).catch(() => {});
   }
   if (existing.includes('Fiches')) {
     await grist.docApi.applyUserActions([
@@ -296,16 +312,37 @@ function render() {
   html += `</div>`;
   app.innerHTML = html;
 
-  // activer le glisser-déposer sur chaque rubrique
+  // activer le glisser-déposer sur chaque rubrique — meme "groupe" partagé
+  // pour autoriser le passage d'un item d'une catégorie à une autre
   document.querySelectorAll('.sortable-zone').forEach(zone => {
     Sortable.create(zone, {
+      group: { name: 'edl-items', pull: true, put: true },
       handle: '.handle',
+      draggable: '.item-row',
       animation: 150,
       onEnd: async (evt) => {
-        const rub = zone.dataset.rubrique;
-        const rows = Array.from(zone.querySelectorAll('.item-row'));
-        const bulkActions = rows.map((row, idx) => ['UpdateRecord', 'Items', parseInt(row.dataset.id), { Ordre: (idx + 1) * 10 }]);
-        await grist.docApi.applyUserActions(bulkActions);
+        const fromRub = evt.from.dataset.rubrique;
+        const toRub = evt.to.dataset.rubrique;
+        const movedId = parseInt(evt.item.dataset.id);
+        const actions = [];
+
+        // renumérote l'ordre dans la zone de destination
+        Array.from(evt.to.querySelectorAll('.item-row')).forEach((row, idx) => {
+          actions.push(['UpdateRecord', 'Items', parseInt(row.dataset.id), { Ordre: (idx + 1) * 10 }]);
+        });
+
+        if (fromRub !== toRub) {
+          // l'item change de catégorie : on met à jour sa Rubrique...
+          actions.push(['UpdateRecord', 'Items', movedId, {
+            Rubrique: toRub, Date_modif: Date.now() / 1000, Auteur: state.currentUserEmail || null
+          }]);
+          // ...et on renumérote aussi la zone d'origine, qui a perdu un item
+          Array.from(evt.from.querySelectorAll('.item-row')).forEach((row, idx) => {
+            actions.push(['UpdateRecord', 'Items', parseInt(row.dataset.id), { Ordre: (idx + 1) * 10 }]);
+          });
+        }
+
+        await grist.docApi.applyUserActions(actions);
         await loadAll();
         render();
       }
@@ -315,18 +352,26 @@ function render() {
 
 function renderItemRow(it) {
   const niveauClass = it.Niveau ? `niveau-${it.Niveau}` : '';
+  const connector = it.Niveau >= 1 ? `<span class="connector ${niveauClass}">↳</span>` : '';
+  const typeTag = it.Type_info ? `<span class="type-tag">${esc(it.Type_info)}</span>` : '';
   return `<div class="item-row ${it.Chiffre_cle ? 'chiffre' : ''}" data-id="${it.id}">
-    <span class="handle" title="Glisser pour réordonner">⠿</span>
+    <span class="handle" title="Glisser pour réordonner ou changer de rubrique">⠿</span>
     <span class="indent-controls">
       <button title="Diminuer le retrait" ${!it.Niveau ? 'disabled' : ''} onclick="changeNiveau(${it.id}, -1)">«</button>
       <button title="Augmenter le retrait (mettre en second plan)" ${it.Niveau >= 2 ? 'disabled' : ''} onclick="changeNiveau(${it.id}, 1)">»</button>
     </span>
     ${it.Chiffre_cle ? '<span class="star">★</span>' : ''}
+    ${connector}
+    ${typeTag}
     <div class="item-text ${niveauClass}" contenteditable="true" spellcheck="false"
       data-id="${it.id}"
       onblur="saveItemText(this)"
       onkeydown="handleItemKeydown(event, this)">${esc(it.Texte)}</div>
     <span class="item-actions">
+      <select class="type-select" title="Cartouche" onchange="setTypeInfo(${it.id}, this.value)">
+        <option value="" ${!it.Type_info ? 'selected' : ''}>—</option>
+        ${TYPE_INFO_CHOICES.map(t => `<option value="${t}" ${it.Type_info === t ? 'selected' : ''}>${t}</option>`).join('')}
+      </select>
       <button title="Marquer/démarquer comme chiffre clé" onclick="toggleChiffreCle(${it.id}, ${!it.Chiffre_cle})">${it.Chiffre_cle ? '☆' : '★'}</button>
       <button title="Supprimer" onclick="deleteItem(${it.id})">✕</button>
     </span>
@@ -417,6 +462,14 @@ async function changeNiveau(itemId, delta) {
 async function toggleChiffreCle(itemId, value) {
   await grist.docApi.applyUserActions([
     ['UpdateRecord', 'Items', itemId, { Chiffre_cle: value, Date_modif: Date.now() / 1000, Auteur: state.currentUserEmail || null }]
+  ]);
+  await loadAll();
+  render();
+}
+
+async function setTypeInfo(itemId, value) {
+  await grist.docApi.applyUserActions([
+    ['UpdateRecord', 'Items', itemId, { Type_info: value, Date_modif: Date.now() / 1000, Auteur: state.currentUserEmail || null }]
   ]);
   await loadAll();
   render();
