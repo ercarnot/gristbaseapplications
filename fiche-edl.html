@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Fiche EDL</title>
+<script src="https://grist.numerique.gouv.fr/grist-plugin-api.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<style>
+  :root{
+    --border:#e2e0d8; --border-strong:#c9c6ba; --text-primary:#22221f; --text-secondary:#65645d;
+    --text-muted:#8f8d82; --surface-1:#f7f6f2; --surface-2:#ffffff; --radius:8px;
+    --bg-accent:#e6f1fb; --text-accent:#0c447c; --bg-success:#eaf3de; --text-success:#27500a;
+    --bg-warning:#faeeda; --text-warning:#854f0b; --bg-gray:#f1efe8; --text-gray:#444441;
+  }
+  *{box-sizing:border-box;}
+  body{font-family:-apple-system,"Segoe UI",Arial,sans-serif; background:var(--surface-1); margin:0; padding:16px; color:var(--text-primary); font-size:14px;}
+  #init-banner{background:var(--bg-warning); color:var(--text-warning); padding:10px 14px; border-radius:var(--radius); margin-bottom:12px; display:none; font-size:13px;}
+  #init-banner button{margin-left:8px;}
+  .card{background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:20px 24px; max-width:680px; margin:0 auto;}
+  .top-row{display:flex; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap;}
+  select, input[type=text], textarea{
+    font-family:inherit; font-size:13px; padding:6px 8px; border:1px solid var(--border-strong); border-radius:6px; background:#fff;
+  }
+  button{
+    font-family:inherit; font-size:13px; padding:6px 12px; border:1px solid var(--border-strong); border-radius:6px;
+    background:#fff; cursor:pointer;
+  }
+  button:hover{background:var(--surface-1);}
+  button.primary{background:#0c447c; color:#fff; border:none;}
+  button.primary:hover{background:#0a3a69;}
+  button.ghost-add{border:1px dashed var(--border-strong); color:var(--text-muted); width:100%; text-align:left; margin-top:4px;}
+  .header{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;}
+  .theme-label{font-size:12px; color:var(--text-secondary); margin:0 0 2px;}
+  .titre-label{font-size:18px; font-weight:600; margin:0;}
+  .badge{font-size:11px; padding:3px 10px; border-radius:6px; white-space:nowrap; font-weight:500;}
+  .badge.brouillon{background:var(--bg-gray); color:var(--text-gray);}
+  .badge.propose{background:var(--bg-warning); color:var(--text-warning);}
+  .badge.valide{background:var(--bg-success); color:var(--text-success);}
+  .modif-banner{display:flex; gap:6px; align-items:center; background:var(--bg-warning); color:var(--text-warning);
+    font-size:12px; padding:6px 10px; border-radius:6px; margin-bottom:8px;}
+  .meta-line{font-size:12px; color:var(--text-muted); border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:14px;}
+  .rubrique{margin-bottom:16px;}
+  .rubrique h3{font-size:14px; font-weight:600; margin:0 0 6px;}
+  .subtitle{font-size:12px; font-weight:600; color:var(--text-secondary); margin:8px 0 2px 4px;}
+  .item-row{display:flex; gap:8px; padding:5px 6px; border-radius:6px; align-items:flex-start; cursor:grab;}
+  .item-row.chiffre{background:var(--bg-accent);}
+  .item-row:hover{background:var(--surface-1);}
+  .item-row.chiffre:hover{background:#dbe9f8;}
+  .item-row .handle{color:var(--text-muted); font-size:12px; padding-top:3px;}
+  .item-text{flex:1; font-size:14px; line-height:1.5; padding-top:1px;}
+  .item-text.niveau-1{margin-left:16px;}
+  .item-text.niveau-2{margin-left:32px;}
+  .item-actions{display:flex; gap:4px; opacity:0; transition:opacity .1s;}
+  .item-row:hover .item-actions{opacity:1;}
+  .item-actions button{padding:2px 6px; font-size:11px;}
+  .star{color:#0c447c; font-size:13px;}
+  .add-form{display:none; gap:6px; margin-top:6px; flex-wrap:wrap;}
+  .add-form.open{display:flex;}
+  .add-form textarea{flex:1; min-width:220px; min-height:36px;}
+  footer{display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--border); padding-top:14px; margin-top:6px;}
+  .empty-state{text-align:center; padding:40px 20px; color:var(--text-muted);}
+</style>
+</head>
+<body>
+
+<div id="init-banner"></div>
+<div id="app"></div>
+
+<script>
+const RUBRIQUES = ["Contexte", "Actions", "Résultats", "Perspectives"];
+const RUBRIQUE_LABELS = {
+  "Contexte": "Contexte",
+  "Actions": "Actions mises en place",
+  "Résultats": "Résultats",
+  "Perspectives": "Perspectives"
+};
+const STATUT_CHOICES = ["Brouillon", "Proposé", "Validé"];
+
+let state = {
+  services: [],
+  fiches: [],
+  items: [],
+  currentFicheId: null,
+  currentUserEmail: null, // sélection manuelle pour ce prototype
+};
+
+// ---------------------------------------------------------------
+// INITIALISATION GRIST
+// ---------------------------------------------------------------
+grist.ready({ requiredAccess: 'full' });
+
+async function boot() {
+  await ensureSchema();
+  await loadAll();
+  render();
+}
+boot();
+
+async function ensureSchema() {
+  const existing = await grist.docApi.listTables();
+  const actions = [];
+
+  if (!existing.includes('Services')) {
+    actions.push(['AddTable', 'Services', [
+      { id: 'Email', type: 'Text' },
+      { id: 'Nom', type: 'Text' },
+      { id: 'Service', type: 'Text' },
+    ]]);
+  }
+  if (!existing.includes('Fiches')) {
+    actions.push(['AddTable', 'Fiches', [
+      { id: 'Theme', type: 'Text' },
+      { id: 'Titre', type: 'Text' },
+      { id: 'Service_responsable', type: 'Ref:Services' },
+      { id: 'Statut', type: 'Choice', widgetOptions: JSON.stringify({ choices: STATUT_CHOICES }) },
+      { id: 'Date_validation', type: 'DateTime' },
+      { id: 'Valide_par', type: 'Ref:Services' },
+    ]]);
+  }
+  if (!existing.includes('Items')) {
+    actions.push(['AddTable', 'Items', [
+      { id: 'Fiche', type: 'Ref:Fiches' },
+      { id: 'Rubrique', type: 'Choice', widgetOptions: JSON.stringify({ choices: RUBRIQUES }) },
+      { id: 'Sous_titre', type: 'Text' },
+      { id: 'Ordre', type: 'Int' },
+      { id: 'Niveau', type: 'Int' },
+      { id: 'Texte', type: 'Text' },
+      { id: 'Chiffre_cle', type: 'Bool' },
+      { id: 'Auteur', type: 'Ref:Services' },
+      { id: 'Date_modif', type: 'DateTime' },
+      { id: 'Origine', type: 'Text' },
+    ]]);
+  }
+
+  if (actions.length) {
+    showInitBanner('Création des tables manquantes en cours…');
+    await grist.docApi.applyUserActions(actions);
+    showInitBanner('Tables créées : ' + actions.map(a => a[1]).join(', '), true);
+  }
+}
+
+function showInitBanner(msg, autoHide) {
+  const el = document.getElementById('init-banner');
+  el.style.display = 'block';
+  el.textContent = msg;
+  if (autoHide) setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+async function loadAll() {
+  const [services, fiches, items] = await Promise.all([
+    grist.docApi.fetchTable('Services'),
+    grist.docApi.fetchTable('Fiches'),
+    grist.docApi.fetchTable('Items'),
+  ]);
+  state.services = toRecords(services);
+  state.fiches = toRecords(fiches);
+  state.items = toRecords(items);
+  if (!state.currentFicheId && state.fiches.length) {
+    state.currentFicheId = state.fiches[0].id;
+  }
+}
+
+// Grist fetchTable renvoie des colonnes en arrays parallèles -> on les remet en objets
+function toRecords(table) {
+  const ids = table.id || [];
+  const out = [];
+  for (let i = 0; i < ids.length; i++) {
+    const rec = { id: ids[i] };
+    for (const col in table) {
+      if (col === 'id') continue;
+      rec[col] = table[col][i];
+    }
+    out.push(rec);
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------
+// RENDU
+// ---------------------------------------------------------------
+function serviceName(refId) {
+  const s = state.services.find(s => s.id === refId);
+  return s ? (s.Service || s.Nom || s.Email) : '—';
+}
+
+function render() {
+  const app = document.getElementById('app');
+
+  if (!state.fiches.length) {
+    app.innerHTML = `<div class="card empty-state">
+      Aucune fiche pour l'instant.<br>
+      <button class="primary" style="margin-top:12px" onclick="createFiche()">Créer une première fiche</button>
+    </div>`;
+    return;
+  }
+
+  const fiche = state.fiches.find(f => f.id === state.currentFicheId) || state.fiches[0];
+  const items = state.items.filter(i => i.Fiche === fiche.id).sort((a, b) => (a.Ordre || 0) - (b.Ordre || 0));
+
+  const modifieeDepuisValidation = fiche.Statut === 'Validé' && fiche.Date_validation &&
+    items.some(i => i.Date_modif && i.Date_modif > fiche.Date_validation);
+
+  const statutClass = fiche.Statut === 'Validé' ? 'valide' : fiche.Statut === 'Proposé' ? 'propose' : 'brouillon';
+
+  let html = `<div class="card">`;
+
+  html += `<div class="top-row">
+    <label style="font-size:12px; color:var(--text-secondary);">Fiche :</label>
+    <select onchange="switchFiche(this.value)">
+      ${state.fiches.map(f => `<option value="${f.id}" ${f.id === fiche.id ? 'selected' : ''}>${esc(f.Theme)} — ${esc(f.Titre)}</option>`).join('')}
+    </select>
+    <button onclick="createFiche()">+ Nouvelle fiche</button>
+    <span style="flex:1"></span>
+    <label style="font-size:12px; color:var(--text-secondary);">Vous êtes :</label>
+    <select onchange="state.currentUserEmail=this.value">
+      <option value="">— sélectionner —</option>
+      ${state.services.map(s => `<option value="${s.id}" ${state.currentUserEmail === s.id ? 'selected' : ''}>${esc(s.Nom || s.Email)} (${esc(s.Service)})</option>`).join('')}
+    </select>
+    <button onclick="openServiceAdmin()">Gérer services</button>
+  </div>`;
+
+  html += `<div class="header">
+    <div>
+      <p class="theme-label">${esc(fiche.Theme)}</p>
+      <p class="titre-label">${esc(fiche.Titre)}</p>
+    </div>
+    <span class="badge ${statutClass}">${esc(fiche.Statut || 'Brouillon')}</span>
+  </div>`;
+
+  if (modifieeDepuisValidation) {
+    html += `<div class="modif-banner">⚠ Modifiée depuis validation</div>`;
+  }
+
+  html += `<div class="meta-line">Service responsable : ${esc(serviceName(fiche.Service_responsable))}
+    ${fiche.Date_validation ? ' · Validée le ' + fmtDate(fiche.Date_validation) + (fiche.Valide_par ? ' par ' + esc(serviceName(fiche.Valide_par)) : '') : ''}
+  </div>`;
+
+  for (const rub of RUBRIQUES) {
+    const rubItems = items.filter(i => i.Rubrique === rub);
+    html += `<div class="rubrique" data-rubrique="${rub}">
+      <h3>${RUBRIQUE_LABELS[rub]}</h3>
+      <div class="sortable-zone" data-rubrique="${rub}">`;
+
+    let lastSousTitre = undefined;
+    for (const it of rubItems) {
+      if (it.Sous_titre && it.Sous_titre !== lastSousTitre) {
+        html += `<p class="subtitle">${esc(it.Sous_titre)}</p>`;
+      }
+      lastSousTitre = it.Sous_titre || lastSousTitre;
+      html += renderItemRow(it);
+    }
+    html += `</div>`;
+    html += `<button class="ghost-add" onclick="toggleAddForm(this)">+ Ajouter un item</button>
+      <div class="add-form">
+        <textarea placeholder="Texte de l'item…"></textarea>
+        <input type="text" placeholder="Sous-titre (optionnel)" style="width:160px">
+        <button class="primary" onclick="submitAddItem(this, '${fiche.id}', '${rub}')">Ajouter</button>
+      </div>`;
+    html += `</div>`;
+  }
+
+  html += `<footer>`;
+  if (fiche.Statut === 'Brouillon' || !fiche.Statut) {
+    html += `<button onclick="setStatut(${fiche.id}, 'Proposé')">Proposer pour validation</button>`;
+  }
+  if (fiche.Statut === 'Proposé') {
+    html += `<button onclick="setStatut(${fiche.id}, 'Brouillon')">Renvoyer en brouillon</button>`;
+    html += `<button class="primary" onclick="setStatut(${fiche.id}, 'Validé')">Valider la fiche</button>`;
+  }
+  if (fiche.Statut === 'Validé' && modifieeDepuisValidation) {
+    html += `<button class="primary" onclick="setStatut(${fiche.id}, 'Validé')">Revalider la fiche</button>`;
+  }
+  html += `</footer>`;
+
+  html += `</div>`;
+  app.innerHTML = html;
+
+  // activer le glisser-déposer sur chaque rubrique
+  document.querySelectorAll('.sortable-zone').forEach(zone => {
+    Sortable.create(zone, {
+      handle: '.handle',
+      animation: 150,
+      onEnd: async (evt) => {
+        const rub = zone.dataset.rubrique;
+        const rows = Array.from(zone.querySelectorAll('.item-row'));
+        const bulkActions = rows.map((row, idx) => ['UpdateRecord', 'Items', parseInt(row.dataset.id), { Ordre: (idx + 1) * 10 }]);
+        await grist.docApi.applyUserActions(bulkActions);
+        await loadAll();
+        render();
+      }
+    });
+  });
+}
+
+function renderItemRow(it) {
+  const niveauClass = it.Niveau ? `niveau-${it.Niveau}` : '';
+  return `<div class="item-row ${it.Chiffre_cle ? 'chiffre' : ''}" data-id="${it.id}">
+    <span class="handle">⠿</span>
+    <span class="item-text ${niveauClass}">
+      ${it.Chiffre_cle ? '<span class="star">★</span> ' : ''}${esc(it.Texte)}
+    </span>
+    <span class="item-actions">
+      <button onclick="editItem(${it.id})">✎</button>
+      <button onclick="toggleChiffreCle(${it.id}, ${!it.Chiffre_cle})">${it.Chiffre_cle ? '☆' : '★'}</button>
+      <button onclick="deleteItem(${it.id})">✕</button>
+    </span>
+  </div>`;
+}
+
+// ---------------------------------------------------------------
+// ACTIONS
+// ---------------------------------------------------------------
+function switchFiche(id) {
+  state.currentFicheId = parseInt(id);
+  render();
+}
+
+function toggleAddForm(btn) {
+  const form = btn.nextElementSibling;
+  form.classList.toggle('open');
+}
+
+async function submitAddItem(btn, ficheId, rubrique) {
+  const form = btn.parentElement;
+  const textarea = form.querySelector('textarea');
+  const subInput = form.querySelector('input');
+  const texte = textarea.value.trim();
+  if (!texte) return;
+
+  const rubItems = state.items.filter(i => i.Fiche == ficheId && i.Rubrique === rubrique);
+  const maxOrdre = rubItems.length ? Math.max(...rubItems.map(i => i.Ordre || 0)) : 0;
+
+  await grist.docApi.applyUserActions([
+    ['AddRecord', 'Items', null, {
+      Fiche: parseInt(ficheId),
+      Rubrique: rubrique,
+      Sous_titre: subInput.value.trim(),
+      Ordre: maxOrdre + 10,
+      Niveau: 0,
+      Texte: texte,
+      Chiffre_cle: false,
+      Auteur: state.currentUserEmail || null,
+      Date_modif: Date.now() / 1000,
+      Origine: 'Saisie service',
+    }]
+  ]);
+  textarea.value = '';
+  subInput.value = '';
+  await loadAll();
+  render();
+}
+
+async function editItem(itemId) {
+  const it = state.items.find(i => i.id === itemId);
+  const nouveauTexte = prompt('Modifier le texte :', it.Texte);
+  if (nouveauTexte === null || nouveauTexte.trim() === '') return;
+  await grist.docApi.applyUserActions([
+    ['UpdateRecord', 'Items', itemId, { Texte: nouveauTexte.trim(), Date_modif: Date.now() / 1000, Auteur: state.currentUserEmail || null }]
+  ]);
+  await loadAll();
+  render();
+}
+
+async function toggleChiffreCle(itemId, value) {
+  await grist.docApi.applyUserActions([
+    ['UpdateRecord', 'Items', itemId, { Chiffre_cle: value, Date_modif: Date.now() / 1000, Auteur: state.currentUserEmail || null }]
+  ]);
+  await loadAll();
+  render();
+}
+
+async function deleteItem(itemId) {
+  if (!confirm('Supprimer cet item ?')) return;
+  await grist.docApi.applyUserActions([['RemoveRecord', 'Items', itemId]]);
+  await loadAll();
+  render();
+}
+
+async function setStatut(ficheId, statut) {
+  const fields = { Statut: statut };
+  if (statut === 'Validé') {
+    fields.Date_validation = Date.now() / 1000;
+    fields.Valide_par = state.currentUserEmail || null;
+  }
+  await grist.docApi.applyUserActions([['UpdateRecord', 'Fiches', ficheId, fields]]);
+  await loadAll();
+  render();
+}
+
+async function createFiche() {
+  const theme = prompt('Thème général (ex. Sécurité) :');
+  if (!theme) return;
+  const titre = prompt('Titre de la fiche :');
+  if (!titre) return;
+  const res = await grist.docApi.applyUserActions([
+    ['AddRecord', 'Fiches', null, { Theme: theme.trim(), Titre: titre.trim(), Statut: 'Brouillon' }]
+  ]);
+  await loadAll();
+  state.currentFicheId = res.retValues[0];
+  render();
+}
+
+async function openServiceAdmin() {
+  const nom = prompt('Nom de la personne à ajouter à l\'annuaire Services :');
+  if (!nom) return;
+  const service = prompt('Service (ex. DDT, Gendarmerie) :');
+  const email = prompt('Email de connexion (optionnel) :') || '';
+  await grist.docApi.applyUserActions([
+    ['AddRecord', 'Services', null, { Nom: nom.trim(), Service: (service || '').trim(), Email: email.trim() }]
+  ]);
+  await loadAll();
+  render();
+}
+
+// ---------------------------------------------------------------
+// UTILITAIRES
+// ---------------------------------------------------------------
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function fmtDate(unixSeconds) {
+  if (!unixSeconds) return '';
+  const d = new Date(unixSeconds * 1000);
+  return d.toLocaleDateString('fr-FR');
+}
+</script>
+</body>
+</html>
