@@ -650,47 +650,84 @@ async function importFiches(fichesData) {
     return;
   }
 
-  const existingKeys = new Set(state.fiches.map(f => `${f.Theme}||${f.Titre}`));
-  let created = 0, skipped = 0, totalItems = 0;
+  let createdFiches = 0, updatedFiches = 0, addedItems = 0, skippedItems = 0;
 
-  for (const fc of fichesData) {
-    const key = `${fc.Theme}||${fc.Titre}`;
-    if (existingKeys.has(key)) {
-      skipped++;
-      continue;
-    }
-    const res = await grist.docApi.applyUserActions([
-      ['AddRecord', 'Fiches', null, {
-        Theme: fc.Theme || '',
-        Titre: fc.Titre || '',
-        Statut: fc.Statut || 'Brouillon',
-      }]
-    ]);
-    const ficheId = res.retValues[0];
-    created++;
+  try {
+    for (const fc of fichesData) {
+      let fiche = state.fiches.find(f => f.Theme === fc.Theme && f.Titre === fc.Titre);
+      let ficheId;
 
-    const items = fc.items || [];
-    if (items.length) {
-      const bulkActions = items.map(it => ['AddRecord', 'Items', null, {
-        Fiche: ficheId,
-        Rubrique: it.Rubrique || 'Contexte',
-        Sous_titre: it.Sous_titre || '',
-        Ordre: it.Ordre || 0,
-        Niveau: it.Niveau || 0,
-        Texte: it.Texte || '',
-        Chiffre_cle: !!it.Chiffre_cle,
-        Origine: it.Origine || 'Import',
-        Date_modif: Date.now() / 1000,
-      }]);
-      // applyUserActions accepte plusieurs actions dans le meme appel
-      await grist.docApi.applyUserActions(bulkActions);
-      totalItems += items.length;
+      if (fiche) {
+        // La fiche existe déjà : on va y AJOUTER les nouveaux items plutôt que l'ignorer
+        ficheId = fiche.id;
+        updatedFiches++;
+      } else {
+        const res = await grist.docApi.applyUserActions([
+          ['AddRecord', 'Fiches', null, {
+            Theme: fc.Theme || '',
+            Titre: fc.Titre || '',
+            Statut: fc.Statut || 'Brouillon',
+          }]
+        ]);
+        ficheId = res.retValues[0];
+        createdFiches++;
+        state.fiches.push({ id: ficheId, Theme: fc.Theme, Titre: fc.Titre, Statut: fc.Statut || 'Brouillon' });
+      }
+
+      const items = fc.items || [];
+      if (!items.length) continue;
+
+      // Protection anti-doublon : un item avec le même texte dans la même rubrique
+      // de cette fiche est considéré déjà présent et n'est pas réinséré. Permet de
+      // réimporter le même fichier sans risque, et de compléter une fiche existante.
+      const existingItemsForFiche = state.items.filter(i => i.Fiche === ficheId);
+      const existingTexts = {};
+      const maxOrdreParRubrique = {};
+      for (const it of existingItemsForFiche) {
+        (existingTexts[it.Rubrique] = existingTexts[it.Rubrique] || new Set()).add((it.Texte || '').trim());
+        maxOrdreParRubrique[it.Rubrique] = Math.max(maxOrdreParRubrique[it.Rubrique] || 0, it.Ordre || 0);
+      }
+
+      const bulkActions = [];
+      for (const it of items) {
+        const rub = it.Rubrique || 'Contexte';
+        const texte = (it.Texte || '').trim();
+        if (existingTexts[rub]?.has(texte)) { skippedItems++; continue; }
+        maxOrdreParRubrique[rub] = (maxOrdreParRubrique[rub] || 0) + 10;
+        bulkActions.push(['AddRecord', 'Items', null, {
+          Fiche: ficheId,
+          Rubrique: rub,
+          Sous_titre: it.Sous_titre || '',
+          Ordre: maxOrdreParRubrique[rub],
+          Niveau: it.Niveau || 0,
+          Texte: texte,
+          Chiffre_cle: !!it.Chiffre_cle,
+          Type_info: it.Type_info || '',
+          Auteur: state.currentUserEmail || null,
+          Origine: it.Origine || 'Import',
+          Date_modif: Date.now() / 1000,
+        }]);
+        (existingTexts[rub] = existingTexts[rub] || new Set()).add(texte); // évite les doublons internes au même import
+      }
+      if (bulkActions.length) {
+        // applyUserActions accepte plusieurs actions dans le meme appel
+        await grist.docApi.applyUserActions(bulkActions);
+        addedItems += bulkActions.length;
+      }
     }
-    existingKeys.add(key);
+  } catch (err) {
+    console.error('Erreur import fiches :', err);
+    alert("L'import a échoué en cours de route : " + (err && err.message ? err.message : err) +
+      "\n\nCe qui a déjà été ajouté avant l'erreur reste en place (" + createdFiches + " fiche(s) créée(s), " +
+      addedItems + " item(s) ajouté(s) jusqu'ici). Corrigez la cause indiquée puis réimportez le même fichier : " +
+      "la protection anti-doublon évite les répétitions.");
+    await loadAll();
+    render();
+    return;
   }
 
   showInitBanner(
-    `Import terminé : ${created} fiche(s) créée(s) (${totalItems} items), ${skipped} déjà présente(s) ignorée(s).`,
+    `Import terminé : ${createdFiches} fiche(s) créée(s), ${updatedFiches} fiche(s) complétée(s), ${addedItems} item(s) ajouté(s), ${skippedItems} déjà présent(s) ignoré(s).`,
     false
   );
   await loadAll();
