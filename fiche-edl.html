@@ -210,6 +210,8 @@ function render() {
       ${state.fiches.map(f => `<option value="${f.id}" ${f.id === fiche.id ? 'selected' : ''}>${esc(f.Theme)} — ${esc(f.Titre)}</option>`).join('')}
     </select>
     <button onclick="createFiche()">+ Nouvelle fiche</button>
+    <button onclick="document.getElementById('import-file').click()">⭱ Importer des fiches (JSON)</button>
+    <input type="file" id="import-file" accept="application/json" style="display:none" onchange="handleImportFile(this)">
     <span style="flex:1"></span>
     <label style="font-size:12px; color:var(--text-secondary);">Vous êtes :</label>
     <select onchange="state.currentUserEmail=this.value">
@@ -408,6 +410,81 @@ async function openServiceAdmin() {
   await grist.docApi.applyUserActions([
     ['AddRecord', 'Services', null, { Nom: nom.trim(), Service: (service || '').trim(), Email: email.trim() }]
   ]);
+  await loadAll();
+  render();
+}
+
+// ---------------------------------------------------------------
+// IMPORT DE FICHES (JSON)
+// ---------------------------------------------------------------
+function handleImportFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    let data;
+    try {
+      data = JSON.parse(e.target.result);
+    } catch (err) {
+      alert("Fichier JSON invalide : " + err.message);
+      input.value = '';
+      return;
+    }
+    await importFiches(data);
+    input.value = '';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+async function importFiches(fichesData) {
+  if (!Array.isArray(fichesData)) {
+    alert("Format inattendu : le fichier doit contenir une liste de fiches.");
+    return;
+  }
+
+  const existingKeys = new Set(state.fiches.map(f => `${f.Theme}||${f.Titre}`));
+  let created = 0, skipped = 0, totalItems = 0;
+
+  for (const fc of fichesData) {
+    const key = `${fc.Theme}||${fc.Titre}`;
+    if (existingKeys.has(key)) {
+      skipped++;
+      continue;
+    }
+    const res = await grist.docApi.applyUserActions([
+      ['AddRecord', 'Fiches', null, {
+        Theme: fc.Theme || '',
+        Titre: fc.Titre || '',
+        Statut: fc.Statut || 'Brouillon',
+      }]
+    ]);
+    const ficheId = res.retValues[0];
+    created++;
+
+    const items = fc.items || [];
+    if (items.length) {
+      const bulkActions = items.map(it => ['AddRecord', 'Items', null, {
+        Fiche: ficheId,
+        Rubrique: it.Rubrique || 'Contexte',
+        Sous_titre: it.Sous_titre || '',
+        Ordre: it.Ordre || 0,
+        Niveau: it.Niveau || 0,
+        Texte: it.Texte || '',
+        Chiffre_cle: !!it.Chiffre_cle,
+        Origine: it.Origine || 'Import',
+        Date_modif: Date.now() / 1000,
+      }]);
+      // applyUserActions accepte plusieurs actions dans le meme appel
+      await grist.docApi.applyUserActions(bulkActions);
+      totalItems += items.length;
+    }
+    existingKeys.add(key);
+  }
+
+  showInitBanner(
+    `Import terminé : ${created} fiche(s) créée(s) (${totalItems} items), ${skipped} déjà présente(s) ignorée(s).`,
+    false
+  );
   await loadAll();
   render();
 }
