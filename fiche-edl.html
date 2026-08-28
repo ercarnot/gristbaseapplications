@@ -42,18 +42,23 @@
   .rubrique{margin-bottom:16px;}
   .rubrique h3{font-size:14px; font-weight:600; margin:0 0 6px;}
   .subtitle{font-size:12px; font-weight:600; color:var(--text-secondary); margin:8px 0 2px 4px;}
-  .item-row{display:flex; gap:8px; padding:5px 6px; border-radius:6px; align-items:flex-start; cursor:grab;}
+  .item-row{display:flex; gap:8px; padding:5px 6px; border-radius:6px; align-items:flex-start;}
   .item-row.chiffre{background:var(--bg-accent);}
   .item-row:hover{background:var(--surface-1);}
   .item-row.chiffre:hover{background:#dbe9f8;}
-  .item-row .handle{color:var(--text-muted); font-size:12px; padding-top:3px;}
-  .item-text{flex:1; font-size:14px; line-height:1.5; padding-top:1px;}
+  .item-row .handle{color:var(--text-muted); font-size:12px; padding-top:3px; cursor:grab;}
+  .indent-controls{display:flex; gap:2px; opacity:0; transition:opacity .1s;}
+  .item-row:hover .indent-controls{opacity:1;}
+  .indent-controls button{padding:1px 5px; font-size:11px; line-height:1.4;}
+  .indent-controls button:disabled{opacity:.3; cursor:default;}
+  .item-text{flex:1; font-size:14px; line-height:1.5; padding:1px 4px; border-radius:4px; outline:none;}
+  .item-text:focus{background:#fff; box-shadow:0 0 0 2px #0c447c33;}
   .item-text.niveau-1{margin-left:16px;}
   .item-text.niveau-2{margin-left:32px;}
-  .item-actions{display:flex; gap:4px; opacity:0; transition:opacity .1s;}
+  .item-actions{display:flex; gap:4px; opacity:0; transition:opacity .1s; padding-top:1px;}
   .item-row:hover .item-actions{opacity:1;}
   .item-actions button{padding:2px 6px; font-size:11px;}
-  .star{color:#0c447c; font-size:13px;}
+  .star{color:#0c447c; font-size:13px; padding-top:3px;}
   .add-form{display:none; gap:6px; margin-top:6px; flex-wrap:wrap;}
   .add-form.open{display:flex;}
   .add-form textarea{flex:1; min-width:220px; min-height:36px;}
@@ -67,8 +72,9 @@
 <div id="app"></div>
 
 <script>
-const RUBRIQUES = ["Contexte", "Actions", "Résultats", "Perspectives"];
+const RUBRIQUES = ["Message clé", "Contexte", "Actions", "Résultats", "Perspectives"];
 const RUBRIQUE_LABELS = {
+  "Message clé": "Message clé",
   "Contexte": "Contexte",
   "Actions": "Actions mises en place",
   "Résultats": "Résultats",
@@ -136,6 +142,19 @@ async function ensureSchema() {
     showInitBanner('Création des tables manquantes en cours…');
     await grist.docApi.applyUserActions(actions);
     showInitBanner('Tables créées : ' + actions.map(a => a[1]).join(', '), true);
+  }
+
+  // Synchronise la liste des choix (utile si les tables existaient deja
+  // avant l'ajout de "Message cle", ou si RUBRIQUES/STATUT_CHOICES evolue)
+  if (existing.includes('Items')) {
+    await grist.docApi.applyUserActions([
+      ['ModifyColumn', 'Items', 'Rubrique', { widgetOptions: JSON.stringify({ choices: RUBRIQUES }) }]
+    ]).catch(() => {}); // silencieux si la colonne n'existe pas encore sous cette forme
+  }
+  if (existing.includes('Fiches')) {
+    await grist.docApi.applyUserActions([
+      ['ModifyColumn', 'Fiches', 'Statut', { widgetOptions: JSON.stringify({ choices: STATUT_CHOICES }) }]
+    ]).catch(() => {});
   }
 }
 
@@ -297,14 +316,19 @@ function render() {
 function renderItemRow(it) {
   const niveauClass = it.Niveau ? `niveau-${it.Niveau}` : '';
   return `<div class="item-row ${it.Chiffre_cle ? 'chiffre' : ''}" data-id="${it.id}">
-    <span class="handle">⠿</span>
-    <span class="item-text ${niveauClass}">
-      ${it.Chiffre_cle ? '<span class="star">★</span> ' : ''}${esc(it.Texte)}
+    <span class="handle" title="Glisser pour réordonner">⠿</span>
+    <span class="indent-controls">
+      <button title="Diminuer le retrait" ${!it.Niveau ? 'disabled' : ''} onclick="changeNiveau(${it.id}, -1)">«</button>
+      <button title="Augmenter le retrait (mettre en second plan)" ${it.Niveau >= 2 ? 'disabled' : ''} onclick="changeNiveau(${it.id}, 1)">»</button>
     </span>
+    ${it.Chiffre_cle ? '<span class="star">★</span>' : ''}
+    <div class="item-text ${niveauClass}" contenteditable="true" spellcheck="false"
+      data-id="${it.id}"
+      onblur="saveItemText(this)"
+      onkeydown="handleItemKeydown(event, this)">${esc(it.Texte)}</div>
     <span class="item-actions">
-      <button onclick="editItem(${it.id})">✎</button>
-      <button onclick="toggleChiffreCle(${it.id}, ${!it.Chiffre_cle})">${it.Chiffre_cle ? '☆' : '★'}</button>
-      <button onclick="deleteItem(${it.id})">✕</button>
+      <button title="Marquer/démarquer comme chiffre clé" onclick="toggleChiffreCle(${it.id}, ${!it.Chiffre_cle})">${it.Chiffre_cle ? '☆' : '★'}</button>
+      <button title="Supprimer" onclick="deleteItem(${it.id})">✕</button>
     </span>
   </div>`;
 }
@@ -352,12 +376,39 @@ async function submitAddItem(btn, ficheId, rubrique) {
   render();
 }
 
-async function editItem(itemId) {
-  const it = state.items.find(i => i.id === itemId);
-  const nouveauTexte = prompt('Modifier le texte :', it.Texte);
-  if (nouveauTexte === null || nouveauTexte.trim() === '') return;
+async function saveItemText(el) {
+  const id = parseInt(el.dataset.id);
+  const it = state.items.find(i => i.id === id);
+  if (!it) return;
+  const newText = el.textContent.trim();
+  if (!newText) {
+    // on ne vide jamais un item par accident : on restaure le texte precedent
+    el.textContent = it.Texte;
+    return;
+  }
+  if (newText === it.Texte) return; // rien n'a change, pas d'appel inutile
+  it.Texte = newText; // mise a jour optimiste locale
   await grist.docApi.applyUserActions([
-    ['UpdateRecord', 'Items', itemId, { Texte: nouveauTexte.trim(), Date_modif: Date.now() / 1000, Auteur: state.currentUserEmail || null }]
+    ['UpdateRecord', 'Items', id, { Texte: newText, Date_modif: Date.now() / 1000, Auteur: state.currentUserEmail || null }]
+  ]);
+  await loadAll();
+  render();
+}
+
+function handleItemKeydown(event, el) {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    el.blur(); // declenche saveItemText ; Maj+Entree autorise un saut de ligne dans l'item
+  }
+}
+
+async function changeNiveau(itemId, delta) {
+  const it = state.items.find(i => i.id === itemId);
+  if (!it) return;
+  const newNiveau = Math.max(0, Math.min(2, (it.Niveau || 0) + delta));
+  if (newNiveau === it.Niveau) return;
+  await grist.docApi.applyUserActions([
+    ['UpdateRecord', 'Items', itemId, { Niveau: newNiveau, Date_modif: Date.now() / 1000, Auteur: state.currentUserEmail || null }]
   ]);
   await loadAll();
   render();
