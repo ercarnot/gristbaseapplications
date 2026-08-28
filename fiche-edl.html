@@ -5,6 +5,7 @@
 <title>Fiche EDL</title>
 <script src="https://grist.numerique.gouv.fr/grist-plugin-api.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.2.4/build/index.umd.js"></script>
 <style>
   :root{
     --border:#e2e0d8; --border-strong:#c9c6ba; --text-primary:#22221f; --text-secondary:#65645d;
@@ -85,10 +86,11 @@ const RUBRIQUE_LABELS = {
   "Contexte": "Contexte",
   "Actions": "Actions mises en place",
   "Résultats": "Résultats",
-  "Perspectives": "Perspectives"
+  "Perspectives": "Perspectives",
+  "Focus": "Focus"
 };
 const STATUT_CHOICES = ["Brouillon", "Proposé", "Validé"];
-const TYPE_INFO_CHOICES = ["Chiffre", "Évolution", "Alerte", "Action", "Citation"];
+const TYPE_INFO_CHOICES = ["Chiffre", "Évolution", "Alerte", "Action", "Citation", "Objectif"];
 
 let state = {
   services: [],
@@ -297,6 +299,7 @@ function render() {
   }
 
   html += `<footer>`;
+  html += `<button onclick="exportFicheWord(${fiche.id})">⭳ Exporter (.docx)</button>`;
   if (fiche.Statut === 'Brouillon' || !fiche.Statut) {
     html += `<button onclick="setStatut(${fiche.id}, 'Proposé')">Proposer pour validation</button>`;
   }
@@ -366,8 +369,9 @@ function renderItemRow(it) {
     <div class="item-text ${niveauClass}" contenteditable="true" spellcheck="false"
       data-id="${it.id}"
       onblur="saveItemText(this)"
-      onkeydown="handleItemKeydown(event, this)">${esc(it.Texte)}</div>
+      onkeydown="handleItemKeydown(event, this)">${mdToHtml(it.Texte)}</div>
     <span class="item-actions">
+      <button title="Gras (ou Ctrl+B) — sélectionnez du texte d'abord" onmousedown="event.preventDefault()" onclick="applyBold(${it.id})"><b>B</b></button>
       <select class="type-select" title="Cartouche" onchange="setTypeInfo(${it.id}, this.value)">
         <option value="" ${!it.Type_info ? 'selected' : ''}>—</option>
         ${TYPE_INFO_CHOICES.map(t => `<option value="${t}" ${it.Type_info === t ? 'selected' : ''}>${t}</option>`).join('')}
@@ -425,10 +429,9 @@ async function saveItemText(el) {
   const id = parseInt(el.dataset.id);
   const it = state.items.find(i => i.id === id);
   if (!it) return;
-  const newText = el.textContent.trim();
+  const newText = htmlToMd(el.innerHTML);
   if (!newText) {
-    // on ne vide jamais un item par accident : on restaure le texte precedent
-    el.textContent = it.Texte;
+    el.innerHTML = mdToHtml(it.Texte); // on ne vide jamais un item par accident
     return;
   }
   if (newText === it.Texte) return; // rien n'a change, pas d'appel inutile
@@ -440,7 +443,19 @@ async function saveItemText(el) {
   render();
 }
 
+function applyBold(itemId) {
+  const el = document.querySelector(`.item-text[data-id="${itemId}"]`);
+  if (!el) return;
+  el.focus();
+  document.execCommand('bold');
+}
+
 function handleItemKeydown(event, el) {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'b') {
+    event.preventDefault();
+    document.execCommand('bold');
+    return;
+  }
   if (event.key === 'Enter' && !event.shiftKey) {
     event.preventDefault();
     el.blur(); // declenche saveItemText ; Maj+Entree autorise un saut de ligne dans l'item
@@ -594,12 +609,133 @@ async function importFiches(fichesData) {
 }
 
 // ---------------------------------------------------------------
+// EXPORT WORD (.docx) — génération 100% côté navigateur, via docx.js
+// ---------------------------------------------------------------
+async function exportFicheWord(ficheId) {
+  if (!window.docx) {
+    alert("La bibliothèque d'export Word n'a pas pu se charger (connexion réseau ?). Réessayez dans quelques secondes.");
+    return;
+  }
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+    WidthType, AlignmentType, HeadingLevel, ShadingType } = window.docx;
+
+  const fiche = state.fiches.find(f => f.id === ficheId);
+  if (!fiche) return;
+  const items = state.items.filter(i => i.Fiche === ficheId).sort((a, b) => (a.Ordre || 0) - (b.Ordre || 0));
+
+  const children = [];
+
+  // Cartouche titre (tableau bordé à une cellule, comme les fiches d'origine)
+  children.push(new Table({
+    width: { size: 9000, type: WidthType.DXA },
+    rows: [new TableRow({
+      children: [new TableCell({
+        margins: { top: 150, bottom: 150, left: 150, right: 150 },
+        children: [
+          new Paragraph({
+            alignment: AlignmentType.CENTER, spacing: { after: 60 },
+            children: [new TextRun({ text: (fiche.Theme || '').toUpperCase(), bold: true, size: 26 })]
+          }),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [new TextRun({ text: fiche.Titre || '', size: 24 })]
+          }),
+        ],
+      })],
+    })],
+  }));
+  children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+
+  for (const rub of RUBRIQUES) {
+    const rubItems = items.filter(i => i.Rubrique === rub);
+    if (!rubItems.length) continue;
+
+    children.push(new Paragraph({
+      text: RUBRIQUE_LABELS[rub], heading: HeadingLevel.HEADING_2, spacing: { before: 200, after: 100 }
+    }));
+
+    let lastSousTitre;
+    for (const it of rubItems) {
+      if (it.Sous_titre && it.Sous_titre !== lastSousTitre) {
+        children.push(new Paragraph({
+          children: [new TextRun({ text: it.Sous_titre, bold: true, italics: true })],
+          spacing: { before: 100, after: 60 }
+        }));
+      }
+      lastSousTitre = it.Sous_titre || lastSousTitre;
+
+      const runs = [];
+      if (it.Chiffre_cle) runs.push(new TextRun({ text: '★ ', bold: true }));
+      if (it.Type_info) runs.push(new TextRun({ text: `[${it.Type_info}] `, italics: true, color: '666666', size: 18 }));
+      for (const seg of parseBoldSegments(it.Texte)) {
+        if (!seg.texte) continue;
+        runs.push(new TextRun({ text: seg.texte, bold: seg.gras }));
+      }
+      children.push(new Paragraph({
+        children: runs,
+        bullet: { level: it.Niveau || 0 },
+        spacing: { after: 80 },
+        shading: it.Chiffre_cle ? { type: ShadingType.CLEAR, color: 'auto', fill: 'E6F1FB' } : undefined,
+      }));
+    }
+  }
+
+  const doc = new Document({ sections: [{ properties: {}, children }] });
+  const blob = await Packer.toBlob(doc);
+
+  const dateLabel = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const filename = `EDL - ${fiche.Theme} - ${fiche.Titre} - version ${dateLabel}.docx`.replace(/[\\/:*?"<>|]/g, '-');
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// ---------------------------------------------------------------
 // UTILITAIRES
 // ---------------------------------------------------------------
 function esc(s) {
   if (s === null || s === undefined) return '';
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+
+// Le texte est stocké en clair avec des marqueurs **gras** façon markdown-lite
+// (permet de garder Texte lisible dans Grist et de le réutiliser tel quel à l'export Word)
+function mdToHtml(text) {
+  let html = esc(text || '');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\n/g, '<br>');
+  return html;
+}
+
+function htmlToMd(html) {
+  let s = html;
+  s = s.replace(/<div>/gi, '\n').replace(/<\/div>/gi, '');
+  s = s.replace(/<br\s*\/?>/gi, '\n');
+  s = s.replace(/<\/?(strong|b)>/gi, '**');
+  s = s.replace(/<[^>]+>/g, ''); // retire toute autre balise residuelle
+  const ta = document.createElement('textarea');
+  ta.innerHTML = s;
+  s = ta.value;
+  return s.replace(/\n{3,}/g, '\n\n').trim();
+}
+
+// Découpe "texte **gras** texte" en segments {texte, gras} pour l'export Word
+function parseBoldSegments(text) {
+  const segments = [];
+  const parts = (text || '').split(/\*\*(.+?)\*\*/g);
+  parts.forEach((part, idx) => {
+    if (part === '') return;
+    segments.push({ texte: part, gras: idx % 2 === 1 });
+  });
+  return segments.length ? segments : [{ texte: text || '', gras: false }];
+}
+
 function fmtDate(unixSeconds) {
   if (!unixSeconds) return '';
   const d = new Date(unixSeconds * 1000);
