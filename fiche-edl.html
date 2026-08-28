@@ -86,12 +86,13 @@
 <div id="app"></div>
 
 <script>
-const RUBRIQUES = ["Message clé", "Contexte", "Actions", "Résultats", "Perspectives", "Focus"];
+const RUBRIQUES = ["Message clé", "Contexte", "Actions", "Résultats", "Freins", "Perspectives", "Focus"];
 const RUBRIQUE_LABELS = {
   "Message clé": "Message clé",
   "Contexte": "Contexte",
   "Actions": "Actions mises en place",
   "Résultats": "Résultats",
+  "Freins": "Freins",
   "Perspectives": "Perspectives",
   "Focus": "Focus"
 };
@@ -425,6 +426,21 @@ async function commitNewSubtitle(input, idsStr) {
   render();
 }
 
+// Sous-titre au niveau d'un seul item, quelle que soit sa position dans son groupe —
+// complète le contrôle par groupe ci-dessus pour les cas où un item isolé
+// à l'intérieur d'un lot d'items "sans sous-titre" doit recevoir le sien en propre.
+function editItemSubtitle(itemId) {
+  const it = state.items.find(i => i.id === itemId);
+  if (!it) return;
+  const value = prompt('Sous-titre pour cet item (laisser vide pour le retirer) :', it.Sous_titre || '');
+  if (value === null) return; // annulé
+  const trimmed = value.trim();
+  if (trimmed === (it.Sous_titre || '')) return;
+  grist.docApi.applyUserActions([
+    ['UpdateRecord', 'Items', itemId, { Sous_titre: trimmed, Date_modif: Date.now() / 1000, Auteur: state.currentUserEmail || null }]
+  ]).then(async () => { await loadAll(); render(); });
+}
+
 function renderItemRow(it) {
   const niveauClass = it.Niveau ? `niveau-${it.Niveau}` : '';
   const connector = it.Niveau >= 1 ? `<span class="connector ${niveauClass}">↳</span>` : '';
@@ -444,6 +460,7 @@ function renderItemRow(it) {
       onkeydown="handleItemKeydown(event, this)">${mdToHtml(it.Texte)}</div>
     <span class="item-actions">
       <button title="Gras (ou Ctrl+B) — sélectionnez du texte d'abord" onmousedown="event.preventDefault()" onclick="applyBold(${it.id})"><b>B</b></button>
+      <button title="Ajouter/modifier le sous-titre de cet item" onclick="editItemSubtitle(${it.id})">🏷</button>
       <select class="type-select" title="Cartouche" onchange="setTypeInfo(${it.id}, this.value)">
         <option value="" ${!it.Type_info ? 'selected' : ''}>—</option>
         ${TYPE_INFO_CHOICES.map(t => `<option value="${t}" ${it.Type_info === t ? 'selected' : ''}>${t}</option>`).join('')}
