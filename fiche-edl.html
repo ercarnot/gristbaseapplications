@@ -617,7 +617,10 @@ async function exportFicheWord(ficheId) {
     return;
   }
   const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-    WidthType, AlignmentType, HeadingLevel, ShadingType } = window.docx;
+    WidthType, AlignmentType, HeadingLevel, ShadingType, BorderStyle } = window.docx;
+
+  const NAVY = '0C447C';
+  const LIGHTBLUE = 'E6F1FB';
 
   const fiche = state.fiches.find(f => f.id === ficheId);
   if (!fiche) return;
@@ -634,7 +637,7 @@ async function exportFicheWord(ficheId) {
         children: [
           new Paragraph({
             alignment: AlignmentType.CENTER, spacing: { after: 60 },
-            children: [new TextRun({ text: (fiche.Theme || '').toUpperCase(), bold: true, size: 26 })]
+            children: [new TextRun({ text: (fiche.Theme || '').toUpperCase(), bold: true, size: 28, color: NAVY })]
           }),
           new Paragraph({
             alignment: AlignmentType.CENTER,
@@ -646,41 +649,76 @@ async function exportFicheWord(ficheId) {
   }));
   children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
 
+  // Message clé : mis en avant dans un encadré, comme le premier repère visuel de la fiche
+  const messageItems = items.filter(i => i.Rubrique === 'Message clé');
+  if (messageItems.length) {
+    const msgParagraphs = messageItems.map(it => new Paragraph({
+      spacing: { after: 80 },
+      children: parseBoldSegments(it.Texte).filter(s => s.texte).map(seg =>
+        new TextRun({ text: seg.texte, bold: true, size: 26, color: NAVY })
+      ),
+    }));
+    children.push(new Table({
+      width: { size: 9000, type: WidthType.DXA },
+      rows: [new TableRow({
+        children: [new TableCell({
+          shading: { type: ShadingType.CLEAR, color: 'auto', fill: LIGHTBLUE },
+          margins: { top: 160, bottom: 160, left: 220, right: 220 },
+          children: msgParagraphs,
+        })],
+      })],
+    }));
+    children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+  }
+
   for (const rub of RUBRIQUES) {
+    if (rub === 'Message clé') continue; // déjà traité ci-dessus, mis en avant
     const rubItems = items.filter(i => i.Rubrique === rub);
     if (!rubItems.length) continue;
 
     children.push(new Paragraph({
-      text: RUBRIQUE_LABELS[rub], heading: HeadingLevel.HEADING_2, spacing: { before: 200, after: 100 }
+      children: [new TextRun({ text: RUBRIQUE_LABELS[rub], bold: true, size: 27, color: NAVY })],
+      spacing: { before: 260, after: 140 },
+      border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: LIGHTBLUE, space: 4 } },
     }));
 
     let lastSousTitre;
     for (const it of rubItems) {
       if (it.Sous_titre && it.Sous_titre !== lastSousTitre) {
         children.push(new Paragraph({
-          children: [new TextRun({ text: it.Sous_titre, bold: true, italics: true })],
-          spacing: { before: 100, after: 60 }
+          children: [new TextRun({ text: it.Sous_titre, bold: true, italics: true, size: 22 })],
+          spacing: { before: 120, after: 70 }
         }));
       }
       lastSousTitre = it.Sous_titre || lastSousTitre;
 
       const runs = [];
-      if (it.Chiffre_cle) runs.push(new TextRun({ text: '★ ', bold: true }));
-      if (it.Type_info) runs.push(new TextRun({ text: `[${it.Type_info}] `, italics: true, color: '666666', size: 18 }));
+      if (it.Chiffre_cle) runs.push(new TextRun({ text: '★ ', bold: true, color: NAVY }));
+      if (it.Type_info) runs.push(new TextRun({ text: it.Type_info + '  ', smallCaps: true, italics: true, color: '767570', size: 20 }));
       for (const seg of parseBoldSegments(it.Texte)) {
         if (!seg.texte) continue;
-        runs.push(new TextRun({ text: seg.texte, bold: seg.gras }));
+        runs.push(new TextRun({ text: seg.texte, bold: seg.gras, size: 23 }));
       }
       children.push(new Paragraph({
         children: runs,
         bullet: { level: it.Niveau || 0 },
-        spacing: { after: 80 },
-        shading: it.Chiffre_cle ? { type: ShadingType.CLEAR, color: 'auto', fill: 'E6F1FB' } : undefined,
+        spacing: { after: 100, line: 300 },
+        shading: it.Chiffre_cle ? { type: ShadingType.CLEAR, color: 'auto', fill: LIGHTBLUE } : undefined,
       }));
     }
   }
 
-  const doc = new Document({ sections: [{ properties: {}, children }] });
+  const doc = new Document({
+    styles: {
+      default: {
+        document: {
+          run: { font: 'Calibri', size: 23 },
+          paragraph: { spacing: { line: 300, lineRule: 'auto' } },
+        },
+      },
+    },
+    sections: [{ properties: {}, children }],
+  });
   const blob = await Packer.toBlob(doc);
 
   const dateLabel = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
