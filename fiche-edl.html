@@ -84,9 +84,18 @@
     display:flex; flex-direction:column; box-shadow:0 8px 32px rgba(0,0,0,0.25);}
   .modal-header{display:flex; justify-content:space-between; align-items:center;
     padding:14px 18px; border-bottom:1px solid var(--border); font-weight:600;}
-  .modal-header button{border:none; background:none; font-size:16px; padding:2px 6px; cursor:pointer;}
   #synthese-modal-textarea{flex:1; min-height:400px; margin:16px 18px; padding:12px; font-size:14px;
     line-height:1.6; font-family:inherit; border:1px solid var(--border-strong); border-radius:8px; resize:vertical;}
+  .synthese-view{flex:1; min-height:400px; max-height:60vh; margin:16px 18px; padding:4px 8px;
+    overflow-y:auto; font-size:14px; line-height:1.7;}
+  .synthese-view p{margin:0 0 14px;}
+  .synthese-view .synth-heading{font-weight:600; color:var(--text-accent); margin:20px 0 8px; font-size:15px;}
+  .synthese-view .synth-heading:first-child{margin-top:0;}
+  .synthese-view ul{margin:0 0 14px; padding-left:22px;}
+  .synthese-view li{margin-bottom:6px;}
+  .synthese-view .synth-empty{color:var(--text-muted); font-style:italic;}
+  .modal-header button{border:none; background:none; font-size:13px; padding:4px 8px; cursor:pointer; border-radius:6px;}
+  .modal-header button:hover{background:var(--surface-1);}
   .modal-footer{display:flex; justify-content:space-between; align-items:center;
     padding:12px 18px; border-top:1px solid var(--border);}
   .modal-hint{font-size:12px; color:var(--text-muted);}
@@ -97,13 +106,17 @@
 <div id="init-banner"></div>
 <div id="app"></div>
 
-<div id="synthese-modal" class="modal-overlay" style="display:none;" onclick="if(event.target===this) closeSyntheseModal(false)">
+<div id="synthese-modal" class="modal-overlay" style="display:none;" onclick="if(event.target===this) closeSyntheseModal(true)">
   <div class="modal-box">
     <div class="modal-header">
       <span id="synthese-modal-title">Synthèse du rapport source</span>
-      <button onclick="closeSyntheseModal(true)" title="Fermer">✕</button>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <button id="synthese-toggle-btn" onclick="toggleSyntheseEditMode()">✎ Modifier</button>
+        <button onclick="closeSyntheseModal(true)" title="Fermer">✕</button>
+      </div>
     </div>
-    <textarea id="synthese-modal-textarea" placeholder="Collez ici le texte intégral de la synthèse…"></textarea>
+    <div id="synthese-modal-view" class="synthese-view"></div>
+    <textarea id="synthese-modal-textarea" style="display:none;" placeholder="Collez ici le texte intégral de la synthèse…"></textarea>
     <div class="modal-footer">
       <span class="modal-hint">Enregistrement automatique à la fermeture</span>
       <button class="primary" onclick="closeSyntheseModal(true)">Fermer et enregistrer</button>
@@ -512,6 +525,62 @@ function renderItemRow(it) {
 // SYNTHÈSE COMPLÈTE (texte intégral, en boîte modale)
 // ---------------------------------------------------------------
 let syntheseModalFicheId = null;
+let syntheseEditMode = false;
+
+// Mise en forme automatique d'un texte collé tel quel : paragraphes, puces
+// (-, •, *), et détection des lignes courtes sans ponctuation finale comme
+// titres de section — sans jamais modifier le texte source lui-même.
+function formatSyntheseHtml(text) {
+  if (!text || !text.trim()) return '<p class="synth-empty">Aucune synthèse pour l’instant — cliquez sur « Modifier » pour en coller une.</p>';
+
+  const lines = text.split('\n');
+  let html = '';
+  let inList = false;
+  let paragraphBuffer = [];
+
+  function flushParagraph() {
+    if (paragraphBuffer.length) {
+      html += `<p>${paragraphBuffer.join(' ')}</p>`;
+      paragraphBuffer = [];
+    }
+  }
+  function closeList() {
+    if (inList) { html += '</ul>'; inList = false; }
+  }
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) { flushParagraph(); closeList(); continue; }
+
+    const isBullet = /^[-•*]\s+/.test(line);
+
+    if (isBullet) {
+      flushParagraph();
+      if (!inList) { html += '<ul>'; inList = true; }
+      html += `<li>${mdInline(line.replace(/^[-•*]\s+/, ''))}</li>`;
+      continue;
+    }
+
+    const wordCount = line.split(/\s+/).length;
+    const looksLikeHeading = paragraphBuffer.length === 0 && !inList &&
+      wordCount <= 14 && line.length < 100 && !/[.?!,;]$/.test(line);
+
+    if (looksLikeHeading) {
+      closeList();
+      html += `<p class="synth-heading">${mdInline(line)}</p>`;
+    } else {
+      closeList();
+      paragraphBuffer.push(mdInline(line));
+    }
+  }
+  flushParagraph();
+  closeList();
+  return html;
+}
+
+function mdInline(s) {
+  return esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
 
 function openSyntheseModal(ficheId) {
   const fiche = state.fiches.find(f => f.id === ficheId);
@@ -519,7 +588,28 @@ function openSyntheseModal(ficheId) {
   syntheseModalFicheId = ficheId;
   document.getElementById('synthese-modal-title').textContent = `Synthèse — ${fiche.Titre}`;
   document.getElementById('synthese-modal-textarea').value = fiche.Synthese_texte || '';
+  document.getElementById('synthese-modal-view').innerHTML = formatSyntheseHtml(fiche.Synthese_texte);
+  syntheseEditMode = !fiche.Synthese_texte; // rien a lire : on ouvre directement en edition
+  applySyntheseMode();
   document.getElementById('synthese-modal').style.display = 'flex';
+}
+
+function toggleSyntheseEditMode() {
+  if (!syntheseEditMode) {
+    syntheseEditMode = true;
+  } else {
+    // repasse en lecture : regenere l'apercu a partir du texte actuellement saisi
+    document.getElementById('synthese-modal-view').innerHTML =
+      formatSyntheseHtml(document.getElementById('synthese-modal-textarea').value);
+    syntheseEditMode = false;
+  }
+  applySyntheseMode();
+}
+
+function applySyntheseMode() {
+  document.getElementById('synthese-modal-view').style.display = syntheseEditMode ? 'none' : 'block';
+  document.getElementById('synthese-modal-textarea').style.display = syntheseEditMode ? 'block' : 'none';
+  document.getElementById('synthese-toggle-btn').textContent = syntheseEditMode ? '👁 Aperçu' : '✎ Modifier';
 }
 
 async function closeSyntheseModal(save) {
