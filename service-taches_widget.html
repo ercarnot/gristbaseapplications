@@ -131,6 +131,7 @@
     <button class="tab" data-tab="dashboard">Tableau de bord</button>
     <button class="tab" data-tab="taches">Tâches</button>
     <button class="tab" data-tab="projets">Projets</button>
+    <button class="tab" data-tab="mailprojet">✉ Mail → Projet</button>
     <button class="tab" data-tab="dossiers">Dossiers</button>
     <button class="tab" data-tab="modeles">Modèles</button>
     <button class="tab" data-tab="export3">Export 3 semaines</button>
@@ -510,6 +511,7 @@ async function render(){
   if(currentTab==="dashboard") renderDashboard();
   else if(currentTab==="taches") renderTaches();
   else if(currentTab==="projets") renderProjets();
+  else if(currentTab==="mailprojet") renderMailProjet();
   else if(currentTab==="dossiers") renderDossiers();
   else if(currentTab==="modeles") renderModeles();
   else if(currentTab==="export3") renderExport3();
@@ -631,6 +633,7 @@ function renderDashboard(){
    TACHES (liste + édition + notes)
 ========================================================= */
 let tacheFilters = { agent:"", dossier:"", projet:"", statut:"" };
+let mailProjetState = { brut:"", nom:"", modeleId:"", categorie:"", agent:"", dateRef:"", demandeur:"", extrait:"" };
 
 function renderTaches(){
   const view = document.getElementById('view');
@@ -1192,6 +1195,142 @@ function renderProjets(){
         </div>
       `).join("")}
   `;
+}
+
+/* =========================================================
+   MAIL → PROJET — coller un mail, créer directement le projet (et ses tâches si un modèle est reconnu)
+========================================================= */
+const MOIS_FR_NUM = { "janvier":1,"février":2,"fevrier":2,"mars":3,"avril":4,"mai":5,"juin":6,"juillet":7,"août":8,"aout":8,"septembre":9,"octobre":10,"novembre":11,"décembre":12,"decembre":12 };
+function mpPad2(n){ return String(n).padStart(2,"0"); }
+function mpDetecterDate(texte){
+  if(!texte) return "";
+  const num = texte.match(/\b(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})\b/);
+  if(num){
+    let [, j, m, a] = num;
+    if(a.length===2) a = "20"+a;
+    if(Number(m)>=1 && Number(m)<=12 && Number(j)>=1 && Number(j)<=31) return `${a}-${mpPad2(m)}-${mpPad2(j)}`;
+  }
+  const lettres = texte.toLowerCase().match(/\b(\d{1,2})\s+(janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre)\s+(\d{4})\b/);
+  if(lettres){ const [, j, moisNom, a] = lettres; return `${a}-${mpPad2(MOIS_FR_NUM[moisNom])}-${mpPad2(j)}`; }
+  return "";
+}
+function mpDetecterObjet(texte){ const m = texte.match(/^\s*(objet|sujet|subject)\s*:\s*(.+)$/im); return m ? m[2].trim() : ""; }
+function mpDetecterDemandeur(texte){ const m = texte.match(/^\s*(de|from|exp[ée]diteur)\s*:\s*(.+)$/im); return m ? m[2].trim() : ""; }
+
+function renderMailProjet(){
+  const view = document.getElementById('view');
+  const s = mailProjetState;
+  view.innerHTML = `
+    <h1>Mail → Projet</h1>
+    <p class="sub">Collez un mail de commande (objet + corps), analysez-le, complétez, puis créez le projet directement — avec ses tâches-types si un modèle est reconnu.</p>
+
+    <div class="card">
+      <label>1. Collez ici l'objet ET le corps du mail</label>
+      <textarea id="mpBrut" style="min-height:110px;" placeholder="Objet : Déplacement du préfet à ...&#10;&#10;Bonjour, pourriez-vous préparer...">${s.brut||""}</textarea>
+      <div style="margin-top:10px;"><button class="btn secondary" id="mpAnalyser">🔎 Analyser le texte collé</button></div>
+    </div>
+
+    <div class="card">
+      <label>Nom du projet</label>
+      <input type="text" id="mpNom" value="${s.nom||""}">
+
+      <div class="row">
+        <div class="col">
+          <label>Modèle (type de projet) <span class="muted">— optionnel, génère les tâches-types</span></label>
+          <select id="mpModele"><option value="">— aucun —</option>${STATE.modeles.map(m=>`<option value="${m.id}" ${String(s.modeleId)===String(m.id)?'selected':''}>${m.fields.Nom} (${blueprintForModele(m.id).length} tâches)</option>`).join("")}</select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <label>Catégorie</label>
+          <select id="mpCategorie">${DOSSIER_CATEGORIES.map(c=>`<option ${s.categorie===c?'selected':''}>${c}</option>`).join("")}</select>
+        </div>
+        <div class="col">
+          <label>Agent porteur</label>
+          <select id="mpAgent">${AGENTS.map(a=>`<option ${s.agent===a?'selected':''}>${a}</option>`).join("")}</select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <label>Date limite / de référence</label>
+          <input type="date" id="mpDateRef" value="${s.dateRef||todayISO()}">
+        </div>
+        <div class="col">
+          <label>Demandeur</label>
+          <input type="text" id="mpDemandeur" value="${s.demandeur||""}">
+        </div>
+      </div>
+      <label>Extrait du mail (repris dans le bilan du projet)</label>
+      <textarea id="mpExtrait" style="min-height:90px;">${s.extrait||""}</textarea>
+
+      <div style="margin-top:14px;"><button class="btn" id="mpCreer">✅ Créer le projet</button></div>
+      <div id="mpMsg" style="margin-top:10px;font-size:.86rem;"></div>
+    </div>
+  `;
+
+  // sync la saisie brute vers l'état, pour survivre à un re-render (ex. après analyse)
+  const bind = (id, key)=>{ const el = document.getElementById(id); if(el) el.oninput = ()=>{ s[key] = el.value; }; };
+  bind('mpBrut','brut'); bind('mpNom','nom'); bind('mpDateRef','dateRef'); bind('mpDemandeur','demandeur'); bind('mpExtrait','extrait');
+  document.getElementById('mpModele').onchange = e=>{ s.modeleId = e.target.value; };
+  document.getElementById('mpCategorie').onchange = e=>{ s.categorie = e.target.value; };
+  document.getElementById('mpAgent').onchange = e=>{ s.agent = e.target.value; };
+
+  document.getElementById('mpAnalyser').onclick = ()=>{
+    const texte = document.getElementById('mpBrut').value.trim();
+    if(!texte) return;
+    const objet = mpDetecterObjet(texte);
+    const demandeur = mpDetecterDemandeur(texte);
+    const date = mpDetecterDate(texte);
+    s.brut = texte;
+    if(objet) s.nom = objet;
+    if(demandeur) s.demandeur = demandeur;
+    if(date) s.dateRef = date;
+    s.extrait = texte.slice(0, 3000);
+    renderMailProjet();
+    if(!objet) toast("Objet non détecté automatiquement — complétez le nom du projet à la main.", true);
+  };
+
+  document.getElementById('mpCreer').onclick = async ()=>{
+    const nom = document.getElementById('mpNom').value.trim();
+    const msgEl = document.getElementById('mpMsg');
+    if(!nom){ msgEl.textContent = "Le nom du projet est requis."; msgEl.style.color = "var(--urgent)"; return; }
+    const modeleId = document.getElementById('mpModele').value ? Number(document.getElementById('mpModele').value) : null;
+    const categorie = document.getElementById('mpCategorie').value;
+    const agent = document.getElementById('mpAgent').value;
+    const dateRef = document.getElementById('mpDateRef').value || todayISO();
+    const demandeur = document.getElementById('mpDemandeur').value.trim();
+    const extrait = document.getElementById('mpExtrait').value.trim();
+    let bilan = "";
+    if(demandeur) bilan = `Demandeur : ${demandeur}`;
+    if(extrait) bilan = `${bilan}${bilan?'\n':''}\n— Extrait du mail d'origine —\n${extrait}`.trim();
+
+    try{
+      const projetId = await GristAPI.addRecord("Projets", {
+        Nom: nom, Modele: modeleId, Categorie: categorie,
+        DateReference: toGristDate(dateRef), Agent: agent, Statut: "Actif", Bilan: bilan
+      });
+      let nbTaches = 0;
+      if(modeleId){
+        const bp = blueprintForModele(modeleId);
+        const refSec = toGristDate(dateRef);
+        let ordreCpt = 0;
+        for(const b of bp){
+          await GristAPI.addRecord("Taches", {
+            Titre: b.fields.Titre, Projet: projetId, Agent: b.fields.Agent || agent,
+            Statut: "À faire", Priorite: b.fields.Priorite || "Normale",
+            DateEcheance: refSec + (b.fields.OffsetJours||0)*86400,
+            DateCreation: toGristDate(todayISO()), Ordre: ordreCpt++
+          });
+          nbTaches++;
+        }
+      }
+      mailProjetState = { brut:"", nom:"", modeleId:"", categorie:"", agent:"", dateRef:"", demandeur:"", extrait:"" };
+      await refreshAll();
+      currentTab = "projets";
+      render();
+      toast(nbTaches ? `Projet créé avec ${nbTaches} tâche(s) du modèle.` : "Projet créé.");
+    }catch(e){ msgEl.textContent = e.message; msgEl.style.color = "var(--urgent)"; }
+  };
 }
 
 function renderProjetContacts(projetId){
