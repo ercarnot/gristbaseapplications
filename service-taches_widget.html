@@ -1250,6 +1250,16 @@ function openEditProjetModal(id){
           <select id="peStatut">${["Actif","Clos"].map(s=>`<option ${f.Statut===s?'selected':''}>${s}</option>`).join("")}</select>
         </div>
       </div>
+      <div class="row" style="align-items:flex-end;">
+        <div class="col">
+          <label>Modèle (type de projet)</label>
+          <select id="peModele"><option value="">— aucun —</option>${STATE.modeles.map(m=>`<option value="${m.id}" ${f.Modele===m.id?'selected':''}>${m.fields.Nom}</option>`).join("")}</select>
+        </div>
+        <div class="col" style="flex:none;">
+          <button type="button" class="btn small secondary" id="peGenererTaches">🧩 Générer les tâches du modèle</button>
+        </div>
+      </div>
+      <p class="sub" id="peGenererHelp">Utile si le projet a été importé (mail → projet) sans modèle reconnu, ou pour compléter un projet créé sans tâches-types. Les tâches sont ajoutées à celles déjà présentes (pas de doublon automatique — vérifiez avant de cliquer deux fois).</p>
       <label>Axe du plan de communication (optionnel)</label>
       <select id="peAxe"><option value="">— aucun —</option>${STATE.axes.map(a=>`<option value="${a.id}" ${f.Axe===a.id?'selected':''}>${a.fields.Nom}</option>`).join("")}</select>
       <label style="display:flex;align-items:center;gap:6px;margin-top:12px;"><input type="checkbox" id="peMarquant" style="width:auto;" ${f.Marquant?'checked':''}> Marquant — temps fort de l'année (apparaîtra dans le Film de l'année et le rapport annuel)</label>
@@ -1303,12 +1313,43 @@ function openEditProjetModal(id){
 
   document.getElementById('peExportOdt').onclick = ()=>exportProjetOdt(id);
 
+  document.getElementById('peGenererTaches').onclick = async ()=>{
+    const modeleId = document.getElementById('peModele').value ? Number(document.getElementById('peModele').value) : null;
+    if(!modeleId){ toast("Choisissez d'abord un modèle.", true); return; }
+    const bp = blueprintForModele(modeleId);
+    if(bp.length===0){ toast("Ce modèle n'a aucune tâche-type.", true); return; }
+    const existantes = tachesForProjet(id).length;
+    if(existantes>0 && !confirm(`Ce projet a déjà ${existantes} tâche(s). Ajouter les ${bp.length} tâche(s) du modèle en plus (elles ne remplacent pas les existantes) ?`)) return;
+    const refSec = toGristDate(document.getElementById('peDate').value || fromGristDate(f.DateReference) || todayISO());
+    let ordreCpt = existantes;
+    try{
+      for(const b of bp){
+        await GristAPI.addRecord("Taches", {
+          Titre: b.fields.Titre,
+          Projet: id,
+          Agent: b.fields.Agent || f.Agent,
+          Statut: "À faire",
+          Priorite: b.fields.Priorite || "Normale",
+          DateEcheance: refSec + (b.fields.OffsetJours||0)*86400,
+          DateCreation: toGristDate(todayISO()),
+          Ordre: ordreCpt++
+        });
+      }
+      if(!f.Modele) await GristAPI.updateRecord("Projets", id, {Modele: modeleId});
+      await refreshAll();
+      bg.remove();
+      openEditProjetModal(id);
+      toast(`${bp.length} tâche(s) générée(s) depuis le modèle.`);
+    }catch(e){ toast(e.message, true); }
+  };
+
   document.getElementById('peSave').onclick = async ()=>{
     const fields = {
       Nom: document.getElementById('peNom').value,
       DateReference: toGristDate(document.getElementById('peDate').value),
       Agent: document.getElementById('peAgent').value,
       Categorie: document.getElementById('peCategorie').value,
+      Modele: document.getElementById('peModele').value ? Number(document.getElementById('peModele').value) : null,
       Axe: document.getElementById('peAxe').value ? Number(document.getElementById('peAxe').value) : null,
       Statut: document.getElementById('peStatut').value,
       Marquant: document.getElementById('peMarquant').checked,
