@@ -704,7 +704,7 @@ function renderTaches(){
           <select id="fStatut"><option value="">Tous</option>${STATUTS.map(s=>`<option ${tacheFilters.statut===s?'selected':''}>${s}</option>`).join("")}</select>
         </div>
         <div class="col" style="flex:none;">
-          <button class="btn" onclick="openTacheModal()">+ Nouvelle tâche</button>
+          <button class="btn" onclick="openTacheModal(null, ${projetFiltre ? projetFiltre.id : 'null'})">+ Nouvelle tâche</button>
         </div>
       </div>
     </div>
@@ -783,9 +783,11 @@ async function deleteTacheQuick(id){
   }catch(e){ toast(e.message, true); }
 }
 
-function openTacheModal(id){
+function openTacheModal(id, defaultProjetId){
   const t = id ? STATE.taches.find(x=>x.id===id) : null;
-  const f = t ? t.fields : {};
+  const f = t ? t.fields : (defaultProjetId ? {Projet: defaultProjetId} : {});
+  // Liste des projets proposés : uniquement les actifs, plus celui déjà affecté (même clos) pour ne pas le perdre à l'édition.
+  const projetsProposes = STATE.projets.filter(p=>p.fields.Statut!=="Clos" || p.id===f.Projet);
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
   bg.innerHTML = `
@@ -800,8 +802,8 @@ function openTacheModal(id){
           <select id="mDossier"><option value="">—</option>${STATE.dossiers.map(d=>`<option value="${d.id}" ${f.Dossier===d.id?'selected':''}>${d.fields.Nom}</option>`).join("")}</select>
         </div>
         <div class="col">
-          <label>Projet ${f.Projet ? '<span class="muted">(généré automatiquement)</span>' : ''}</label>
-          <select id="mProjet"><option value="">— aucun —</option>${STATE.projets.map(p=>`<option value="${p.id}" ${f.Projet===p.id?'selected':''}>${p.fields.Nom}</option>`).join("")}</select>
+          <label>Projet ${(f.Projet && !t) ? '<span class="muted">(associé automatiquement)</span>' : ''}</label>
+          <select id="mProjet"><option value="">— aucun —</option>${projetsProposes.map(p=>`<option value="${p.id}" ${f.Projet===p.id?'selected':''}>${p.fields.Nom}${p.fields.Statut==='Clos'?' (clos)':''}</option>`).join("")}</select>
           ${f.Projet ? `<button type="button" class="btn small ghost" style="margin-top:6px;" onclick="this.closest('.modal-bg').remove(); openEditProjetModal(${f.Projet});">✎ Modifier le projet</button>` : ''}
         </div>
       </div>
@@ -1347,22 +1349,55 @@ async function importProjetsJson(file){
     data = JSON.parse(text);
   }catch(e){ toast("Fichier JSON illisible : " + e.message, true); return; }
 
-  if(!Array.isArray(data)){ toast("Le fichier doit contenir un tableau de projets.", true); return; }
+  if(!Array.isArray(data)) data = [data]; // accepte aussi un fichier contenant un seul projet (cas du plug-in mail)
 
   let nbProjets = 0, nbTaches = 0, erreurs = [];
   for(const item of data){
     try{
+      // "modele" (nom du modèle, tel qu'issu p.ex. du plug-in mail) : si reconnu, génère les tâches-types du modèle
+      // au lieu de (ou en plus de) celles listées explicitement dans item.taches.
+      const modele = item.modele ? STATE.modeles.find(m=>m.fields.Nom.trim().toLowerCase()===String(item.modele).trim().toLowerCase()) : null;
+      const dateRef = item.dateReference || item.dateLimite || todayISO();
+
+      // Le mail d'origine (demandeur, extrait du corps) est conservé dans le Bilan pour ne rien perdre de la commande initiale.
+      let bilan = item.bilan || "";
+      if(item.demandeur) bilan = `Demandeur : ${item.demandeur}\n${bilan}`.trim();
+      if(item.extraitMail) bilan = `${bilan}\n\n— Extrait du mail d'origine —\n${item.extraitMail}`.trim();
+
       const projetId = await GristAPI.addRecord("Projets", {
         Nom: item.nom || "Projet importé",
-        Categorie: item.categorie || DOSSIER_CATEGORIES[0],
-        DateReference: toGristDate(item.dateReference || todayISO()),
+        Modele: modele ? modele.id : null,
+        Categorie: item.categorie || (modele && modele.fields.CategorieDefaut) || DOSSIER_CATEGORIES[0],
+        DateReference: toGristDate(dateRef),
         Agent: item.agent || AGENTS[0],
         Statut: item.statut || "Actif",
         Marquant: !!item.marquant,
-        Bilan: item.bilan || ""
+        Bilan: bilan
       });
       nbProjets++;
+
+      let nbTachesItem = 0;
+      if(modele){
+        // Génère les tâches-types du modèle, comme le fait "Nouveau projet depuis un modèle"
+        const bp = blueprintForModele(modele.id);
+        const refSec = toGristDate(dateRef);
+        let ordreCpt = 0;
+        for(const b of bp){
+          await GristAPI.addRecord("Taches", {
+            Titre: b.fields.Titre,
+            Projet: projetId,
+            Agent: b.fields.Agent || item.agent || AGENTS[0],
+            Statut: "À faire",
+            Priorite: b.fields.Priorite || "Normale",
+            DateEcheance: refSec + (b.fields.OffsetJours||0)*86400,
+            DateCreation: toGristDate(todayISO()),
+            Ordre: ordreCpt++
+          });
+          nbTachesItem++;
+        }
+      }
       const taches = Array.isArray(item.taches) ? item.taches : [];
+      let ordreCpt2 = nbTachesItem;
       for(const t of taches){
         await GristAPI.addRecord("Taches", {
           Titre: t.titre || "Tâche importée",
@@ -1370,11 +1405,14 @@ async function importProjetsJson(file){
           Agent: t.agent || item.agent || AGENTS[0],
           Statut: t.statut || "Terminé",
           Priorite: t.priorite || "Normale",
-          DateEcheance: toGristDate(t.dateEcheance || item.dateReference || todayISO()),
-          DateCreation: toGristDate(t.dateEcheance || item.dateReference || todayISO())
+          DateEcheance: toGristDate(t.dateEcheance || dateRef),
+          DateCreation: toGristDate(t.dateEcheance || dateRef),
+          Ordre: ordreCpt2++
         });
-        nbTaches++;
+        nbTachesItem++;
       }
+      nbTaches += nbTachesItem;
+      if(item.modele && !modele) erreurs.push(`${item.nom||'?'} : modèle "${item.modele}" introuvable — projet créé sans tâches-types, à compléter manuellement.`);
     }catch(e){ erreurs.push(`${item.nom||'?'} : ${e.message}`); }
   }
 
@@ -2163,7 +2201,8 @@ function buildExportSections(){
   });
 
   // --- Tâches sans dossier ni projet
-  const diversTasks = activeTasks.filter(t=>!t.fields.Dossier && !t.fields.Projet);
+  const diversTasks = activeTasks.filter(t=>!t.fields.Dossier && !t.fields.Projet)
+    .sort((a,b)=>(a.fields.DateEcheance||0)-(b.fields.DateEcheance||0));
   if(diversTasks.length){
     sections.push({
       titre:"Autres tâches",
