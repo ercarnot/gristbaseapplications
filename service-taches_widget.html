@@ -301,6 +301,10 @@ const GristAPI = {
         {id:"Email", fields:{label:"Email", type:"Text"}},
         {id:"Telephone", fields:{label:"Telephone", type:"Text"}},
         {id:"Projet", fields:{label:"Projet", type:"Ref:Projets"}}
+      ],
+      ServicesEDL:[
+        {id:"Nom", fields:{label:"Nom", type:"Text"}},
+        {id:"Email", fields:{label:"Email", type:"Text"}}
       ]
     };
 
@@ -396,10 +400,10 @@ function todayISO(){ return new Date().toISOString().slice(0,10); }
 /* =========================================================
    ETAT LOCAL (cache)
 ========================================================= */
-const STATE = { dossiers:[], taches:[], notes:[], modeles:[], modeleTaches:[], projets:[], indicateurs:[], statsManuelles:[], bilansThematiques:[], contacts:[], agents:[], categories:[], parametres:[], axes:[], loaded:false };
+const STATE = { dossiers:[], taches:[], notes:[], modeles:[], modeleTaches:[], projets:[], indicateurs:[], statsManuelles:[], bilansThematiques:[], contacts:[], agents:[], categories:[], parametres:[], axes:[], servicesEdl:[], loaded:false };
 
 async function refreshAll(){
-  const [dossiers, taches, notes, modeles, modeleTaches, projets, indicateurs, statsManuelles, bilansThematiques, contacts, agents, categories, parametres, axes] = await Promise.all([
+  const [dossiers, taches, notes, modeles, modeleTaches, projets, indicateurs, statsManuelles, bilansThematiques, contacts, agents, categories, parametres, axes, servicesEdl] = await Promise.all([
     GristAPI.getRecords("Dossiers"),
     GristAPI.getRecords("Taches"),
     GristAPI.getRecords("JournalNotes"),
@@ -413,7 +417,8 @@ async function refreshAll(){
     GristAPI.getRecords("Agents"),
     GristAPI.getRecords("Categories"),
     GristAPI.getRecords("Parametres"),
-    GristAPI.getRecords("Axes")
+    GristAPI.getRecords("Axes"),
+    GristAPI.getRecords("ServicesEDL")
   ]);
   STATE.dossiers = dossiers;
   STATE.taches = taches;
@@ -429,6 +434,7 @@ async function refreshAll(){
   STATE.categories = categories;
   STATE.parametres = parametres;
   STATE.axes = axes;
+  STATE.servicesEdl = servicesEdl;
   STATE.loaded = true;
 
   // Repeupler les listes dynamiques (agents/catégories/nom du service) à partir de Grist
@@ -841,8 +847,9 @@ function openTacheModal(id, defaultProjetId){
         </div>
       </div>
 
-      <div style="margin-top:16px; display:flex; gap:10px;">
+      <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
         <button class="btn" id="mSave">Enregistrer</button>
+        ${t ? '<button type="button" class="btn secondary" id="mSaisineEdl">✉️ Saisine EDL</button>' : ''}
         ${t ? '<button class="btn ghost" id="mDelete">Supprimer</button>' : ''}
       </div>
 
@@ -897,6 +904,7 @@ function openTacheModal(id, defaultProjetId){
   };
 
   if(t){
+    document.getElementById('mSaisineEdl').onclick = ()=>openSaisineEdlModal(t.id);
     document.getElementById('mDelete').onclick = async ()=>{
       if(!confirm("Supprimer définitivement cette tâche ?")) return;
       try{
@@ -929,6 +937,119 @@ function renderNotesInModal(tacheId){
       <div class="meta">${fmtDateHuman(fromGristDate(n.fields.Date))} ${n.fields.Marquant?' · ★ marquant':''}</div>
       ${n.fields.Contenu}
     </div>`).join("");
+}
+
+/* =========================================================
+   SAISINE EDL — génère un mail (.eml) standardisé pour solliciter
+   un service et obtenir des éléments de langage sur une tâche/projet
+========================================================= */
+function buildSaisineEdlTexte(tache, projet){
+  const objetRef = projet ? projet.fields.Nom : tache.fields.Titre;
+  const echeance = fromGristDate(tache.fields.DateEcheance);
+  const dateEvenement = projet ? fromGristDate(projet.fields.DateReference) : echeance;
+
+  const objet = `Sollicitation d'éléments de langage — ${objetRef}`;
+
+  let corps = `Bonjour,\n\n`;
+  corps += `Dans le cadre de « ${objetRef} »`;
+  corps += dateEvenement ? `, prévu(e) le ${fmtDateHuman(dateEvenement)}, ` : `, `;
+  corps += `le ${NOM_SERVICE} vous sollicite pour l'obtention d'éléments de langage sur ce dossier.\n\n`;
+  corps += echeance
+    ? `Merci de nous faire parvenir vos éléments avant le ${fmtDateHuman(echeance)}, afin de nous permettre de les intégrer dans les meilleurs délais.\n\n`
+    : `Merci de nous faire parvenir vos éléments dans les meilleurs délais.\n\n`;
+  if(projet && projet.fields.Bilan) corps += `Éléments de contexte :\n${projet.fields.Bilan}\n\n`;
+  corps += `Nous restons à votre disposition pour tout complément d'information.\n\n`;
+  corps += `Cordialement,\n\n${tache.fields.Agent||""}${tache.fields.Agent?"\n":""}${NOM_SERVICE}`;
+
+  return { objet, corps };
+}
+
+function openSaisineEdlModal(tacheId){
+  const tache = STATE.taches.find(x=>x.id===tacheId);
+  if(!tache) return;
+  const projet = tache.fields.Projet ? STATE.projets.find(p=>p.id===tache.fields.Projet) : null;
+  const { objet, corps } = buildSaisineEdlTexte(tache, projet);
+
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.innerHTML = `
+    <div class="modal" style="max-width:640px;">
+      <span class="close" onclick="this.closest('.modal-bg').remove()">✕</span>
+      <h2>Saisine EDL</h2>
+      <p class="sub">Génère un mail (.eml) standardisé, à ouvrir avec votre client de messagerie. Relisez et ajustez le texte avant envoi.</p>
+
+      <label>Service à solliciter</label>
+      <select id="seDest">
+        <option value="">— Choisir dans l'annuaire —</option>
+        ${STATE.servicesEdl.map(s=>`<option value="${s.id}">${s.fields.Nom}${s.fields.Email?` (${s.fields.Email})`:''}</option>`).join("")}
+        <option value="__autre__">Autre (saisie libre)…</option>
+      </select>
+      <div class="row" id="seManuelRow" style="display:none;">
+        <div class="col"><label>Nom du service</label><input type="text" id="seDestNom" placeholder="ex. SDIS 04"></div>
+        <div class="col"><label>Email</label><input type="text" id="seDestEmail" placeholder="ex. cabinet@sdis04.fr"></div>
+      </div>
+
+      <label>Objet</label>
+      <input type="text" id="seObjet" value="${objet.replace(/"/g,'&quot;')}">
+
+      <label>Corps du message</label>
+      <textarea id="seCorps" style="min-height:220px;">${corps}</textarea>
+
+      <div style="margin-top:16px;"><button class="btn" id="seGenerer">📥 Générer le mail (.eml)</button></div>
+      <div id="seMsg" style="margin-top:10px;font-size:.86rem;"></div>
+    </div>`;
+  document.body.appendChild(bg);
+
+  document.getElementById('seDest').onchange = (e)=>{
+    const manuelRow = document.getElementById('seManuelRow');
+    manuelRow.style.display = e.target.value==='__autre__' ? 'flex' : 'none';
+  };
+
+  document.getElementById('seGenerer').onclick = ()=>{
+    const msgEl = document.getElementById('seMsg');
+    const destSel = document.getElementById('seDest').value;
+    let destNom = "", destEmail = "";
+    if(destSel==='__autre__'){
+      destNom = document.getElementById('seDestNom').value.trim();
+      destEmail = document.getElementById('seDestEmail').value.trim();
+    } else if(destSel){
+      const s = STATE.servicesEdl.find(x=>String(x.id)===destSel);
+      if(s){ destNom = s.fields.Nom||""; destEmail = s.fields.Email||""; }
+    }
+    if(!destEmail){ msgEl.textContent = "Renseignez l'email du destinataire (annuaire ou saisie libre)."; msgEl.style.color = "var(--urgent)"; return; }
+
+    const objetVal = document.getElementById('seObjet').value;
+    const corpsVal = document.getElementById('seCorps').value;
+    const corpsHtml = corpsVal.split("\n").map(l=>l===""?"<br>":l).join("<br>\n");
+    const html = `<html>\n  <head><meta http-equiv="content-type" content="text/html; charset=utf-8"></head>\n  <body bgcolor="#FFFFFF" text="#000000">\n    ${corpsHtml}\n  </body>\n</html>`;
+
+    const subjectB64 = b64EncodeUnicode(objetVal);
+    const eml = [
+      `To: ${destNom ? `${destNom} <${destEmail}>` : destEmail}`,
+      `Subject: =?UTF-8?B?${subjectB64}?=`,
+      `MIME-Version: 1.0`,
+      `Content-Type: text/html; charset=utf-8`,
+      `Content-Transfer-Encoding: 8bit`,
+      ``,
+      html
+    ].join("\r\n");
+
+    const blob = new Blob([eml], {type:"message/rfc822"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Saisine-EDL-${slugifyLocal(tache.fields.Titre||"tache")}.eml`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast("Mail généré — ouvrez-le avec votre client de messagerie.");
+  };
+}
+
+function slugifyLocal(s){
+  return (s||"mail").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"")
+    .replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"").slice(0,60) || "mail";
 }
 
 /* =========================================================
@@ -2049,10 +2170,23 @@ function renderParametres(){
         <div class="col" style="flex:none;"><button class="btn secondary small" id="paCatAdd">+ Ajouter</button></div>
       </div>
     </div>
+
+    <div class="card">
+      <strong>Services sollicités pour les EDL</strong>
+      <p class="sub" style="margin-top:2px;">Annuaire des services à qui l'on peut demander des éléments de langage (bouton « Saisine EDL » sur une tâche).</p>
+      <div id="paServicesEdlList" style="margin-top:10px;"></div>
+      <hr style="margin:14px 0;border:none;border-top:1px solid var(--gris-bord)">
+      <div class="row">
+        <div class="col"><label>Nom du service</label><input type="text" id="paSeNom" placeholder="ex. SDIS 04"></div>
+        <div class="col"><label>Email</label><input type="text" id="paSeEmail" placeholder="ex. cabinet@sdis04.fr"></div>
+      </div>
+      <button class="btn secondary small" id="paSeAdd" style="margin-top:8px;">+ Ajouter le service</button>
+    </div>
   `;
 
   renderParametresAgents();
   renderParametresCategories();
+  renderParametresServicesEdl();
 
   document.getElementById('paSaveService').onclick = async ()=>{
     const nom = document.getElementById('paNomService').value.trim();
@@ -2099,6 +2233,45 @@ function renderParametres(){
       toast("Catégorie ajoutée.");
     }catch(e){ toast(e.message, true); }
   };
+
+  document.getElementById('paSeAdd').onclick = async ()=>{
+    const nom = document.getElementById('paSeNom').value.trim();
+    if(!nom) return;
+    try{
+      await GristAPI.addRecord("ServicesEDL", {
+        Nom: nom,
+        Email: document.getElementById('paSeEmail').value.trim()
+      });
+      await refreshAll();
+      renderParametresServicesEdl();
+      document.getElementById('paSeNom').value = "";
+      document.getElementById('paSeEmail').value = "";
+      toast("Service ajouté.");
+    }catch(e){ toast(e.message, true); }
+  };
+}
+
+function renderParametresServicesEdl(){
+  const el = document.getElementById('paServicesEdlList');
+  if(!el) return;
+  el.innerHTML = STATE.servicesEdl.length===0 ? '<p class="empty">Aucun service défini pour l\'instant.</p>' :
+    STATE.servicesEdl.map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eef0f5;">
+      <div>
+        <strong>${s.fields.Nom}</strong>
+        <div class="muted" style="font-size:.8rem;">${s.fields.Email||''}</div>
+      </div>
+      <button class="btn small ghost" onclick="deleteServiceEdl(${s.id})">✕</button>
+    </div>`).join("");
+}
+
+async function deleteServiceEdl(id){
+  if(!confirm("Supprimer ce service ?")) return;
+  try{
+    await GristAPI.deleteRecord("ServicesEDL", id);
+    await refreshAll();
+    renderParametresServicesEdl();
+    toast("Service supprimé.");
+  }catch(e){ toast(e.message, true); }
 }
 
 function renderParametresAgents(){
