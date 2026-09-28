@@ -200,7 +200,9 @@ const GristAPI = {
   async createMissingTables(){
     const schema = {
       Parametres:[
-        {id:"NomService", fields:{label:"NomService", type:"Text"}}
+        {id:"NomService", fields:{label:"NomService", type:"Text"}},
+        {id:"TemplateEdlObjet", fields:{label:"TemplateEdlObjet", type:"Text"}},
+        {id:"TemplateEdlCorps", fields:{label:"TemplateEdlCorps", type:"Text"}}
       ],
       Agents:[
         {id:"Nom", fields:{label:"Nom", type:"Text"}},
@@ -443,6 +445,8 @@ async function refreshAll(){
   AGENT_EMAILS = {}; agents.forEach(a=>{ if(a.fields.Nom && a.fields.Email) AGENT_EMAILS[a.fields.Nom] = a.fields.Email; });
   DOSSIER_CATEGORIES = categories.map(c=>c.fields.Nom).filter(Boolean);
   NOM_SERVICE = (parametres[0] && parametres[0].fields.NomService) || "Service";
+  EDL_TEMPLATE_OBJET = (parametres[0] && parametres[0].fields.TemplateEdlObjet) || EDL_OBJET_DEFAUT;
+  EDL_TEMPLATE_CORPS = (parametres[0] && parametres[0].fields.TemplateEdlCorps) || EDL_CORPS_DEFAUT;
   document.title = `${NOM_SERVICE} — Pilotage des tâches`;
   const brandEl = document.querySelector('#side .brand');
   if(brandEl) brandEl.innerHTML = `${xmlEscapeHtml(NOM_SERVICE)}<small>Pilotage des tâches</small>`;
@@ -493,6 +497,27 @@ let AGENT_EMAILS = {};
 function agentInitiales(agent){ return AGENT_INITIALES[agent] || agent || ""; }
 let DOSSIER_CATEGORIES = [];
 let NOM_SERVICE = "Service";
+
+// Modèle de mail par défaut pour la Saisine EDL — utilisé tant que rien n'a été personnalisé dans Paramètres.
+// Variables disponibles : {PROJET} {DATE_EVENEMENT} {DATE_LIMITE} {CONTEXTE} {AGENT} {SERVICE}
+const EDL_OBJET_DEFAUT = `Sollicitation d'éléments de langage — {PROJET}`;
+const EDL_CORPS_DEFAUT =
+`Bonjour,
+
+Dans le cadre de « {PROJET} », prévu(e) le {DATE_EVENEMENT}, le {SERVICE} vous sollicite pour l'obtention d'éléments de langage sur ce dossier.
+
+Merci de nous faire parvenir vos éléments avant le {DATE_LIMITE}, afin de nous permettre de les intégrer dans les meilleurs délais.
+
+{CONTEXTE}
+
+Nous restons à votre disposition pour tout complément d'information.
+
+Cordialement,
+
+{AGENT}
+{SERVICE}`;
+let EDL_TEMPLATE_OBJET = EDL_OBJET_DEFAUT;
+let EDL_TEMPLATE_CORPS = EDL_CORPS_DEFAUT;
 
 /* =========================================================
    NAVIGATION
@@ -943,23 +968,27 @@ function renderNotesInModal(tacheId){
    SAISINE EDL — génère un mail (.eml) standardisé pour solliciter
    un service et obtenir des éléments de langage sur une tâche/projet
 ========================================================= */
+function edlAppliquerVariables(gabarit, vars){
+  return gabarit.replace(/\{(\w+)\}/g, (m, key)=> (key in vars) ? vars[key] : m);
+}
+
 function buildSaisineEdlTexte(tache, projet){
   const objetRef = projet ? projet.fields.Nom : tache.fields.Titre;
   const echeance = fromGristDate(tache.fields.DateEcheance);
   const dateEvenement = projet ? fromGristDate(projet.fields.DateReference) : echeance;
 
-  const objet = `Sollicitation d'éléments de langage — ${objetRef}`;
+  const vars = {
+    PROJET: objetRef || "",
+    DATE_EVENEMENT: dateEvenement ? fmtDateHuman(dateEvenement) : "(date à préciser)",
+    DATE_LIMITE: echeance ? fmtDateHuman(echeance) : "(délai à préciser)",
+    CONTEXTE: (projet && projet.fields.Bilan) ? `Éléments de contexte :\n${projet.fields.Bilan}` : "",
+    AGENT: tache.fields.Agent || "",
+    SERVICE: NOM_SERVICE
+  };
 
-  let corps = `Bonjour,\n\n`;
-  corps += `Dans le cadre de « ${objetRef} »`;
-  corps += dateEvenement ? `, prévu(e) le ${fmtDateHuman(dateEvenement)}, ` : `, `;
-  corps += `le ${NOM_SERVICE} vous sollicite pour l'obtention d'éléments de langage sur ce dossier.\n\n`;
-  corps += echeance
-    ? `Merci de nous faire parvenir vos éléments avant le ${fmtDateHuman(echeance)}, afin de nous permettre de les intégrer dans les meilleurs délais.\n\n`
-    : `Merci de nous faire parvenir vos éléments dans les meilleurs délais.\n\n`;
-  if(projet && projet.fields.Bilan) corps += `Éléments de contexte :\n${projet.fields.Bilan}\n\n`;
-  corps += `Nous restons à votre disposition pour tout complément d'information.\n\n`;
-  corps += `Cordialement,\n\n${tache.fields.Agent||""}${tache.fields.Agent?"\n":""}${NOM_SERVICE}`;
+  const objet = edlAppliquerVariables(EDL_TEMPLATE_OBJET, vars);
+  const corps = edlAppliquerVariables(EDL_TEMPLATE_CORPS, vars)
+    .replace(/\n{3,}/g, "\n\n"); // évite les doubles sauts de ligne quand CONTEXTE est vide
 
   return { objet, corps };
 }
@@ -2182,6 +2211,22 @@ function renderParametres(){
       </div>
       <button class="btn secondary small" id="paSeAdd" style="margin-top:8px;">+ Ajouter le service</button>
     </div>
+
+    <div class="card">
+      <strong>Modèle de mail — Saisine EDL</strong>
+      <p class="sub" style="margin-top:2px;">
+        Texte utilisé par défaut lors d'une saisine EDL (rebouton "✉️ Saisine EDL" sur une tâche). Reste modifiable au cas par cas avant chaque envoi.
+        Variables disponibles, remplacées automatiquement : <code>{PROJET}</code> <code>{DATE_EVENEMENT}</code> <code>{DATE_LIMITE}</code> <code>{CONTEXTE}</code> <code>{AGENT}</code> <code>{SERVICE}</code>
+      </p>
+      <label>Objet</label>
+      <input type="text" id="paEdlObjet" value="${xmlEscapeHtml(EDL_TEMPLATE_OBJET).replace(/"/g,'&quot;')}">
+      <label>Corps du message</label>
+      <textarea id="paEdlCorps" style="min-height:220px;">${xmlEscapeHtml(EDL_TEMPLATE_CORPS)}</textarea>
+      <div style="margin-top:10px;display:flex;gap:10px;">
+        <button class="btn" id="paEdlSave">Enregistrer le modèle</button>
+        <button class="btn ghost" id="paEdlReset">Réinitialiser au modèle par défaut</button>
+      </div>
+    </div>
   `;
 
   renderParametresAgents();
@@ -2247,6 +2292,33 @@ function renderParametres(){
       document.getElementById('paSeNom').value = "";
       document.getElementById('paSeEmail').value = "";
       toast("Service ajouté.");
+    }catch(e){ toast(e.message, true); }
+  };
+
+  document.getElementById('paEdlSave').onclick = async ()=>{
+    const objet = document.getElementById('paEdlObjet').value;
+    const corps = document.getElementById('paEdlCorps').value;
+    try{
+      const rec = STATE.parametres[0];
+      const fields = { TemplateEdlObjet: objet, TemplateEdlCorps: corps };
+      if(rec) await GristAPI.updateRecord("Parametres", rec.id, fields);
+      else await GristAPI.addRecord("Parametres", fields);
+      await refreshAll();
+      toast("Modèle de mail enregistré.");
+    }catch(e){ toast(e.message, true); }
+  };
+
+  document.getElementById('paEdlReset').onclick = async ()=>{
+    if(!confirm("Réinitialiser le modèle de mail à sa version par défaut ?")) return;
+    document.getElementById('paEdlObjet').value = EDL_OBJET_DEFAUT;
+    document.getElementById('paEdlCorps').value = EDL_CORPS_DEFAUT;
+    try{
+      const rec = STATE.parametres[0];
+      const fields = { TemplateEdlObjet: EDL_OBJET_DEFAUT, TemplateEdlCorps: EDL_CORPS_DEFAUT };
+      if(rec) await GristAPI.updateRecord("Parametres", rec.id, fields);
+      else await GristAPI.addRecord("Parametres", fields);
+      await refreshAll();
+      toast("Modèle réinitialisé.");
     }catch(e){ toast(e.message, true); }
   };
 }
