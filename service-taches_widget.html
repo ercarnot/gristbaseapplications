@@ -1312,7 +1312,7 @@ function renderProjets(){
     const taches = tachesForProjet(p.id);
     const termine = taches.filter(t=>t.fields.Statut==="Terminé").length;
     return {p, taches, termine};
-  }).sort((a,b)=>(b.p.fields.DateReference||0)-(a.p.fields.DateReference||0));
+  }).sort((a,b)=>(a.p.fields.DateReference||0)-(b.p.fields.DateReference||0));
 
   view.innerHTML = `
     <h1>Projets</h1>
@@ -2641,35 +2641,38 @@ function buildExportSections(){
   return { rows, todayISOv, limiteISO };
 }
 
+// Style de cellule partagé entre la vue app/impression et l'email (.eml) — un filet fin, inline pour rester
+// compatible avec les clients mail qui ignorent les balises <style>.
+const EXPORT_TD_STYLE = "padding:5px 8px;border:1px solid #d3d8e4;";
+const EXPORT_TH_STYLE = EXPORT_TD_STYLE + "background:#f1f3f9;";
+
 function renderExport3(){
   const view = document.getElementById('view');
   const { rows, todayISOv, limiteISO } = buildExportSections();
 
   const tableHtml = rows.length===0 ? '<p class="empty">Aucune tâche à échéance sur cette période.</p>' : `
-    <table border="0" cellpadding="2" cellspacing="2" width="926">
+    <table border="0" cellpadding="0" cellspacing="0" width="926" style="border-collapse:collapse;">
       <tbody>
         <tr>
-          <td valign="top"><small><b>Date</b></small></td>
-          <td valign="top"><small><b>Catégorie</b></small></td>
-          <td valign="top"><small><b>Événement</b></small></td>
-          <td valign="top"><small><b>Référent</b></small></td>
-          <td valign="top"><small><b>Actions</b></small></td>
-          <td valign="top"><small><b>Observation</b></small></td>
+          <td valign="top" style="${EXPORT_TH_STYLE}"><small><b>Date</b></small></td>
+          <td valign="top" style="${EXPORT_TH_STYLE}"><small><b>Événement</b></small></td>
+          <td valign="top" style="${EXPORT_TH_STYLE}"><small><b>Référent</b></small></td>
+          <td valign="top" style="${EXPORT_TH_STYLE}"><small><b>Actions</b></small></td>
+          <td valign="top" style="${EXPORT_TH_STYLE}"><small><b>Observation</b></small></td>
         </tr>
         ${rows.map(r=>`<tr>
-          <td valign="top">${fmtDateDDMM(r.date)}</td>
-          <td valign="top"><span class="chip" style="background:var(--bleu-nuit-2)">${r.categorie}</span></td>
-          <td valign="top">${r.nom}</td>
-          <td valign="top">${r.referent}</td>
-          <td valign="top">${r.actions.length ? '<ul>'+r.actions.map(a=>`<li>${a}</li>`).join("")+'</ul>' : ''}</td>
-          <td valign="top">${(r.observations&&r.observations.length) ? '<ul>'+r.observations.map(o=>`<li>${o}</li>`).join("")+'</ul>' : ''}</td>
+          <td valign="top" style="${EXPORT_TD_STYLE}">${fmtDateDDMM(r.date)}</td>
+          <td valign="top" style="${EXPORT_TD_STYLE}">${r.nom}</td>
+          <td valign="top" style="${EXPORT_TD_STYLE}">${r.referent}</td>
+          <td valign="top" style="${EXPORT_TD_STYLE}">${r.actions.length ? '<ul style="margin:0;padding-left:16px;">'+r.actions.map(a=>`<li>${a}</li>`).join("")+'</ul>' : ''}</td>
+          <td valign="top" style="${EXPORT_TD_STYLE}">${(r.observations&&r.observations.length) ? '<ul style="margin:0;padding-left:16px;">'+r.observations.map(o=>`<li>${o}</li>`).join("")+'</ul>' : ''}</td>
         </tr>`).join("")}
       </tbody>
     </table>`;
 
   view.innerHTML = `
     <h1 class="no-print">Export — Planning 3 semaines</h1>
-    <p class="sub no-print">Du ${fmtDateHuman(todayISOv)} au ${fmtDateHuman(limiteISO)} — trié par échéance, catégorie à titre indicatif.</p>
+    <p class="sub no-print">Du ${fmtDateHuman(todayISOv)} au ${fmtDateHuman(limiteISO)} — trié par échéance, de la plus proche à la plus lointaine.</p>
     <div class="no-print" style="margin-bottom:16px;display:flex;gap:10px;">
       <button class="btn" onclick="downloadExportEml()">✉️ Télécharger l'email (.eml)</button>
       <button class="btn secondary" onclick="window.print()">🖨 Imprimer / Enregistrer en PDF</button>
@@ -2984,23 +2987,21 @@ function b64EncodeUnicode(str){
 
 function buildExportEmailHtml(rows, todayISOv, limiteISO){
   const tableHtml = rows.length===0 ? '<i>Aucune tâche à échéance sur cette période.</i><br><br>' : `
-    <table border="0" cellpadding="2" cellspacing="2" width="926">
+    <table border="0" cellpadding="0" cellspacing="0" width="926" style="border-collapse:collapse;">
       <tbody>
         <tr>
-          <td valign="top"><small><b>Date</b></small></td>
-          <td valign="top"><small><b>Catégorie</b></small></td>
-          <td valign="top"><small><b>Événement</b></small></td>
-          <td valign="top"><small><b>Référent</b></small></td>
-          <td valign="top"><small><b>Actions</b></small></td>
-          <td valign="top"><small><b>Observation</b></small></td>
+          <td valign="top" style="${EXPORT_TH_STYLE}"><small><b>Date</b></small></td>
+          <td valign="top" style="${EXPORT_TH_STYLE}"><small><b>Événement</b></small></td>
+          <td valign="top" style="${EXPORT_TH_STYLE}"><small><b>Référent</b></small></td>
+          <td valign="top" style="${EXPORT_TH_STYLE}"><small><b>Actions</b></small></td>
+          <td valign="top" style="${EXPORT_TH_STYLE}"><small><b>Observation</b></small></td>
         </tr>
         ${rows.map(r=>`<tr>
-          <td valign="top">${r.date ? fmtDateDDMM(r.date) : ''}<br></td>
-          <td valign="top">${r.categorie}<br></td>
-          <td valign="top">${r.nom}<br></td>
-          <td valign="top">${r.referent}<br></td>
-          <td valign="top">${r.actions.length ? '<ul>'+r.actions.map(a=>`<li>${a}</li>`).join("")+'</ul>' : '<br>'}</td>
-          <td valign="top">${(r.observations&&r.observations.length) ? '<ul>'+r.observations.map(o=>`<li>${o}</li>`).join("")+'</ul>' : '<br>'}</td>
+          <td valign="top" style="${EXPORT_TD_STYLE}">${r.date ? fmtDateDDMM(r.date) : ''}</td>
+          <td valign="top" style="${EXPORT_TD_STYLE}">${r.nom}</td>
+          <td valign="top" style="${EXPORT_TD_STYLE}">${r.referent}</td>
+          <td valign="top" style="${EXPORT_TD_STYLE}">${r.actions.length ? '<ul style="margin:0;padding-left:16px;">'+r.actions.map(a=>`<li>${a}</li>`).join("")+'</ul>' : ''}</td>
+          <td valign="top" style="${EXPORT_TD_STYLE}">${(r.observations&&r.observations.length) ? '<ul style="margin:0;padding-left:16px;">'+r.observations.map(o=>`<li>${o}</li>`).join("")+'</ul>' : ''}</td>
         </tr>`).join("")}
       </tbody>
     </table>
