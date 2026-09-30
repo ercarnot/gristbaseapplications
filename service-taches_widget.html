@@ -256,7 +256,8 @@ const GristAPI = {
         {id:"DateCloture", fields:{label:"DateCloture", type:"Date"}},
         {id:"TempsEstime", fields:{label:"TempsEstime", type:"Numeric"}},
         {id:"Tags", fields:{label:"Tags", type:"Text"}},
-        {id:"Ordre", fields:{label:"Ordre", type:"Int"}}
+        {id:"Ordre", fields:{label:"Ordre", type:"Int"}},
+        {id:"AfficherCalendrier", fields:{label:"AfficherCalendrier", type:"Bool"}}
       ],
       ModeleTaches:[
         {id:"Modele", fields:{label:"Modele", type:"Ref:Modeles"}},
@@ -871,6 +872,7 @@ function openTacheModal(id, defaultProjetId){
           <input type="text" id="mTags" value="${f.Tags||""}">
         </div>
       </div>
+      <label style="display:flex;align-items:center;gap:6px;margin-top:12px;"><input type="checkbox" id="mCalendrier" style="width:auto;" ${f.AfficherCalendrier?'checked':''}> 📅 Afficher au calendrier (incluse dans l'export .ics)</label>
 
       <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
         <button class="btn" id="mSave">Enregistrer</button>
@@ -906,7 +908,8 @@ function openTacheModal(id, defaultProjetId){
       Priorite: document.getElementById('mPriorite').value,
       DateEcheance: toGristDate(document.getElementById('mEcheance').value),
       TempsEstime: document.getElementById('mTemps').value ? Number(document.getElementById('mTemps').value) : null,
-      Tags: document.getElementById('mTags').value
+      Tags: document.getElementById('mTags').value,
+      AfficherCalendrier: document.getElementById('mCalendrier').checked
     };
     try{
       if(t){
@@ -1079,6 +1082,113 @@ function openSaisineEdlModal(tacheId){
 function slugifyLocal(s){
   return (s||"mail").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"")
     .replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"").slice(0,60) || "mail";
+}
+
+/* =========================================================
+   CALENDRIER — export .ics (à la demande) des projets actifs
+   et des tâches cochées "Afficher au calendrier"
+========================================================= */
+function icsEscape(s){
+  return String(s||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n");
+}
+function icsFoldLine(line){
+  // RFC 5545 : une ligne de contenu ne doit pas dépasser 75 octets ; on replie avec un espace en continuation.
+  const bytes = new TextEncoder().encode(line);
+  if(bytes.length <= 75) return line;
+  let out = [];
+  let start = 0;
+  let first = true;
+  while(start < line.length){
+    const limit = first ? 75 : 74; // 1 caractère pris par l'espace de continuation
+    let end = Math.min(start + limit, line.length);
+    // Ne pas couper au milieu d'un caractère multi-octets encodé
+    while(new TextEncoder().encode(line.slice(start, end)).length > (first?75:74) && end > start) end--;
+    out.push((first?"":" ") + line.slice(start, end));
+    start = end;
+    first = false;
+  }
+  return out.join("\r\n");
+}
+function icsDateAllDay(iso){ return iso ? iso.replace(/-/g,"") : ""; }
+function icsAddDaysISO(iso, n){
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0,10);
+}
+function icsNowStamp(){
+  return new Date().toISOString().replace(/[-:]/g,"").split(".")[0] + "Z";
+}
+
+function buildIcsCalendar(){
+  const stamp = icsNowStamp();
+  const events = [];
+
+  STATE.projets.filter(p=>p.fields.Statut!=="Clos").forEach(p=>{
+    const dref = fromGristDate(p.fields.DateReference);
+    if(!dref) return;
+    const desc = [
+      p.fields.Categorie ? `Catégorie : ${p.fields.Categorie}` : "",
+      p.fields.Agent ? `Agent : ${p.fields.Agent}` : "",
+      p.fields.Bilan || ""
+    ].filter(Boolean).join("\\n");
+    events.push([
+      "BEGIN:VEVENT",
+      `UID:projet-${p.id}@sdcire-taches-app`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART;VALUE=DATE:${icsDateAllDay(dref)}`,
+      `DTEND;VALUE=DATE:${icsDateAllDay(icsAddDaysISO(dref,1))}`,
+      `SUMMARY:${icsEscape(p.fields.Nom||"Projet")}`,
+      desc ? `DESCRIPTION:${icsEscape(desc)}` : "",
+      "END:VEVENT"
+    ].filter(Boolean).map(icsFoldLine).join("\r\n"));
+  });
+
+  STATE.taches.filter(t=>t.fields.AfficherCalendrier && t.fields.Statut!=="Annulé").forEach(t=>{
+    const ech = fromGristDate(t.fields.DateEcheance);
+    if(!ech) return;
+    const projet = t.fields.Projet ? STATE.projets.find(p=>p.id===t.fields.Projet) : null;
+    const titre = projet ? `${projet.fields.Nom} — ${t.fields.Titre}` : t.fields.Titre;
+    const desc = [
+      t.fields.Agent ? `Agent : ${t.fields.Agent}` : "",
+      t.fields.Statut ? `Statut : ${t.fields.Statut}` : ""
+    ].filter(Boolean).join("\\n");
+    events.push([
+      "BEGIN:VEVENT",
+      `UID:tache-${t.id}@sdcire-taches-app`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART;VALUE=DATE:${icsDateAllDay(ech)}`,
+      `DTEND;VALUE=DATE:${icsDateAllDay(icsAddDaysISO(ech,1))}`,
+      `SUMMARY:${icsEscape(titre||"Tâche")}`,
+      desc ? `DESCRIPTION:${icsEscape(desc)}` : "",
+      "END:VEVENT"
+    ].filter(Boolean).map(icsFoldLine).join("\r\n"));
+  });
+
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//" + (NOM_SERVICE||"Service") + "//Pilotage des tâches//FR",
+    "CALSCALE:GREGORIAN",
+    ...events,
+    "END:VCALENDAR"
+  ].join("\r\n");
+}
+
+function downloadIcsCalendar(){
+  const nbProjets = STATE.projets.filter(p=>p.fields.Statut!=="Clos" && p.fields.DateReference).length;
+  const nbTaches = STATE.taches.filter(t=>t.fields.AfficherCalendrier && t.fields.Statut!=="Annulé" && t.fields.DateEcheance).length;
+  if(nbProjets+nbTaches===0){ toast("Rien à exporter : aucun projet actif avec date, ni tâche cochée « Afficher au calendrier ».", true); return; }
+  const ics = buildIcsCalendar();
+  const blob = new Blob([ics], {type:"text/calendar;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Calendrier-${slugifyLocal(NOM_SERVICE)}-${todayISO()}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  toast(`Calendrier généré : ${nbProjets} projet(s), ${nbTaches} tâche(s).`);
 }
 
 /* =========================================================
@@ -1321,7 +1431,9 @@ function renderProjets(){
       <button class="btn" onclick="openNewProjetModal()">+ Nouveau projet depuis un modèle</button>
       <button class="btn secondary" onclick="document.getElementById('importProjetsFile').click()">📥 Importer des projets (JSON)</button>
       <input type="file" id="importProjetsFile" accept=".json" style="display:none;" onchange="importProjetsJson(this.files[0])">
+      <button class="btn secondary" onclick="downloadIcsCalendar()">🗓️ Exporter le calendrier (.ics)</button>
     </div>
+    <p class="sub no-print" style="margin-top:-10px;">Le calendrier reprend tous les projets actifs (date de référence) et les tâches cochées « Afficher au calendrier » dans leur fiche. Réimportez-le dans Thunderbird à chaque mise à jour souhaitée.</p>
     ${projetsWithProgress.length===0 ? '<div class="card"><p class="empty">Aucun projet actif. Créez-en un depuis un modèle pour générer automatiquement ses tâches.</p></div>' :
       projetsWithProgress.map(({p,taches,termine})=>`
         <div class="card">
@@ -2645,6 +2757,8 @@ function buildExportSections(){
 // compatible avec les clients mail qui ignorent les balises <style>.
 const EXPORT_TD_STYLE = "padding:5px 8px;border:1px solid #d3d8e4;";
 const EXPORT_TH_STYLE = EXPORT_TD_STYLE + "background:#f1f3f9;";
+// Largeurs de colonnes fixes (table width=926 au total) : Actions et Observation strictement égales.
+const EXPORT_COL_W = { date:60, evenement:210, referent:60, actions:298, observation:298 };
 
 function renderExport3(){
   const view = document.getElementById('view');
@@ -2654,11 +2768,11 @@ function renderExport3(){
     <table border="0" cellpadding="0" cellspacing="0" width="926" style="border-collapse:collapse;">
       <tbody>
         <tr>
-          <td valign="top" style="${EXPORT_TH_STYLE}"><small><b>Date</b></small></td>
-          <td valign="top" style="${EXPORT_TH_STYLE}"><small><b>Événement</b></small></td>
-          <td valign="top" style="${EXPORT_TH_STYLE}"><small><b>Référent</b></small></td>
-          <td valign="top" style="${EXPORT_TH_STYLE}"><small><b>Actions</b></small></td>
-          <td valign="top" style="${EXPORT_TH_STYLE}"><small><b>Observation</b></small></td>
+          <td valign="top" width="${EXPORT_COL_W.date}" style="${EXPORT_TH_STYLE}width:${EXPORT_COL_W.date}px;"><small><b>Date</b></small></td>
+          <td valign="top" width="${EXPORT_COL_W.evenement}" style="${EXPORT_TH_STYLE}width:${EXPORT_COL_W.evenement}px;"><small><b>Événement</b></small></td>
+          <td valign="top" width="${EXPORT_COL_W.referent}" style="${EXPORT_TH_STYLE}width:${EXPORT_COL_W.referent}px;"><small><b>Référent</b></small></td>
+          <td valign="top" width="${EXPORT_COL_W.actions}" style="${EXPORT_TH_STYLE}width:${EXPORT_COL_W.actions}px;"><small><b>Actions</b></small></td>
+          <td valign="top" width="${EXPORT_COL_W.observation}" style="${EXPORT_TH_STYLE}width:${EXPORT_COL_W.observation}px;"><small><b>Observation</b></small></td>
         </tr>
         ${rows.map(r=>`<tr>
           <td valign="top" style="${EXPORT_TD_STYLE}">${fmtDateDDMM(r.date)}</td>
@@ -2990,11 +3104,11 @@ function buildExportEmailHtml(rows, todayISOv, limiteISO){
     <table border="0" cellpadding="0" cellspacing="0" width="926" style="border-collapse:collapse;">
       <tbody>
         <tr>
-          <td valign="top" style="${EXPORT_TH_STYLE}"><small><b>Date</b></small></td>
-          <td valign="top" style="${EXPORT_TH_STYLE}"><small><b>Événement</b></small></td>
-          <td valign="top" style="${EXPORT_TH_STYLE}"><small><b>Référent</b></small></td>
-          <td valign="top" style="${EXPORT_TH_STYLE}"><small><b>Actions</b></small></td>
-          <td valign="top" style="${EXPORT_TH_STYLE}"><small><b>Observation</b></small></td>
+          <td valign="top" width="${EXPORT_COL_W.date}" style="${EXPORT_TH_STYLE}width:${EXPORT_COL_W.date}px;"><small><b>Date</b></small></td>
+          <td valign="top" width="${EXPORT_COL_W.evenement}" style="${EXPORT_TH_STYLE}width:${EXPORT_COL_W.evenement}px;"><small><b>Événement</b></small></td>
+          <td valign="top" width="${EXPORT_COL_W.referent}" style="${EXPORT_TH_STYLE}width:${EXPORT_COL_W.referent}px;"><small><b>Référent</b></small></td>
+          <td valign="top" width="${EXPORT_COL_W.actions}" style="${EXPORT_TH_STYLE}width:${EXPORT_COL_W.actions}px;"><small><b>Actions</b></small></td>
+          <td valign="top" width="${EXPORT_COL_W.observation}" style="${EXPORT_TH_STYLE}width:${EXPORT_COL_W.observation}px;"><small><b>Observation</b></small></td>
         </tr>
         ${rows.map(r=>`<tr>
           <td valign="top" style="${EXPORT_TD_STYLE}">${r.date ? fmtDateDDMM(r.date) : ''}</td>
