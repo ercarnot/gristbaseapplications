@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Oral de concours — Entraînement</title>
+<style>
+:root{
+  --bg:#f6f3ec; --card:#ffffff; --ink:#16213a; --muted:#5b6478; --line:#d9d3c4;
+  --accent:#1f3a8a; --accent-soft:#e4e9f8; --warn:#d9822b; --bad:#c0392b; --ok:#2f7d5b;
+  --serif:Georgia,'Times New Roman',serif; --sans:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.45}
+body{min-height:100vh;display:flex;flex-direction:column}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:8px 14px}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover{filter:brightness(1.1)}
+button:disabled{opacity:.45;cursor:default}
+button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px solid #8aa0e6;outline-offset:2px}
+
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 24px 6px}
+.top h1{font-family:var(--serif);font-size:22px;margin:0;letter-spacing:.2px}
+.top .meta{color:var(--muted);font-size:13px;margin-left:10px}
+.top .actions{display:flex;gap:8px;flex-wrap:wrap}
+.banner{margin:6px 24px;padding:10px 14px;border-radius:8px;background:#fff4e0;border:1px solid #f0cf94;color:#6b4a0c;font-size:14px}
+.banner.info{background:var(--accent-soft);border-color:#b9c6ee;color:#1d2f6b}
+
+.tabs{display:flex;gap:6px;padding:8px 24px 0;overflow-x:auto;border-bottom:1px solid var(--line)}
+.tab{display:flex;flex-direction:column;gap:6px;min-width:150px;padding:10px 14px 9px;border:1px solid var(--line);border-bottom:none;border-radius:10px 10px 0 0;background:#efeadd;color:var(--muted);cursor:pointer;text-align:left}
+.tab .num{font-size:11px;letter-spacing:.8px;text-transform:uppercase}
+.tab .name{font-weight:600;font-size:15px;color:inherit}
+.tab.current{background:var(--card);color:var(--ink);border-color:var(--line);box-shadow:0 -3px 0 var(--accent) inset}
+.tab.done .name::after{content:" ✓";color:var(--ok)}
+.tab.empty{opacity:.5}
+.dots{display:flex;gap:5px}
+.dot{width:9px;height:9px;border-radius:50%;border:1.5px solid #a9a393;background:transparent}
+.dot.done{background:var(--ok);border-color:var(--ok)}
+.dot.now{background:var(--accent);border-color:var(--accent)}
+
+main{flex:1;padding:22px 24px 12px;display:flex;justify-content:center}
+.card{width:100%;max-width:960px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:30px 34px;box-shadow:0 1px 0 rgba(0,0,0,.03)}
+.kicker{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.9px}
+.question{font-family:var(--serif);font-size:clamp(24px,3.4vw,38px);line-height:1.28;margin:18px 0 8px;font-weight:600}
+.pistes{margin:14px 0 0;padding:14px 18px;background:#faf8f1;border-left:4px solid var(--warn);border-radius:6px;white-space:pre-wrap;font-size:16px}
+.pistes small{display:block;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-size:11px;margin-bottom:4px}
+
+.timer{margin-top:26px;display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.digits{font-variant-numeric:tabular-nums;font-family:var(--serif);font-size:64px;line-height:1;min-width:170px;font-weight:600}
+.barwrap{flex:1;min-width:200px}
+.bar{height:12px;border-radius:99px;background:#ece7d8;overflow:hidden}
+.bar>i{display:block;height:100%;width:100%;background:var(--ok);transition:width .25s linear,background .3s}
+.tstate{margin-top:6px;font-size:13px;color:var(--muted);min-height:18px}
+.timer.warn .digits{color:var(--warn)} .timer.warn .bar>i{background:var(--warn)}
+.timer.over .digits{color:var(--bad)} .timer.over .bar>i{background:var(--bad)}
+.controls{margin-top:24px;display:flex;gap:10px;flex-wrap:wrap}
+
+h2.big{font-family:var(--serif);font-size:30px;margin:8px 0 12px}
+.order{margin:14px 0 20px;padding:0;list-style:none;display:grid;gap:8px}
+.order li{display:flex;gap:12px;align-items:center;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:#faf8f1}
+.order .n{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:14px}
+.order .c{margin-left:auto;color:var(--muted);font-size:13px}
+table.recap{width:100%;border-collapse:collapse;margin-top:10px;font-size:15px}
+table.recap th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:8px 6px;border-bottom:2px solid var(--line)}
+table.recap td{padding:9px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+table.recap td.t{white-space:nowrap;font-variant-numeric:tabular-nums}
+table.recap tr.grp td{background:var(--accent-soft);font-weight:700;color:#1d2f6b}
+.over-t{color:var(--bad);font-weight:600} .ok-t{color:var(--ok);font-weight:600}
+.note{color:var(--muted);font-size:14px;margin-top:12px}
+
+.keys{padding:8px 24px 16px;color:var(--muted);font-size:12.5px;text-align:center}
+kbd{font:inherit;font-size:11.5px;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 6px;background:var(--card);color:var(--ink)}
+
+#drawer{position:fixed;inset:0;background:rgba(22,33,58,.45);display:flex;justify-content:flex-end;z-index:10}
+#drawer[hidden]{display:none}
+.panel{width:min(520px,100%);height:100%;background:var(--card);padding:22px 24px;overflow:auto;box-shadow:-6px 0 24px rgba(0,0,0,.15)}
+.panel h3{font-family:var(--serif);font-size:22px;margin:0 0 4px}
+.panel h4{margin:22px 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.9px;color:var(--muted)}
+.panel .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.panel label{display:flex;gap:8px;align-items:center;font-size:15px}
+.panel textarea,.panel select,.panel input[type=text]{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+.panel textarea{min-height:90px;resize:vertical}
+table.counts{width:100%;border-collapse:collapse;font-size:14px}
+table.counts th,table.counts td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left}
+table.counts th{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)}
+.low{color:var(--bad);font-weight:700}
+.msg{margin-top:8px;font-size:14px}
+.msg.err{color:var(--bad)} .msg.okk{color:var(--ok)}
+
+@media (max-width:700px){
+  .card{padding:22px 18px} .digits{font-size:48px;min-width:130px} .tab{min-width:128px}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div><h1 style="display:inline">Oral de concours</h1><span class="meta" id="meta"></span></div>
+  <div class="actions">
+    <button id="btnNew" title="Nouveau tirage et nouvel ordre des onglets">Nouvelle séance</button>
+    <button id="btnBase" title="Questions, réglages, import">Base &amp; réglages</button>
+    <button id="btnFs" title="Touche F">Plein écran</button>
+  </div>
+</header>
+<div id="banner" class="banner" hidden></div>
+<nav id="tabs" class="tabs" aria-label="Onglets de la séance"></nav>
+<main><section id="stage" class="card" aria-live="polite"></section></main>
+<footer class="keys">
+  <kbd>→</kbd> question suivante · <kbd>←</kbd> précédente · <kbd>Espace</kbd> ou <kbd>T</kbd> chrono · <kbd>R</kbd> remise à zéro · <kbd>N</kbd> pistes de réponse · <kbd>F</kbd> plein écran
+</footer>
+
+<aside id="drawer" hidden>
+  <div class="panel" role="dialog" aria-label="Base et réglages">
+    <div class="row" style="justify-content:space-between"><h3>Base &amp; réglages</h3><button id="btnClose">Fermer</button></div>
+    <div id="drawerBody"></div>
+  </div>
+</aside>
+
+<script src="https://grist.numerique.gouv.fr/grist-plugin-api.js"></script>
+<script>
+'use strict';
+/* ============ Constantes ============ */
+const TYPES = [
+  {key:'Actualités',                label:'Actualités du ministère de l’Intérieur',   short:'Actualités'},
+  {key:'Management',                label:'Management',                               short:'Management'},
+  {key:'Questions métiers',         label:'Questions métiers',                        short:'Questions métiers'},
+  {key:'Connaissance du ministère', label:'Connaissance du ministère de l’Intérieur', short:'Connaissance du ministère'},
+  {key:'Motivation',                label:'Motivation',                               short:'Motivation'}
+];
+const PER_TAB = 3, DURATION = 90;               // 3 questions par onglet, 1 min 30
+const T_Q = 'Oral_Questions', T_S = 'Oral_Seances';
+const inGrist = (typeof grist !== 'undefined') && window.self !== window.top;
+
+/* ============ Réglages (localStorage, facultatif) ============ */
+const settings = {auto:false, sound:true, avoidSeen:true};
+try { Object.assign(settings, JSON.parse(localStorage.getItem('oralConcoursSettings')||'{}')); } catch(e){}
+function saveSettings(){ try{ localStorage.setItem('oralConcoursSettings', JSON.stringify(settings)); }catch(e){} }
+
+/* ============ Utilitaires ============ */
+function h(tag, props, ...kids){
+  const e = document.createElement(tag);
+  if (props) for (const [k,v] of Object.entries(props)){
+    if (k==='class') e.className = v;
+    else if (k==='text') e.textContent = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (v!==false && v!=null) e.setAttribute(k, v===true ? '' : v);
+  }
+  for (const c of kids.flat()) if (c!=null) e.append(c);
+  return e;
+}
+const $ = id => document.getElementById(id);
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+function fmt(s){ const a=Math.abs(s), m=Math.floor(a/60), r=a%60; return (s<0?'+':'')+m+':'+String(r).padStart(2,'0'); }
+function today(){ return new Date().toISOString().slice(0,10); }
+function norm(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+function typeFromText(t){
+  const n = norm(t);
+  if (n.includes('actual')) return 'Actualités';
+  if (n.includes('manag')) return 'Management';
+  if (n.includes('metier')) return 'Questions métiers';
+  if (n.includes('connaiss')) return 'Connaissance du ministère';
+  if (n.includes('motiv')) return 'Motivation';
+  return null;
+}
+const typeInfo = key => TYPES.find(t=>t.key===key);
+
+/* ============ Couche de données ============ */
+let QUESTIONS = [];   // {id,type,question,piste,ecarte,nb,dernier}
+let demoMode = false;
+
+const DEMO_ITEMS = [
+ {
+  "type": "Actualités",
+  "question": "Quel événement récent concernant le ministère de l’Intérieur vous a le plus marqué, et pourquoi ?",
+  "piste": "IDÉE MAÎTRESSE\nCe qui m’a le plus marqué, c’est le mouvement de fond qui fait du préfet le chef d’orchestre de l’État local.\n\nEXPLICATIONS\n1. Les faits : depuis l’annonce « Refonder l’État local » de juillet 2025, puis l’avant-projet de loi de décentralisation début 2026, le préfet devient délégué territorial des opérateurs, avec un pouvoir de dérogation élargi et un rôle de guichet unique pour les collectivités.\n2. Pourquoi cela me marque : c’est une réponse à une demande de lisibilité de l’État, pour les élus comme pour les citoyens.\n3. Ce que j’en tire : cela renforce l’exigence de coordination et de communication entre services.\n\nÀ VÉRIFIER avant l’oral : où en est le texte. Vous pouvez aussi choisir un autre événement, à condition de pouvoir le raconter en trois temps : fait, enjeu, conséquence."
+ },
+ {
+  "type": "Actualités",
+  "question": "Un fait divers majeur relance le débat sur la sécurité : que dites-vous à un journaliste ?",
+  "piste": "IDÉE MAÎTRESSE\nJe parle d’abord des victimes et des faits établis, puis de l’action de l’État, sans polémique ni spéculation.\n\nEXPLICATIONS\n1. Compassion et faits vérifiés : je ne dis que ce qui est établi.\n2. Ce qui est fait : mobilisation des forces de sécurité, enquête menée sous l’autorité du procureur. Ce qui relève de la justice, je le lui laisse.\n3. Le temps long : je replace l’événement dans la politique de sécurité menée, avec des chiffres seulement s’ils sont fiables.\n4. Un message clé, répété, d’un ton calme. Jamais de « sans commentaire » : je dis ce que je peux dire, et quand je donnerai la suite."
+ },
+ {
+  "type": "Actualités",
+  "question": "Quelle réforme en cours touche, selon vous, l’organisation des préfectures ?",
+  "piste": "IDÉE MAÎTRESSE\nLe renforcement du préfet comme chef d’orchestre de l’action territoriale de l’État.\n\nEXPLICATIONS\n1. Origine : l’annonce « Refonder l’État local » de juillet 2025, prolongée par un avant-projet de loi de décentralisation début 2026.\n2. Contenu : autorité accrue sur les services et les opérateurs, pouvoir de dérogation étendu, guichet unique pour les subventions des collectivités, substitution possible en cas de carence.\n3. Enjeu : un État plus lisible et plus réactif sur le terrain. Point de vigilance : les moyens et la coordination.\n\nÀ VÉRIFIER avant l’oral : le stade d’examen du texte (adopté, en discussion, amendé)."
+ },
+ {
+  "type": "Actualités",
+  "question": "Quel sujet d’actualité mobilise le plus les services de l’État dans un département ?",
+  "piste": "IDÉE MAÎTRESSE\nLa gestion des risques et des crises : elle mobilise tous les services en même temps et se joue avant l’événement.\n\nEXPLICATIONS\n1. Les risques : naturels (feux de forêt, inondations), routiers, ordre public. L’actualité en fournit régulièrement.\n2. Les acteurs : police, gendarmerie, pompiers, services techniques, santé, collectivités. Le préfet coordonne.\n3. Ce qui fait la différence : la préparation (plans ORSEC, exercices) et la communication de crise.\n\nÀ PERSONNALISER : appuyez-vous sur un exemple concret que vous connaissez, ce sera plus crédible."
+ },
+ {
+  "type": "Management",
+  "question": "Comment réagissez-vous face à un agent qui conteste une décision devant l’équipe ?",
+  "piste": "IDÉE MAÎTRESSE\nJe garde le cadre devant l’équipe, et je traite le fond en tête-à-tête.\n\nEXPLICATIONS\n1. Sur le moment : j’écoute, je rappelle que la décision est prise et pourquoi, et je propose d’en reparler ensuite. Pas de confrontation publique.\n2. En tête-à-tête : je cherche à comprendre l’objection. Elle peut contenir une information utile, et j’ajuste si elle est fondée.\n3. Si l’opposition persiste : la décision est appliquée, je le dis clairement et sans agressivité.\n4. Ce que je protège : l’autorité par la clarté, et la dignité de l’agent."
+ },
+ {
+  "type": "Management",
+  "question": "Décrivez une situation où vous avez dû arbitrer entre deux urgences.",
+  "piste": "IDÉE MAÎTRESSE\nJ’arbitre selon l’impact et l’échéance, et je dis clairement ce qui passe en second.\n\nEXPLICATIONS (à raconter en quatre temps)\n1. Situation : deux demandes urgentes en même temps, avec la même équipe.\n2. Critères : gravité, irréversibilité, échéance, personnes concernées.\n3. Action : je décide vite, je délègue l’une, j’informe les demandeurs de ma décision et du calendrier de la seconde.\n4. Résultat et leçon : les deux sont traitées, et j’ai mis en place un point quotidien pour anticiper.\n\nÀ PERSONNALISER : remplacez par un cas vécu précis, avec un chiffre ou une date."
+ },
+ {
+  "type": "Management",
+  "question": "Comment fixez-vous les priorités d’une équipe en sous-effectif ?",
+  "piste": "IDÉE MAÎTRESSE\nFaire moins, mais mieux : je hiérarchise avec l’équipe, je diffère ce qui peut l’être et je protège l’essentiel.\n\nEXPLICATIONS\n1. Je classe les missions : obligatoires, à fort impact, différables.\n2. J’associe l’équipe à ce tri, pour que les priorités soient comprises et partagées.\n3. Je simplifie, je mutualise, j’outille pour gagner du temps.\n4. Je remonte à ma hiérarchie les arbitrages et les risques que cela fait courir.\n5. Je surveille la charge de chacun pour éviter l’épuisement."
+ },
+ {
+  "type": "Management",
+  "question": "Comment conduisez-vous un entretien de recadrage ?",
+  "piste": "IDÉE MAÎTRESSE\nUn recadrage porte sur des faits, jamais sur la personne, et se termine par un engagement clair.\n\nEXPLICATIONS\n1. Préparation : des faits précis et datés, la règle concernée.\n2. Cadre : tête-à-tête, ton calme, sans public.\n3. Déroulé : j’expose les faits, j’écoute, je comprends les causes, je rappelle l’attendu.\n4. Conclusion : des actions concrètes, une échéance de suivi, une trace écrite si nécessaire.\n5. Je reviens vers l’agent après, pour constater les progrès."
+ },
+ {
+  "type": "Questions métiers",
+  "question": "Quel est le rôle du préfet dans la gestion d’une crise ?",
+  "piste": "IDÉE MAÎTRESSE\nLe préfet dirige les opérations dès que la crise dépasse le cadre communal : il décide, coordonne tous les acteurs et informe la population.\n\nEXPLICATIONS\n1. Il déclenche le dispositif ORSEC et active le centre opérationnel départemental.\n2. Il coordonne forces de sécurité, pompiers, santé, services techniques et maires. Dans sa commune, le maire reste le premier responsable.\n3. Il organise la communication : alerter, informer, rassurer.\n4. Il rend compte aux niveaux zonal et national.\n5. Après la crise, il fait réaliser un retour d’expérience."
+ },
+ {
+  "type": "Questions métiers",
+  "question": "Comment organiseriez-vous la communication lors d’un événement grave ?",
+  "piste": "IDÉE MAÎTRESSE\nInformer vite, vrai, et d’une seule voix : la communication fait partie de la gestion de crise.\n\nEXPLICATIONS\n1. Une cellule communication intégrée à la cellule de crise, et un porte-parole unique.\n2. Premiers messages rapides : faits établis, consignes à la population, ce qui est fait, heure de la prochaine information.\n3. Les canaux : réseaux sociaux de la préfecture, presse, alerte à la population si nécessaire.\n4. Les victimes et leurs familles d’abord. Ce qui relève de l’enquête est coordonné avec le parquet.\n5. Je surveille les rumeurs et je les corrige, puis je fais un retour d’expérience."
+ },
+ {
+  "type": "Questions métiers",
+  "question": "Que faites-vous dans la première heure d’une inondation ?",
+  "piste": "IDÉE MAÎTRESSE\nDans la première heure : alerter, protéger, coordonner. La priorité absolue est de sauver des vies.\n\nEXPLICATIONS\n1. J’active la cellule de crise et le centre opérationnel, et je confirme la situation avec les services de prévision et les pompiers.\n2. J’alerte la population et je diffuse les consignes : se mettre à l’abri, éviter les routes. Je décide les premières mesures : fermetures de routes, évacuations.\n3. Je coordonne avec les maires, les forces de l’ordre, les pompiers, les services techniques et les gestionnaires de réseaux.\n4. J’informe l’échelon zonal et national, et j’organise la communication."
+ },
+ {
+  "type": "Questions métiers",
+  "question": "Comment articuler police et gendarmerie lors d’un grand rassemblement ?",
+  "piste": "IDÉE MAÎTRESSE\nUn seul pilotage : le préfet fixe les objectifs, et un dispositif unique répartit les rôles selon les zones de compétence.\n\nEXPLICATIONS\n1. Répartition : la police nationale en zone urbaine, la gendarmerie en zone rurale ou périurbaine, selon le lieu du rassemblement.\n2. Un responsable unique de la coordination opérationnelle est désigné, avec un poste de commandement commun et des liaisons directes.\n3. Les interfaces : pompiers, urgences médicales, mairie, organisateurs.\n4. Les renforts (CRS, gendarmerie mobile) sont intégrés au dispositif.\n5. Un retour d’expérience clôt l’opération."
+ },
+ {
+  "type": "Connaissance du ministère",
+  "question": "Quelles sont les grandes missions du ministère de l’Intérieur ?",
+  "piste": "IDÉE MAÎTRESSE\nLe ministère de l’Intérieur garantit la sécurité des personnes et des biens, et assure la présence de l’État et des libertés publiques sur tout le territoire.\n\nEXPLICATIONS\n1. Sécurité : police nationale, gendarmerie nationale, sécurité civile, sécurité routière, lutte contre le terrorisme.\n2. Administration territoriale : préfectures et sous-préfectures, relations avec les collectivités.\n3. Libertés publiques et citoyenneté : élections, cultes, titres, immigration, asile, intégration.\n4. Gestion de crise, à tous les niveaux.\n\nÀ ACTUALISER : le périmètre exact du ministère (intitulé, attributions) change avec les gouvernements."
+ },
+ {
+  "type": "Connaissance du ministère",
+  "question": "Quelle différence entre la police nationale et la gendarmerie nationale ?",
+  "piste": "IDÉE MAÎTRESSE\nDeux forces complémentaires, toutes deux sous l’autorité du ministre de l’Intérieur, qui diffèrent par leur statut et leur territoire.\n\nEXPLICATIONS\n1. La police nationale est une force civile, surtout présente dans les zones urbaines.\n2. La gendarmerie nationale a un statut militaire. Elle est rattachée au ministère de l’Intérieur depuis 2009 et intervient surtout en zone rurale et périurbaine, soit la plus grande partie du territoire.\n3. Chacune a ses spécificités : CRS et police judiciaire côté police, gendarmerie mobile et maillage territorial côté gendarmerie.\n4. Dans le département, le préfet coordonne les deux."
+ },
+ {
+  "type": "Connaissance du ministère",
+  "question": "Quel est le rôle d’un sous-préfet d’arrondissement ?",
+  "piste": "IDÉE MAÎTRESSE\nLe sous-préfet est le représentant de l’État de proximité : le bras du préfet et le premier interlocuteur des élus de son arrondissement.\n\nEXPLICATIONS\n1. Il représente le préfet dans l’arrondissement.\n2. Il appuie les collectivités : conseil, ingénierie territoriale, accompagnement de projets.\n3. Il met en œuvre les politiques de l’État au niveau local et anime le réseau des acteurs : maires, intercommunalités, associations, entreprises.\n4. Il gère les situations de crise et de sécurité dans son territoire."
+ },
+ {
+  "type": "Connaissance du ministère",
+  "question": "Qu’est-ce que l’administration territoriale de l’État ?",
+  "piste": "IDÉE MAÎTRESSE\nC’est l’ensemble des services de l’État présents sur le territoire, organisés autour du préfet à trois niveaux : région, département, arrondissement.\n\nEXPLICATIONS\n1. Région : le préfet de région, le secrétariat général aux affaires régionales et les directions régionales.\n2. Département : le préfet, la préfecture et les directions départementales interministérielles, avec la police, la gendarmerie et les finances publiques.\n3. Arrondissement : les sous-préfets.\n4. Principe : la déconcentration. Le préfet représente l’État et dirige ses services. La réforme en cours renforce ce rôle."
+ },
+ {
+  "type": "Motivation",
+  "question": "Pourquoi souhaitez-vous devenir attaché principal ?",
+  "piste": "IDÉE MAÎTRESSE\nJe veux exercer pleinement des responsabilités de cadre : piloter, encadrer et conseiller au service de l’État.\n\nEXPLICATIONS\n1. Mon parcours : entrepreneur dans la production graphique et multimédia, puis Canopé, les collectivités territoriales et enfin la préfecture, où je dirige le service de communication interministérielle.\n2. J’exerce déjà ces responsabilités : encadrer une équipe, conseiller la hiérarchie, concevoir des projets.\n3. Le concours reconnaît et prolonge cet engagement.\n4. Mon moteur : le sens du service public.\n\nÀ PERSONNALISER avec vos mots."
+ },
+ {
+  "type": "Motivation",
+  "question": "Qu’est-ce qui, dans votre parcours, vous prépare à ce poste ?",
+  "piste": "IDÉE MAÎTRESSE\nMon parcours croise trois mondes, l’entreprise, les collectivités et l’État, et me donne une vision d’ensemble de l’action publique.\n\nEXPLICATIONS\n1. Entrepreneur : autonomie, sens du résultat, gestion de projet.\n2. Canopé et collectivités : culture de la formation, relation avec les élus et les territoires.\n3. Préfecture : communication, rédaction de discours, gestion de crise, management d’une petite équipe.\n4. Formateur : une pédagogie que j’applique à l’encadrement.\n\nEn résumé : je sais cadrer, écrire, former et coordonner."
+ },
+ {
+  "type": "Motivation",
+  "question": "Où vous voyez-vous dans cinq ans ?",
+  "piste": "IDÉE MAÎTRESSE\nDans cinq ans, je me vois cadre confirmé, au service de la cohérence de l’action de l’État dans les territoires.\n\nEXPLICATIONS\n1. Approfondir le pilotage et le conseil stratégique.\n2. Transmettre : former et faire grandir les équipes.\n3. Contribuer à l’innovation : concevoir des outils qui améliorent la productivité des services.\n4. Rester ouvert à la mobilité, y compris géographique et fonctionnelle.\n\nGardez un projet, pas un poste précis : vous montrez de l’ambition sans paraître figé."
+ },
+ {
+  "type": "Motivation",
+  "question": "Quelle est votre plus grande réussite professionnelle ?",
+  "piste": "IDÉE MAÎTRESSE\nMa plus grande réussite est d’avoir fait de mon service un laboratoire de productivité, avec des outils conçus sur mesure.\n\nEXPLICATIONS (méthode : contexte, action, résultat)\n1. Contexte : des tâches répétitives qui prenaient du temps à l’équipe.\n2. Action : concevoir des outils internes adaptés à nos besoins, en associant l’équipe.\n3. Résultat : gain de temps, productions homogènes, équipe plus autonome.\n\nÀ PERSONNALISER : remplacez par la réussite que vous préférez et chiffrez-la (temps gagné, nombre d’utilisateurs)."
+ }
+];
+
+async function ensureTables(){
+  const tables = await grist.docApi.listTables();
+  const actions = [];
+  if (!tables.includes(T_Q)) actions.push(['AddTable', T_Q, [
+    {id:'Type', type:'Choice', widgetOptions: JSON.stringify({choices: TYPES.map(t=>t.key)})},
+    {id:'Question', type:'Text'},
+    {id:'Piste', type:'Text'},
+    {id:'Ecarter', type:'Bool'},
+    {id:'Nb_tirages', type:'Int'},
+    {id:'Dernier_tirage', type:'Text'}
+  ]]);
+  if (!tables.includes(T_S)) actions.push(['AddTable', T_S, [
+    {id:'Date', type:'Text'},
+    {id:'Ordre', type:'Text'},
+    {id:'Duree_totale', type:'Int'},
+    {id:'Detail', type:'Text'}
+  ]]);
+  if (actions.length) await grist.docApi.applyUserActions(actions);
+}
+
+async function loadQuestions(){
+  if (!inGrist){
+    demoMode = true; let n = 0;
+    QUESTIONS = [];
+    for (const it of DEMO_ITEMS)
+      QUESTIONS.push({id:++n, type:it.type, question:it.question, piste:it.piste, ecarte:false, nb:0, dernier:''});
+    return;
+  }
+  await ensureTables();
+  const t = await grist.docApi.fetchTable(T_Q);
+  QUESTIONS = [];
+  t.id.forEach((id,i)=>{
+    const q = String(t.Question[i]||'').trim(); if(!q) return;
+    const type = typeFromText(t.Type[i]); if(!type) return;
+    QUESTIONS.push({id, type, question:q, piste:t.Piste[i]||'', ecarte:!!t.Ecarter[i], nb:Number(t.Nb_tirages[i])||0, dernier:t.Dernier_tirage[i]||''});
+  });
+}
+
+/* ============ Tirage ============ */
+let S = null;   // séance
+function newSession(){
+  stopTimer();
+  const order = shuffle(TYPES.map(t=>t.key));
+  const steps = [], lacks = [];
+  order.forEach((key, tabIdx)=>{
+    let pool = shuffle(QUESTIONS.filter(q=>q.type===key && !q.ecarte));
+    if (settings.avoidSeen) pool.sort((a,b)=>(a.nb-b.nb) || (a.dernier<b.dernier?-1:a.dernier>b.dernier?1:0));
+    const pick = pool.slice(0, PER_TAB);
+    if (pick.length < PER_TAB) lacks.push({key, have:pick.length});
+    pick.forEach((q,i)=>steps.push({tabIdx, key, q, n:i+1, counted:false}));
+  });
+  S = {order, steps, idx:-1, times:{}, done:false, saved:false, showPistes:false, lacks};
+  render();
+}
+
+/* ============ Chrono ============ */
+let acc = 0, t0 = 0, running = false, ticker = null, beeped = false;
+const elapsed = () => acc + (running ? (performance.now()-t0)/1000 : 0);
+function startTimer(){ if(running) return; running = true; t0 = performance.now(); ticker = setInterval(tick, 200); updateTimerUI(); }
+function pauseTimer(){ if(!running) return; acc += (performance.now()-t0)/1000; running = false; clearInterval(ticker); updateTimerUI(); }
+function stopTimer(){ running=false; clearInterval(ticker); acc=0; beeped=false; }
+function resetTimer(){ stopTimer(); updateTimerUI(); }
+function toggleTimer(){ running ? pauseTimer() : startTimer(); }
+function tick(){
+  if (!beeped && elapsed() >= DURATION){ beeped = true; beep(); }
+  updateTimerUI();
+}
+function beep(){
+  if(!settings.sound) return;
+  try{
+    const ac = new (window.AudioContext||window.webkitAudioContext)();
+    [0,0.35].forEach(d=>{ const o=ac.createOscillator(), g=ac.createGain(); o.frequency.value=880; g.gain.value=.15; o.connect(g); g.connect(ac.destination); o.start(ac.currentTime+d); o.stop(ac.currentTime+d+.25); });
+  }catch(e){}
+}
+function updateTimerUI(){
+  const box = $('timer'); if(!box) return;
+  const el = elapsed(), rem = DURATION - el;
+  const shown = rem > 0 ? Math.ceil(rem) : -Math.floor(-rem);
+  $('tDigits').textContent = fmt(shown);
+  $('tBar').style.width = Math.max(0, Math.min(100, rem/DURATION*100)) + '%';
+  box.classList.toggle('warn', rem <= DURATION*0.2 && rem > 0);
+  box.classList.toggle('over', rem <= 0);
+  $('tState').textContent = rem<=0 ? 'Temps écoulé — concluez.' : running ? 'Chrono en cours' : (el>0 ? 'En pause' : 'Prêt : 1 min 30');
+  const b = $('btnTimer'); if(b) b.textContent = running ? '⏸ Pause' : (el>0 ? '▶ Reprendre' : '▶ Démarrer le chrono');
+}
+
+/* ============ Navigation pas à pas ============ */
+function leave(){
+  if (S && S.idx>=0 && S.idx<S.steps.length){ const e=Math.round(elapsed()); if(e>0 || S.times[S.idx]==null) S.times[S.idx]=e; }
+  stopTimer();
+}
+function go(n){
+  leave();
+  if (n >= S.steps.length){ S.idx = S.steps.length; S.done = true; render(); saveSession(); return; }
+  S.done = false; S.idx = Math.max(-1, n); S.showPistes = false;
+  if (S.idx>=0){ markSeen(S.steps[S.idx]); }
+  render();
+  if (S.idx>=0 && settings.auto) startTimer();
+}
+const next = () => { if(!S) return; if (S.done) return; go(S.idx+1); };
+const prev = () => { if(!S || S.idx<=-1) return; if (S.done){ S.done=false; go(S.steps.length-1); } else go(S.idx-1); };
+
+async function markSeen(step){
+  if (step.counted) return; step.counted = true;
+  const q = step.q; q.nb += 1; q.dernier = today();
+  if (inGrist){
+    try{ await grist.docApi.applyUserActions([['UpdateRecord', T_Q, q.id, {Nb_tirages:q.nb, Dernier_tirage:q.dernier}]]); }catch(e){ console.warn(e); }
+  }
+}
+async function saveSession(){
+  if (S.saved) return; S.saved = true;
+  if (!inGrist) return;
+  const detail = S.steps.map((st,i)=>({onglet:st.key, question:st.q.question, secondes:S.times[i]??null}));
+  const total = Object.values(S.times).reduce((a,b)=>a+(b||0),0);
+  try{
+    await grist.docApi.applyUserActions([['AddRecord', T_S, null, {Date:new Date().toISOString(), Ordre:S.order.join(' > '), Duree_totale:total, Detail:JSON.stringify(detail)}]]);
+    setBanner('Séance enregistrée dans la base (table '+T_S+').','info');
+  }catch(e){ console.warn(e); }
+}
+
+/* ============ Rendu ============ */
+function setBanner(txt, kind){
+  const b = $('banner'); if(!txt){ b.hidden = true; return; }
+  b.hidden = false; b.className = 'banner' + (kind==='info' ? ' info' : ''); b.textContent = txt;
+}
+function renderTabs(){
+  const nav = $('tabs'); nav.replaceChildren();
+  S.order.forEach((key, i)=>{
+    const steps = S.steps.map((s,idx)=>({s,idx})).filter(x=>x.s.tabIdx===i);
+    const cur = S.idx>=0 && S.idx<S.steps.length && S.steps[S.idx].tabIdx===i;
+    const done = steps.length>0 && steps.every(x=>S.idx>x.idx || S.done);
+    const dots = h('div',{class:'dots'}, Array.from({length:PER_TAB}, (_,k)=>{
+      const x = steps[k]; let c='dot';
+      if (x){ if (S.done || S.idx>x.idx) c+=' done'; else if (S.idx===x.idx) c+=' now'; }
+      return h('span',{class:c});
+    }));
+    const t = h('button',{class:'tab'+(cur?' current':'')+(done?' done':'')+(steps.length===0?' empty':''), type:'button',
+      onclick:()=>{ if(steps.length) go(steps[0].idx); }},
+      h('span',{class:'num',text:'Onglet '+(i+1)}), h('span',{class:'name',text:typeInfo(key).short}), dots);
+    nav.append(t);
+  });
+}
+function renderStage(){
+  const st = $('stage'); st.replaceChildren();
+  const total = S.steps.length;
+
+  if (total === 0){
+    st.append(h('h2',{class:'big',text:'Aucune question disponible'}),
+      h('p',{text:'La base ne contient pas encore de questions actives. Ouvrez « Base & réglages » pour en importer ou en ajouter.'}),
+      h('div',{class:'controls'}, h('button',{class:'primary',onclick:openDrawer,text:'Ouvrir la base'})));
+    return;
+  }
+
+  if (S.idx === -1){   // écran d’ouverture
+    const per = {}; S.steps.forEach(s=>per[s.tabIdx]=(per[s.tabIdx]||0)+1);
+    st.append(
+      h('div',{class:'kicker'}, h('span',{text:'Nouvelle séance'}), h('span',{text:total+' questions · '+fmt(total*DURATION).replace(/^(\d+):(\d+)$/,'$1 min $2')+' de réponses'})),
+      h('h2',{class:'big',text:'Ordre des onglets tiré au sort'}),
+      h('ol',{class:'order'}, S.order.map((k,i)=>h('li',{}, h('span',{class:'n',text:i+1}), h('strong',{text:typeInfo(k).label}), h('span',{class:'c',text:(per[i]||0)+' question'+((per[i]||0)>1?'s':'')})))),
+      h('p',{class:'note',text:'Pour chaque question : 1 min 30 pour répondre. Le pas à pas enchaîne les trois questions d’un onglet, puis passe à l’onglet suivant.'}),
+      h('div',{class:'controls'}, h('button',{class:'primary',onclick:next,text:'Commencer la séance →'}))
+    );
+    return;
+  }
+
+  if (S.done){   // récapitulatif
+    st.append(h('div',{class:'kicker'}, h('span',{text:'Séance terminée'})), h('h2',{class:'big',text:'Récapitulatif'}));
+    const tb = h('table',{class:'recap'}, h('thead',{}, h('tr',{}, h('th',{text:'Question'}), h('th',{text:'Temps'}))));
+    const body = h('tbody'); let lastTab = -1, sum = 0;
+    S.steps.forEach((s,i)=>{
+      if (s.tabIdx!==lastTab){ lastTab=s.tabIdx; body.append(h('tr',{class:'grp'}, h('td',{colspan:2,text:'Onglet '+(s.tabIdx+1)+' — '+typeInfo(s.key).label}))); }
+      const t = S.times[i]; if (t) sum += t;
+      body.append(h('tr',{}, h('td',{text:s.q.question}), h('td',{class:'t '+(t==null?'':(t>DURATION?'over-t':'ok-t')), text:t==null?'—':fmt(t)+(t>DURATION?' (dépassé)':'')})));
+    });
+    tb.append(body); st.append(tb, h('p',{class:'note',text:'Temps total de parole : '+fmt(sum)+'.'}),
+      h('div',{class:'controls'}, h('button',{onclick:prev,text:'← Revenir à la dernière question'}), h('button',{class:'primary',onclick:newSession,text:'Nouvelle séance'})));
+    return;
+  }
+
+  const s = S.steps[S.idx], inTab = S.steps.filter(x=>x.tabIdx===s.tabIdx).length;
+  const nextStep = S.steps[S.idx+1];
+  let nextLabel = 'Question suivante →';
+  if (!nextStep) nextLabel = 'Terminer la séance ✓';
+  else if (nextStep.tabIdx !== s.tabIdx) nextLabel = 'Onglet suivant : '+typeInfo(nextStep.key).short+' →';
+
+  st.append(
+    h('div',{class:'kicker'}, h('span',{text:'Onglet '+(s.tabIdx+1)+' / '+TYPES.length+' · '+typeInfo(s.key).label}), h('span',{text:'Question '+s.n+' / '+inTab})),
+    h('p',{class:'question',text:s.q.question}),
+    ...(S.showPistes ? [h('div',{class:'pistes'}, h('small',{text:'Pistes de réponse'}), s.q.piste ? s.q.piste : 'Aucune piste saisie pour cette question.')] : []),
+    h('div',{class:'timer',id:'timer'},
+      h('div',{class:'digits',id:'tDigits',text:'1:30'}),
+      h('div',{class:'barwrap'}, h('div',{class:'bar'}, h('i',{id:'tBar'})), h('div',{class:'tstate',id:'tState'}))),
+    h('div',{class:'controls'},
+      h('button',{onclick:prev,text:'← Précédente',disabled:S.idx<=0}),
+      h('button',{class:'primary',id:'btnTimer',onclick:toggleTimer,text:'▶ Démarrer le chrono'}),
+      h('button',{onclick:resetTimer,text:'↺ Remise à zéro'}),
+      h('button',{onclick:()=>{S.showPistes=!S.showPistes; render();},text:S.showPistes?'Masquer les pistes':'Voir les pistes'}),
+      h('button',{class:'primary',onclick:next,text:nextLabel}))
+  );
+  updateTimerUI();
+}
+function render(){
+  $('meta').textContent = demoMode ? 'mode démo (hors Grist)' : (S ? S.steps.length+' questions tirées' : '');
+  if (!S) return;
+  const msgs = [];
+  if (demoMode) msgs.push('Mode démo : l’application est ouverte hors de Grist, les questions affichées sont des exemples et rien n’est enregistré.');
+  if (S.lacks.length) msgs.push('Questions insuffisantes dans : ' + S.lacks.map(l=>typeInfo(l.key).short+' ('+l.have+'/'+PER_TAB+')').join(', ')+'.');
+  if (msgs.length && !(S.done && S.saved && inGrist)) setBanner(msgs.join(' '), 'warn'); else if (!(S.saved && inGrist)) setBanner('');
+  renderTabs(); renderStage();
+}
+
+/* ============ Tiroir « Base & réglages » ============ */
+function openDrawer(){ buildDrawer(); $('drawer').hidden = false; }
+function closeDrawer(){ $('drawer').hidden = true; }
+function buildDrawer(msg){
+  const b = $('drawerBody'); b.replaceChildren();
+  const cnt = TYPES.map(t=>{ const all=QUESTIONS.filter(q=>q.type===t.key), act=all.filter(q=>!q.ecarte); return {t, all:all.length, act:act.length, seen:act.filter(q=>q.nb>0).length}; });
+  b.append(
+    h('h4',{text:'Questions par type'}),
+    h('table',{class:'counts'}, h('thead',{}, h('tr',{}, h('th',{text:'Type'}), h('th',{text:'Actives'}), h('th',{text:'Déjà tirées'}))),
+      h('tbody',{}, cnt.map(c=>h('tr',{}, h('td',{text:c.t.short}), h('td',{class:c.act<PER_TAB?'low':'',text:c.act+(c.act<PER_TAB?' (min. '+PER_TAB+')':'')}), h('td',{text:c.seen+' / '+c.act}))))),
+    h('h4',{text:'Réglages'}),
+    h('label',{}, h('input',{type:'checkbox',id:'sAuto',checked:settings.auto||false}), 'Démarrer le chrono dès l’affichage de la question'),
+    h('label',{}, h('input',{type:'checkbox',id:'sSound',checked:settings.sound||false}), 'Signal sonore à la fin des 1 min 30'),
+    h('label',{}, h('input',{type:'checkbox',id:'sAvoid',checked:settings.avoidSeen||false}), 'Privilégier les questions jamais ou le moins tirées'),
+    h('h4',{text:'Ajouter une question'}),
+    h('select',{id:'addType'}, TYPES.map(t=>h('option',{value:t.key,text:t.label}))),
+    h('div',{class:'row'}, h('textarea',{id:'addQ',placeholder:'Texte de la question'})),
+    h('div',{class:'row'}, h('textarea',{id:'addP',placeholder:'Pistes de réponse (facultatif)'})),
+    h('div',{class:'row'}, h('button',{class:'primary',id:'btnAdd',text:'Ajouter à la base'})),
+    h('h4',{text:'Importer en lot (JSON)'}),
+    h('p',{class:'note',text:'Format : [{"type":"Management","question":"…","piste":"…"}, …]. Le type peut être abrégé (management, métiers, motivation, actualités, connaissance).'}),
+    h('textarea',{id:'impJson',placeholder:'Collez le JSON ici'}),
+    h('div',{class:'row'}, h('button',{id:'btnImp',text:'Importer'}), h('button',{id:'btnReload',text:'Recharger depuis Grist'})),
+    h('div',{class:'msg'+(msg&&msg.err?' err':' okk'),id:'drawMsg',text:msg?msg.t:''})
+  );
+  if (!inGrist){ ['btnAdd','btnImp','btnReload'].forEach(id=>$(id).disabled=true); $('drawMsg').textContent='Mode démo : l’écriture dans la base n’est possible que dans Grist.'; }
+  $('sAuto').onchange = e=>{settings.auto=e.target.checked; saveSettings();};
+  $('sSound').onchange = e=>{settings.sound=e.target.checked; saveSettings();};
+  $('sAvoid').onchange = e=>{settings.avoidSeen=e.target.checked; saveSettings();};
+  $('btnAdd').onclick = async ()=>{
+    const q = $('addQ').value.trim(); if(!q) return say('Saisissez le texte de la question.',true);
+    await addRows([{type:$('addType').value, question:q, piste:$('addP').value.trim()}]);
+  };
+  $('btnImp').onclick = async ()=>{
+    let arr; try{ arr = JSON.parse($('impJson').value); }catch(e){ return say('JSON invalide : '+e.message, true); }
+    if(!Array.isArray(arr)) return say('Le JSON doit être une liste.', true);
+    const rows=[], bad=[];
+    arr.forEach((r,i)=>{
+      const type = typeFromText(r.type||r.Type), q = String(r.question||r.Question||'').trim();
+      if(!type||!q) bad.push(i+1); else rows.push({type, question:q, piste:String(r.piste||r.Piste||'').trim()});
+    });
+    if(!rows.length) return say('Aucune ligne valide.', true);
+    await addRows(rows, bad);
+  };
+  $('btnReload').onclick = async ()=>{ try{ await loadQuestions(); buildDrawer({t:'Base rechargée ('+QUESTIONS.length+' questions).'}); }catch(e){ say(e.message,true);} };
+}
+function say(t, err){ const m=$('drawMsg'); if(m){ m.textContent=t; m.className='msg '+(err?'err':'okk'); } }
+async function addRows(rows, bad){
+  try{
+    const n = rows.length, col = f=>rows.map(f);
+    await grist.docApi.applyUserActions([['BulkAddRecord', T_Q, rows.map(()=>null), {
+      Type:col(r=>r.type), Question:col(r=>r.question), Piste:col(r=>r.piste), Ecarter:col(()=>false), Nb_tirages:col(()=>0), Dernier_tirage:col(()=>'')
+    }]]);
+    await loadQuestions();
+    buildDrawer({t:n+' question'+(n>1?'s':'')+' ajoutée'+(n>1?'s':'')+(bad&&bad.length?' — lignes ignorées : '+bad.join(', '):'')+'.'});
+  }catch(e){ say('Erreur : '+e.message, true); }
+}
+
+/* ============ Événements globaux ============ */
+$('btnNew').onclick = ()=>{ if(!S || S.idx<=-1 || S.done || confirm('Abandonner la séance en cours et tirer une nouvelle séance ?')) newSession(); };
+$('btnBase').onclick = openDrawer;
+$('btnClose').onclick = closeDrawer;
+$('drawer').addEventListener('click', e=>{ if(e.target===$('drawer')) closeDrawer(); });
+$('btnFs').onclick = toggleFs;
+function toggleFs(){ try{ if(document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); }catch(e){} }
+document.addEventListener('keydown', e=>{
+  if (!$('drawer').hidden){ if(e.key==='Escape') closeDrawer(); return; }
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test((e.target||{}).tagName)) return;
+  if (e.ctrlKey||e.metaKey||e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (k==='arrowright'){ e.preventDefault(); next(); }
+  else if (k==='arrowleft'){ e.preventDefault(); prev(); }
+  else if (k===' ' || k==='t'){ if(S && S.idx>=0 && !S.done){ e.preventDefault(); toggleTimer(); } else if(k===' ' && S && S.idx===-1){ e.preventDefault(); next(); } }
+  else if (k==='r'){ if(S && S.idx>=0 && !S.done) resetTimer(); }
+  else if (k==='n'){ if(S && S.idx>=0 && !S.done){ S.showPistes=!S.showPistes; render(); } }
+  else if (k==='f'){ toggleFs(); }
+});
+
+/* ============ Démarrage ============ */
+async function init(){
+  $('stage').append(h('p',{class:'note',text:'Chargement de la base…'}));
+  try{
+    if (inGrist) grist.ready({requiredAccess:'full'});
+    await loadQuestions();
+  }catch(e){
+    $('stage').replaceChildren(h('h2',{class:'big',text:'Erreur de chargement'}), h('p',{text:String(e.message||e)}),
+      h('p',{class:'note',text:'Vérifiez que le widget a l’accès complet au document (niveau d’accès « full »).'}));
+    return;
+  }
+  newSession();
+}
+init();
+</script>
+</body>
+</html>
