@@ -7,23 +7,25 @@
 <style>
 :root{
   --bg:#f6f3ec; --card:#ffffff; --ink:#16213a; --muted:#5b6478; --line:#d9d3c4;
-  --accent:#1f3a8a; --accent-soft:#e4e9f8; --warn:#d9822b; --bad:#c0392b; --ok:#2f7d5b;
+  --accent:#1f3a8a; --accent-soft:#e4e9f8; --warn:#d9822b; --bad:#c0392b; --ok:#2f7d5b; --none:#c9c4b5;
   --serif:Georgia,'Times New Roman',serif; --sans:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.45}
 body{min-height:100vh;display:flex;flex-direction:column}
-button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:8px 14px}
-button:hover{border-color:var(--accent)}
+button,select{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:8px 14px}
+select{padding:8px 10px}
+button:hover,select:hover{border-color:var(--accent)}
 button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 button.primary:hover{filter:brightness(1.1)}
 button:disabled{opacity:.45;cursor:default}
 button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px solid #8aa0e6;outline-offset:2px}
+[hidden]{display:none !important}
 
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 24px 6px}
-.top h1{font-family:var(--serif);font-size:22px;margin:0;letter-spacing:.2px}
+.top h1{font-family:var(--serif);font-size:22px;margin:0;letter-spacing:.2px;display:inline}
 .top .meta{color:var(--muted);font-size:13px;margin-left:10px}
-.top .actions{display:flex;gap:8px;flex-wrap:wrap}
+.top .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .banner{margin:6px 24px;padding:10px 14px;border-radius:8px;background:#fff4e0;border:1px solid #f0cf94;color:#6b4a0c;font-size:14px}
 .banner.info{background:var(--accent-soft);border-color:#b9c6ee;color:#1d2f6b}
 
@@ -38,6 +40,8 @@ button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-vis
 .dot{width:9px;height:9px;border-radius:50%;border:1.5px solid #a9a393;background:transparent}
 .dot.done{background:var(--ok);border-color:var(--ok)}
 .dot.now{background:var(--accent);border-color:var(--accent)}
+.dot.r-a_revoir{background:var(--warn);border-color:var(--warn)}
+.dot.r-ratee{background:var(--bad);border-color:var(--bad)}
 
 main{flex:1;padding:22px 24px 12px;display:flex;justify-content:center}
 .card{width:100%;max-width:960px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:30px 34px;box-shadow:0 1px 0 rgba(0,0,0,.03)}
@@ -54,7 +58,14 @@ main{flex:1;padding:22px 24px 12px;display:flex;justify-content:center}
 .tstate{margin-top:6px;font-size:13px;color:var(--muted);min-height:18px}
 .timer.warn .digits{color:var(--warn)} .timer.warn .bar>i{background:var(--warn)}
 .timer.over .digits{color:var(--bad)} .timer.over .bar>i{background:var(--bad)}
-.controls{margin-top:24px;display:flex;gap:10px;flex-wrap:wrap}
+
+.rate{margin-top:22px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:16px;border-top:1px dashed var(--line)}
+.rate .ratelabel{color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.8px;margin-right:4px}
+.rb{border-width:2px}
+.rb.acquise.sel{background:var(--ok);border-color:var(--ok);color:#fff}
+.rb.a_revoir.sel{background:var(--warn);border-color:var(--warn);color:#fff}
+.rb.ratee.sel{background:var(--bad);border-color:var(--bad);color:#fff}
+.controls{margin-top:20px;display:flex;gap:10px;flex-wrap:wrap}
 
 h2.big{font-family:var(--serif);font-size:30px;margin:8px 0 12px}
 .order{margin:14px 0 20px;padding:0;list-style:none;display:grid;gap:8px}
@@ -67,19 +78,22 @@ table.recap td{padding:9px 6px;border-bottom:1px solid var(--line);vertical-alig
 table.recap td.t{white-space:nowrap;font-variant-numeric:tabular-nums}
 table.recap tr.grp td{background:var(--accent-soft);font-weight:700;color:#1d2f6b}
 .over-t{color:var(--bad);font-weight:600} .ok-t{color:var(--ok);font-weight:600}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600;color:#fff;background:var(--none)}
+.pill.acquise{background:var(--ok)} .pill.a_revoir{background:var(--warn)} .pill.ratee{background:var(--bad)}
+.summary{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 4px}
 .note{color:var(--muted);font-size:14px;margin-top:12px}
 
 .keys{padding:8px 24px 16px;color:var(--muted);font-size:12.5px;text-align:center}
 kbd{font:inherit;font-size:11.5px;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 6px;background:var(--card);color:var(--ink)}
 
 #drawer{position:fixed;inset:0;background:rgba(22,33,58,.45);display:flex;justify-content:flex-end;z-index:10}
-#drawer[hidden]{display:none}
-.panel{width:min(520px,100%);height:100%;background:var(--card);padding:22px 24px;overflow:auto;box-shadow:-6px 0 24px rgba(0,0,0,.15)}
+.panel{width:min(560px,100%);height:100%;background:var(--card);padding:22px 24px;overflow:auto;box-shadow:-6px 0 24px rgba(0,0,0,.15)}
 .panel h3{font-family:var(--serif);font-size:22px;margin:0 0 4px}
 .panel h4{margin:22px 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.9px;color:var(--muted)}
 .panel .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0}
-.panel label{display:flex;gap:8px;align-items:center;font-size:15px}
-.panel textarea,.panel select,.panel input[type=text]{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+.panel label{display:flex;gap:8px;align-items:center;font-size:15px;margin:6px 0}
+.panel textarea,.panel select,.panel input[type=text],.panel input[type=date]{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+.panel label select,.panel label input[type=date]{width:auto}
 .panel textarea{min-height:90px;resize:vertical}
 table.counts{width:100%;border-collapse:collapse;font-size:14px}
 table.counts th,table.counts td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left}
@@ -87,6 +101,12 @@ table.counts th{font-size:11px;text-transform:uppercase;letter-spacing:.8px;colo
 .low{color:var(--bad);font-weight:700}
 .msg{margin-top:8px;font-size:14px}
 .msg.err{color:var(--bad)} .msg.okk{color:var(--ok)}
+.stack{display:flex;height:14px;border-radius:99px;overflow:hidden;background:var(--none);min-width:120px}
+.stack i{display:block;height:100%}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin:6px 0 10px}
+.legend b{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.pt{margin:10px 0 14px}
+.pt .lab{display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px}
 
 @media (max-width:700px){
   .card{padding:22px 18px} .digits{font-size:48px;min-width:130px} .tab{min-width:128px}
@@ -96,9 +116,16 @@ table.counts th{font-size:11px;text-transform:uppercase;letter-spacing:.8px;colo
 <body>
 
 <header class="top">
-  <div><h1 style="display:inline">Oral de concours</h1><span class="meta" id="meta"></span></div>
+  <div><h1>Oral de concours</h1><span class="meta" id="meta"></span></div>
   <div class="actions">
-    <button id="btnNew" title="Nouveau tirage et nouvel ordre des onglets">Nouvelle séance</button>
+    <select id="selMode" aria-label="Type de séance">
+      <option value="full">Séance complète</option>
+      <option value="single">Un seul onglet</option>
+      <option value="review">Questions à revoir</option>
+    </select>
+    <select id="selType" aria-label="Onglet à travailler" hidden></select>
+    <button id="btnNew" title="Nouveau tirage">Nouvelle séance</button>
+    <button id="btnProg" title="Tableau de progression">Progression</button>
     <button id="btnBase" title="Questions, réglages, import">Base &amp; réglages</button>
     <button id="btnFs" title="Touche F">Plein écran</button>
   </div>
@@ -107,12 +134,12 @@ table.counts th{font-size:11px;text-transform:uppercase;letter-spacing:.8px;colo
 <nav id="tabs" class="tabs" aria-label="Onglets de la séance"></nav>
 <main><section id="stage" class="card" aria-live="polite"></section></main>
 <footer class="keys">
-  <kbd>→</kbd> question suivante · <kbd>←</kbd> précédente · <kbd>Espace</kbd> ou <kbd>T</kbd> chrono · <kbd>R</kbd> remise à zéro · <kbd>N</kbd> pistes de réponse · <kbd>F</kbd> plein écran
+  <kbd>→</kbd> suivante · <kbd>←</kbd> précédente · <kbd>Espace</kbd> ou <kbd>T</kbd> chrono · <kbd>R</kbd> remise à zéro · <kbd>N</kbd> pistes · <kbd>1</kbd> acquise · <kbd>2</kbd> à revoir · <kbd>3</kbd> ratée · <kbd>F</kbd> plein écran
 </footer>
 
 <aside id="drawer" hidden>
-  <div class="panel" role="dialog" aria-label="Base et réglages">
-    <div class="row" style="justify-content:space-between"><h3>Base &amp; réglages</h3><button id="btnClose">Fermer</button></div>
+  <div class="panel" role="dialog" aria-label="Panneau">
+    <div class="row" style="justify-content:space-between"><h3 id="drawerTitle"></h3><button id="btnClose">Fermer</button></div>
     <div id="drawerBody"></div>
   </div>
 </aside>
@@ -128,12 +155,25 @@ const TYPES = [
   {key:'Connaissance du ministère', label:'Connaissance du ministère de l’Intérieur', short:'Connaissance du ministère'},
   {key:'Motivation',                label:'Motivation',                               short:'Motivation'}
 ];
-const PER_TAB = 3, DURATION = 90;               // 3 questions par onglet, 1 min 30
+const PER_TAB = 3, SINGLE_COUNT = 5, DURATION = 90;   // 3 questions par onglet, 1 min 30
+const INTERVALS = [0,1,3,7,14];                        // jours avant révision, selon la « boîte » 0 à 4
+const NOTE_LABEL = {acquise:'Acquise', a_revoir:'À revoir', ratee:'Ratée'};
 const T_Q = 'Oral_Questions', T_S = 'Oral_Seances';
 const inGrist = (typeof grist !== 'undefined') && window.self !== window.top;
 
+const COLS_Q = [
+  {id:'Type', type:'Choice', widgetOptions: JSON.stringify({choices: TYPES.map(t=>t.key)})},
+  {id:'Question', type:'Text'}, {id:'Piste', type:'Text'}, {id:'Ecarter', type:'Bool'},
+  {id:'Nb_tirages', type:'Int'}, {id:'Dernier_tirage', type:'Text'},
+  {id:'Boite', type:'Int'}, {id:'Derniere_note', type:'Text'}, {id:'Prochaine_revision', type:'Text'}
+];
+const COLS_S = [
+  {id:'Date', type:'Text'}, {id:'Ordre', type:'Text'}, {id:'Duree_totale', type:'Int'}, {id:'Detail', type:'Text'},
+  {id:'Mode', type:'Text'}, {id:'Nb_acquises', type:'Int'}, {id:'Nb_a_revoir', type:'Int'}, {id:'Nb_ratees', type:'Int'}, {id:'Nb_non_evaluees', type:'Int'}
+];
+
 /* ============ Réglages (localStorage, facultatif) ============ */
-const settings = {auto:false, sound:true, avoidSeen:true};
+const settings = {auto:false, sound:true, avoidSeen:true, reviewSlots:1, mode:'full', singleType:TYPES[0].key, examDate:'2026-11-16'};
 try { Object.assign(settings, JSON.parse(localStorage.getItem('oralConcoursSettings')||'{}')); } catch(e){}
 function saveSettings(){ try{ localStorage.setItem('oralConcoursSettings', JSON.stringify(settings)); }catch(e){} }
 
@@ -152,8 +192,10 @@ function h(tag, props, ...kids){
 const $ = id => document.getElementById(id);
 function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
 function fmt(s){ const a=Math.abs(s), m=Math.floor(a/60), r=a%60; return (s<0?'+':'')+m+':'+String(r).padStart(2,'0'); }
-function today(){ return new Date().toISOString().slice(0,10); }
-function norm(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+function today(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function addDays(ds, n){ const [y,m,d]=ds.split('-').map(Number); return new Date(Date.UTC(y,m-1,d+n)).toISOString().slice(0,10); }
+function norm(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
+function normQ(s){ return norm(s).replace(/\s+/g,' ').trim(); }
 function typeFromText(t){
   const n = norm(t);
   if (n.includes('actual')) return 'Actualités';
@@ -164,140 +206,41 @@ function typeFromText(t){
   return null;
 }
 const typeInfo = key => TYPES.find(t=>t.key===key);
+function daysUntil(ds){ if(!ds) return null; const [y,m,d]=ds.split('-').map(Number); const t=new Date(); const a=Date.UTC(y,m-1,d), b=Date.UTC(t.getFullYear(),t.getMonth(),t.getDate()); return Math.round((a-b)/86400000); }
+function frDate(iso){ const d=new Date(iso); if(isNaN(d)) return String(iso||''); return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
 
 /* ============ Couche de données ============ */
-let QUESTIONS = [];   // {id,type,question,piste,ecarte,nb,dernier}
+let QUESTIONS = [];   // {id,type,question,piste,ecarte,nb,dernier,boite,note,prochaine}
 let demoMode = false;
+let demoSessions = [];
 
-const DEMO_ITEMS = [
- {
-  "type": "Actualités",
-  "question": "Quel événement récent concernant le ministère de l’Intérieur vous a le plus marqué, et pourquoi ?",
-  "piste": "IDÉE MAÎTRESSE\nCe qui m’a le plus marqué, c’est le mouvement de fond qui fait du préfet le chef d’orchestre de l’État local.\n\nEXPLICATIONS\n1. Les faits : depuis l’annonce « Refonder l’État local » de juillet 2025, puis l’avant-projet de loi de décentralisation début 2026, le préfet devient délégué territorial des opérateurs, avec un pouvoir de dérogation élargi et un rôle de guichet unique pour les collectivités.\n2. Pourquoi cela me marque : c’est une réponse à une demande de lisibilité de l’État, pour les élus comme pour les citoyens.\n3. Ce que j’en tire : cela renforce l’exigence de coordination et de communication entre services.\n\nÀ VÉRIFIER avant l’oral : où en est le texte. Vous pouvez aussi choisir un autre événement, à condition de pouvoir le raconter en trois temps : fait, enjeu, conséquence."
- },
- {
-  "type": "Actualités",
-  "question": "Un fait divers majeur relance le débat sur la sécurité : que dites-vous à un journaliste ?",
-  "piste": "IDÉE MAÎTRESSE\nJe parle d’abord des victimes et des faits établis, puis de l’action de l’État, sans polémique ni spéculation.\n\nEXPLICATIONS\n1. Compassion et faits vérifiés : je ne dis que ce qui est établi.\n2. Ce qui est fait : mobilisation des forces de sécurité, enquête menée sous l’autorité du procureur. Ce qui relève de la justice, je le lui laisse.\n3. Le temps long : je replace l’événement dans la politique de sécurité menée, avec des chiffres seulement s’ils sont fiables.\n4. Un message clé, répété, d’un ton calme. Jamais de « sans commentaire » : je dis ce que je peux dire, et quand je donnerai la suite."
- },
- {
-  "type": "Actualités",
-  "question": "Quelle réforme en cours touche, selon vous, l’organisation des préfectures ?",
-  "piste": "IDÉE MAÎTRESSE\nLe renforcement du préfet comme chef d’orchestre de l’action territoriale de l’État.\n\nEXPLICATIONS\n1. Origine : l’annonce « Refonder l’État local » de juillet 2025, prolongée par un avant-projet de loi de décentralisation début 2026.\n2. Contenu : autorité accrue sur les services et les opérateurs, pouvoir de dérogation étendu, guichet unique pour les subventions des collectivités, substitution possible en cas de carence.\n3. Enjeu : un État plus lisible et plus réactif sur le terrain. Point de vigilance : les moyens et la coordination.\n\nÀ VÉRIFIER avant l’oral : le stade d’examen du texte (adopté, en discussion, amendé)."
- },
- {
-  "type": "Actualités",
-  "question": "Quel sujet d’actualité mobilise le plus les services de l’État dans un département ?",
-  "piste": "IDÉE MAÎTRESSE\nLa gestion des risques et des crises : elle mobilise tous les services en même temps et se joue avant l’événement.\n\nEXPLICATIONS\n1. Les risques : naturels (feux de forêt, inondations), routiers, ordre public. L’actualité en fournit régulièrement.\n2. Les acteurs : police, gendarmerie, pompiers, services techniques, santé, collectivités. Le préfet coordonne.\n3. Ce qui fait la différence : la préparation (plans ORSEC, exercices) et la communication de crise.\n\nÀ PERSONNALISER : appuyez-vous sur un exemple concret que vous connaissez, ce sera plus crédible."
- },
- {
-  "type": "Management",
-  "question": "Comment réagissez-vous face à un agent qui conteste une décision devant l’équipe ?",
-  "piste": "IDÉE MAÎTRESSE\nJe garde le cadre devant l’équipe, et je traite le fond en tête-à-tête.\n\nEXPLICATIONS\n1. Sur le moment : j’écoute, je rappelle que la décision est prise et pourquoi, et je propose d’en reparler ensuite. Pas de confrontation publique.\n2. En tête-à-tête : je cherche à comprendre l’objection. Elle peut contenir une information utile, et j’ajuste si elle est fondée.\n3. Si l’opposition persiste : la décision est appliquée, je le dis clairement et sans agressivité.\n4. Ce que je protège : l’autorité par la clarté, et la dignité de l’agent."
- },
- {
-  "type": "Management",
-  "question": "Décrivez une situation où vous avez dû arbitrer entre deux urgences.",
-  "piste": "IDÉE MAÎTRESSE\nJ’arbitre selon l’impact et l’échéance, et je dis clairement ce qui passe en second.\n\nEXPLICATIONS (à raconter en quatre temps)\n1. Situation : deux demandes urgentes en même temps, avec la même équipe.\n2. Critères : gravité, irréversibilité, échéance, personnes concernées.\n3. Action : je décide vite, je délègue l’une, j’informe les demandeurs de ma décision et du calendrier de la seconde.\n4. Résultat et leçon : les deux sont traitées, et j’ai mis en place un point quotidien pour anticiper.\n\nÀ PERSONNALISER : remplacez par un cas vécu précis, avec un chiffre ou une date."
- },
- {
-  "type": "Management",
-  "question": "Comment fixez-vous les priorités d’une équipe en sous-effectif ?",
-  "piste": "IDÉE MAÎTRESSE\nFaire moins, mais mieux : je hiérarchise avec l’équipe, je diffère ce qui peut l’être et je protège l’essentiel.\n\nEXPLICATIONS\n1. Je classe les missions : obligatoires, à fort impact, différables.\n2. J’associe l’équipe à ce tri, pour que les priorités soient comprises et partagées.\n3. Je simplifie, je mutualise, j’outille pour gagner du temps.\n4. Je remonte à ma hiérarchie les arbitrages et les risques que cela fait courir.\n5. Je surveille la charge de chacun pour éviter l’épuisement."
- },
- {
-  "type": "Management",
-  "question": "Comment conduisez-vous un entretien de recadrage ?",
-  "piste": "IDÉE MAÎTRESSE\nUn recadrage porte sur des faits, jamais sur la personne, et se termine par un engagement clair.\n\nEXPLICATIONS\n1. Préparation : des faits précis et datés, la règle concernée.\n2. Cadre : tête-à-tête, ton calme, sans public.\n3. Déroulé : j’expose les faits, j’écoute, je comprends les causes, je rappelle l’attendu.\n4. Conclusion : des actions concrètes, une échéance de suivi, une trace écrite si nécessaire.\n5. Je reviens vers l’agent après, pour constater les progrès."
- },
- {
-  "type": "Questions métiers",
-  "question": "Quel est le rôle du préfet dans la gestion d’une crise ?",
-  "piste": "IDÉE MAÎTRESSE\nLe préfet dirige les opérations dès que la crise dépasse le cadre communal : il décide, coordonne tous les acteurs et informe la population.\n\nEXPLICATIONS\n1. Il déclenche le dispositif ORSEC et active le centre opérationnel départemental.\n2. Il coordonne forces de sécurité, pompiers, santé, services techniques et maires. Dans sa commune, le maire reste le premier responsable.\n3. Il organise la communication : alerter, informer, rassurer.\n4. Il rend compte aux niveaux zonal et national.\n5. Après la crise, il fait réaliser un retour d’expérience."
- },
- {
-  "type": "Questions métiers",
-  "question": "Comment organiseriez-vous la communication lors d’un événement grave ?",
-  "piste": "IDÉE MAÎTRESSE\nInformer vite, vrai, et d’une seule voix : la communication fait partie de la gestion de crise.\n\nEXPLICATIONS\n1. Une cellule communication intégrée à la cellule de crise, et un porte-parole unique.\n2. Premiers messages rapides : faits établis, consignes à la population, ce qui est fait, heure de la prochaine information.\n3. Les canaux : réseaux sociaux de la préfecture, presse, alerte à la population si nécessaire.\n4. Les victimes et leurs familles d’abord. Ce qui relève de l’enquête est coordonné avec le parquet.\n5. Je surveille les rumeurs et je les corrige, puis je fais un retour d’expérience."
- },
- {
-  "type": "Questions métiers",
-  "question": "Que faites-vous dans la première heure d’une inondation ?",
-  "piste": "IDÉE MAÎTRESSE\nDans la première heure : alerter, protéger, coordonner. La priorité absolue est de sauver des vies.\n\nEXPLICATIONS\n1. J’active la cellule de crise et le centre opérationnel, et je confirme la situation avec les services de prévision et les pompiers.\n2. J’alerte la population et je diffuse les consignes : se mettre à l’abri, éviter les routes. Je décide les premières mesures : fermetures de routes, évacuations.\n3. Je coordonne avec les maires, les forces de l’ordre, les pompiers, les services techniques et les gestionnaires de réseaux.\n4. J’informe l’échelon zonal et national, et j’organise la communication."
- },
- {
-  "type": "Questions métiers",
-  "question": "Comment articuler police et gendarmerie lors d’un grand rassemblement ?",
-  "piste": "IDÉE MAÎTRESSE\nUn seul pilotage : le préfet fixe les objectifs, et un dispositif unique répartit les rôles selon les zones de compétence.\n\nEXPLICATIONS\n1. Répartition : la police nationale en zone urbaine, la gendarmerie en zone rurale ou périurbaine, selon le lieu du rassemblement.\n2. Un responsable unique de la coordination opérationnelle est désigné, avec un poste de commandement commun et des liaisons directes.\n3. Les interfaces : pompiers, urgences médicales, mairie, organisateurs.\n4. Les renforts (CRS, gendarmerie mobile) sont intégrés au dispositif.\n5. Un retour d’expérience clôt l’opération."
- },
- {
-  "type": "Connaissance du ministère",
-  "question": "Quelles sont les grandes missions du ministère de l’Intérieur ?",
-  "piste": "IDÉE MAÎTRESSE\nLe ministère de l’Intérieur garantit la sécurité des personnes et des biens, et assure la présence de l’État et des libertés publiques sur tout le territoire.\n\nEXPLICATIONS\n1. Sécurité : police nationale, gendarmerie nationale, sécurité civile, sécurité routière, lutte contre le terrorisme.\n2. Administration territoriale : préfectures et sous-préfectures, relations avec les collectivités.\n3. Libertés publiques et citoyenneté : élections, cultes, titres, immigration, asile, intégration.\n4. Gestion de crise, à tous les niveaux.\n\nÀ ACTUALISER : le périmètre exact du ministère (intitulé, attributions) change avec les gouvernements."
- },
- {
-  "type": "Connaissance du ministère",
-  "question": "Quelle différence entre la police nationale et la gendarmerie nationale ?",
-  "piste": "IDÉE MAÎTRESSE\nDeux forces complémentaires, toutes deux sous l’autorité du ministre de l’Intérieur, qui diffèrent par leur statut et leur territoire.\n\nEXPLICATIONS\n1. La police nationale est une force civile, surtout présente dans les zones urbaines.\n2. La gendarmerie nationale a un statut militaire. Elle est rattachée au ministère de l’Intérieur depuis 2009 et intervient surtout en zone rurale et périurbaine, soit la plus grande partie du territoire.\n3. Chacune a ses spécificités : CRS et police judiciaire côté police, gendarmerie mobile et maillage territorial côté gendarmerie.\n4. Dans le département, le préfet coordonne les deux."
- },
- {
-  "type": "Connaissance du ministère",
-  "question": "Quel est le rôle d’un sous-préfet d’arrondissement ?",
-  "piste": "IDÉE MAÎTRESSE\nLe sous-préfet est le représentant de l’État de proximité : le bras du préfet et le premier interlocuteur des élus de son arrondissement.\n\nEXPLICATIONS\n1. Il représente le préfet dans l’arrondissement.\n2. Il appuie les collectivités : conseil, ingénierie territoriale, accompagnement de projets.\n3. Il met en œuvre les politiques de l’État au niveau local et anime le réseau des acteurs : maires, intercommunalités, associations, entreprises.\n4. Il gère les situations de crise et de sécurité dans son territoire."
- },
- {
-  "type": "Connaissance du ministère",
-  "question": "Qu’est-ce que l’administration territoriale de l’État ?",
-  "piste": "IDÉE MAÎTRESSE\nC’est l’ensemble des services de l’État présents sur le territoire, organisés autour du préfet à trois niveaux : région, département, arrondissement.\n\nEXPLICATIONS\n1. Région : le préfet de région, le secrétariat général aux affaires régionales et les directions régionales.\n2. Département : le préfet, la préfecture et les directions départementales interministérielles, avec la police, la gendarmerie et les finances publiques.\n3. Arrondissement : les sous-préfets.\n4. Principe : la déconcentration. Le préfet représente l’État et dirige ses services. La réforme en cours renforce ce rôle."
- },
- {
-  "type": "Motivation",
-  "question": "Pourquoi souhaitez-vous devenir attaché principal ?",
-  "piste": "IDÉE MAÎTRESSE\nJe veux exercer pleinement des responsabilités de cadre : piloter, encadrer et conseiller au service de l’État.\n\nEXPLICATIONS\n1. Mon parcours : entrepreneur dans la production graphique et multimédia, puis Canopé, les collectivités territoriales et enfin la préfecture, où je dirige le service de communication interministérielle.\n2. J’exerce déjà ces responsabilités : encadrer une équipe, conseiller la hiérarchie, concevoir des projets.\n3. Le concours reconnaît et prolonge cet engagement.\n4. Mon moteur : le sens du service public.\n\nÀ PERSONNALISER avec vos mots."
- },
- {
-  "type": "Motivation",
-  "question": "Qu’est-ce qui, dans votre parcours, vous prépare à ce poste ?",
-  "piste": "IDÉE MAÎTRESSE\nMon parcours croise trois mondes, l’entreprise, les collectivités et l’État, et me donne une vision d’ensemble de l’action publique.\n\nEXPLICATIONS\n1. Entrepreneur : autonomie, sens du résultat, gestion de projet.\n2. Canopé et collectivités : culture de la formation, relation avec les élus et les territoires.\n3. Préfecture : communication, rédaction de discours, gestion de crise, management d’une petite équipe.\n4. Formateur : une pédagogie que j’applique à l’encadrement.\n\nEn résumé : je sais cadrer, écrire, former et coordonner."
- },
- {
-  "type": "Motivation",
-  "question": "Où vous voyez-vous dans cinq ans ?",
-  "piste": "IDÉE MAÎTRESSE\nDans cinq ans, je me vois cadre confirmé, au service de la cohérence de l’action de l’État dans les territoires.\n\nEXPLICATIONS\n1. Approfondir le pilotage et le conseil stratégique.\n2. Transmettre : former et faire grandir les équipes.\n3. Contribuer à l’innovation : concevoir des outils qui améliorent la productivité des services.\n4. Rester ouvert à la mobilité, y compris géographique et fonctionnelle.\n\nGardez un projet, pas un poste précis : vous montrez de l’ambition sans paraître figé."
- },
- {
-  "type": "Motivation",
-  "question": "Quelle est votre plus grande réussite professionnelle ?",
-  "piste": "IDÉE MAÎTRESSE\nMa plus grande réussite est d’avoir fait de mon service un laboratoire de productivité, avec des outils conçus sur mesure.\n\nEXPLICATIONS (méthode : contexte, action, résultat)\n1. Contexte : des tâches répétitives qui prenaient du temps à l’équipe.\n2. Action : concevoir des outils internes adaptés à nos besoins, en associant l’équipe.\n3. Résultat : gain de temps, productions homogènes, équipe plus autonome.\n\nÀ PERSONNALISER : remplacez par la réussite que vous préférez et chiffrez-la (temps gagné, nombre d’utilisateurs)."
- }
-];
+const DEMO_ITEMS = [{"type": "Actualités", "question": "Quel événement récent concernant le ministère de l’Intérieur vous a le plus marqué, et pourquoi ?", "piste": "IDÉE MAÎTRESSE\nCe qui m’a le plus marqué, c’est le mouvement de fond qui fait du préfet le chef d’orchestre de l’État local.\n\nEXPLICATIONS\n1. Les faits : depuis l’annonce « Refonder l’État local » de juillet 2025, puis l’avant-projet de loi de décentralisation début 2026, le préfet devient délégué territorial des opérateurs, avec un pouvoir de dérogation élargi et un rôle de guichet unique pour les collectivités.\n2. Pourquoi cela me marque : c’est une réponse à une demande de lisibilité de l’État, pour les élus comme pour les citoyens.\n3. Ce que j’en tire : cela renforce l’exigence de coordination et de communication entre services.\n\nÀ VÉRIFIER avant l’oral : où en est le texte. Vous pouvez aussi choisir un autre événement, à condition de pouvoir le raconter en trois temps : fait, enjeu, conséquence."}, {"type": "Actualités", "question": "Un fait divers majeur relance le débat sur la sécurité : que dites-vous à un journaliste ?", "piste": "IDÉE MAÎTRESSE\nJe parle d’abord des victimes et des faits établis, puis de l’action de l’État, sans polémique ni spéculation.\n\nEXPLICATIONS\n1. Compassion et faits vérifiés : je ne dis que ce qui est établi.\n2. Ce qui est fait : mobilisation des forces de sécurité, enquête menée sous l’autorité du procureur. Ce qui relève de la justice, je le lui laisse.\n3. Le temps long : je replace l’événement dans la politique de sécurité menée, avec des chiffres seulement s’ils sont fiables.\n4. Un message clé, répété, d’un ton calme. Jamais de « sans commentaire » : je dis ce que je peux dire, et quand je donnerai la suite."}, {"type": "Actualités", "question": "Quelle réforme en cours touche, selon vous, l’organisation des préfectures ?", "piste": "IDÉE MAÎTRESSE\nLe renforcement du préfet comme chef d’orchestre de l’action territoriale de l’État.\n\nEXPLICATIONS\n1. Origine : l’annonce « Refonder l’État local » de juillet 2025, prolongée par un avant-projet de loi de décentralisation début 2026.\n2. Contenu : autorité accrue sur les services et les opérateurs, pouvoir de dérogation étendu, guichet unique pour les subventions des collectivités, substitution possible en cas de carence.\n3. Enjeu : un État plus lisible et plus réactif sur le terrain. Point de vigilance : les moyens et la coordination.\n\nÀ VÉRIFIER avant l’oral : le stade d’examen du texte (adopté, en discussion, amendé)."}, {"type": "Actualités", "question": "Quel sujet d’actualité mobilise le plus les services de l’État dans un département ?", "piste": "IDÉE MAÎTRESSE\nLa gestion des risques et des crises : elle mobilise tous les services en même temps et se joue avant l’événement.\n\nEXPLICATIONS\n1. Les risques : naturels (feux de forêt, inondations), routiers, ordre public. L’actualité en fournit régulièrement.\n2. Les acteurs : police, gendarmerie, pompiers, services techniques, santé, collectivités. Le préfet coordonne.\n3. Ce qui fait la différence : la préparation (plans ORSEC, exercices) et la communication de crise.\n\nÀ PERSONNALISER : appuyez-vous sur un exemple concret que vous connaissez, ce sera plus crédible."}, {"type": "Management", "question": "Comment réagissez-vous face à un agent qui conteste une décision devant l’équipe ?", "piste": "IDÉE MAÎTRESSE\nJe garde le cadre devant l’équipe, et je traite le fond en tête-à-tête.\n\nEXPLICATIONS\n1. Sur le moment : j’écoute, je rappelle que la décision est prise et pourquoi, et je propose d’en reparler ensuite. Pas de confrontation publique.\n2. En tête-à-tête : je cherche à comprendre l’objection. Elle peut contenir une information utile, et j’ajuste si elle est fondée.\n3. Si l’opposition persiste : la décision est appliquée, je le dis clairement et sans agressivité.\n4. Ce que je protège : l’autorité par la clarté, et la dignité de l’agent."}, {"type": "Management", "question": "Décrivez une situation où vous avez dû arbitrer entre deux urgences.", "piste": "IDÉE MAÎTRESSE\nJ’arbitre selon l’impact et l’échéance, et je dis clairement ce qui passe en second.\n\nEXPLICATIONS (à raconter en quatre temps)\n1. Situation : deux demandes urgentes en même temps, avec la même équipe.\n2. Critères : gravité, irréversibilité, échéance, personnes concernées.\n3. Action : je décide vite, je délègue l’une, j’informe les demandeurs de ma décision et du calendrier de la seconde.\n4. Résultat et leçon : les deux sont traitées, et j’ai mis en place un point quotidien pour anticiper.\n\nÀ PERSONNALISER : remplacez par un cas vécu précis, avec un chiffre ou une date."}, {"type": "Management", "question": "Comment fixez-vous les priorités d’une équipe en sous-effectif ?", "piste": "IDÉE MAÎTRESSE\nFaire moins, mais mieux : je hiérarchise avec l’équipe, je diffère ce qui peut l’être et je protège l’essentiel.\n\nEXPLICATIONS\n1. Je classe les missions : obligatoires, à fort impact, différables.\n2. J’associe l’équipe à ce tri, pour que les priorités soient comprises et partagées.\n3. Je simplifie, je mutualise, j’outille pour gagner du temps.\n4. Je remonte à ma hiérarchie les arbitrages et les risques que cela fait courir.\n5. Je surveille la charge de chacun pour éviter l’épuisement."}, {"type": "Management", "question": "Comment conduisez-vous un entretien de recadrage ?", "piste": "IDÉE MAÎTRESSE\nUn recadrage porte sur des faits, jamais sur la personne, et se termine par un engagement clair.\n\nEXPLICATIONS\n1. Préparation : des faits précis et datés, la règle concernée.\n2. Cadre : tête-à-tête, ton calme, sans public.\n3. Déroulé : j’expose les faits, j’écoute, je comprends les causes, je rappelle l’attendu.\n4. Conclusion : des actions concrètes, une échéance de suivi, une trace écrite si nécessaire.\n5. Je reviens vers l’agent après, pour constater les progrès."}, {"type": "Questions métiers", "question": "Quel est le rôle du préfet dans la gestion d’une crise ?", "piste": "IDÉE MAÎTRESSE\nLe préfet dirige les opérations dès que la crise dépasse le cadre communal : il décide, coordonne tous les acteurs et informe la population.\n\nEXPLICATIONS\n1. Il déclenche le dispositif ORSEC et active le centre opérationnel départemental.\n2. Il coordonne forces de sécurité, pompiers, santé, services techniques et maires. Dans sa commune, le maire reste le premier responsable.\n3. Il organise la communication : alerter, informer, rassurer.\n4. Il rend compte aux niveaux zonal et national.\n5. Après la crise, il fait réaliser un retour d’expérience."}, {"type": "Questions métiers", "question": "Comment organiseriez-vous la communication lors d’un événement grave ?", "piste": "IDÉE MAÎTRESSE\nInformer vite, vrai, et d’une seule voix : la communication fait partie de la gestion de crise.\n\nEXPLICATIONS\n1. Une cellule communication intégrée à la cellule de crise, et un porte-parole unique.\n2. Premiers messages rapides : faits établis, consignes à la population, ce qui est fait, heure de la prochaine information.\n3. Les canaux : réseaux sociaux de la préfecture, presse, alerte à la population si nécessaire.\n4. Les victimes et leurs familles d’abord. Ce qui relève de l’enquête est coordonné avec le parquet.\n5. Je surveille les rumeurs et je les corrige, puis je fais un retour d’expérience."}, {"type": "Questions métiers", "question": "Que faites-vous dans la première heure d’une inondation ?", "piste": "IDÉE MAÎTRESSE\nDans la première heure : alerter, protéger, coordonner. La priorité absolue est de sauver des vies.\n\nEXPLICATIONS\n1. J’active la cellule de crise et le centre opérationnel, et je confirme la situation avec les services de prévision et les pompiers.\n2. J’alerte la population et je diffuse les consignes : se mettre à l’abri, éviter les routes. Je décide les premières mesures : fermetures de routes, évacuations.\n3. Je coordonne avec les maires, les forces de l’ordre, les pompiers, les services techniques et les gestionnaires de réseaux.\n4. J’informe l’échelon zonal et national, et j’organise la communication."}, {"type": "Questions métiers", "question": "Comment articuler police et gendarmerie lors d’un grand rassemblement ?", "piste": "IDÉE MAÎTRESSE\nUn seul pilotage : le préfet fixe les objectifs, et un dispositif unique répartit les rôles selon les zones de compétence.\n\nEXPLICATIONS\n1. Répartition : la police nationale en zone urbaine, la gendarmerie en zone rurale ou périurbaine, selon le lieu du rassemblement.\n2. Un responsable unique de la coordination opérationnelle est désigné, avec un poste de commandement commun et des liaisons directes.\n3. Les interfaces : pompiers, urgences médicales, mairie, organisateurs.\n4. Les renforts (CRS, gendarmerie mobile) sont intégrés au dispositif.\n5. Un retour d’expérience clôt l’opération."}, {"type": "Connaissance du ministère", "question": "Quelles sont les grandes missions du ministère de l’Intérieur ?", "piste": "IDÉE MAÎTRESSE\nLe ministère de l’Intérieur garantit la sécurité des personnes et des biens, et assure la présence de l’État et des libertés publiques sur tout le territoire.\n\nEXPLICATIONS\n1. Sécurité : police nationale, gendarmerie nationale, sécurité civile, sécurité routière, lutte contre le terrorisme.\n2. Administration territoriale : préfectures et sous-préfectures, relations avec les collectivités.\n3. Libertés publiques et citoyenneté : élections, cultes, titres, immigration, asile, intégration.\n4. Gestion de crise, à tous les niveaux.\n\nÀ ACTUALISER : le périmètre exact du ministère (intitulé, attributions) change avec les gouvernements."}, {"type": "Connaissance du ministère", "question": "Quelle différence entre la police nationale et la gendarmerie nationale ?", "piste": "IDÉE MAÎTRESSE\nDeux forces complémentaires, toutes deux sous l’autorité du ministre de l’Intérieur, qui diffèrent par leur statut et leur territoire.\n\nEXPLICATIONS\n1. La police nationale est une force civile, surtout présente dans les zones urbaines.\n2. La gendarmerie nationale a un statut militaire. Elle est rattachée au ministère de l’Intérieur depuis 2009 et intervient surtout en zone rurale et périurbaine, soit la plus grande partie du territoire.\n3. Chacune a ses spécificités : CRS et police judiciaire côté police, gendarmerie mobile et maillage territorial côté gendarmerie.\n4. Dans le département, le préfet coordonne les deux."}, {"type": "Connaissance du ministère", "question": "Quel est le rôle d’un sous-préfet d’arrondissement ?", "piste": "IDÉE MAÎTRESSE\nLe sous-préfet est le représentant de l’État de proximité : le bras du préfet et le premier interlocuteur des élus de son arrondissement.\n\nEXPLICATIONS\n1. Il représente le préfet dans l’arrondissement.\n2. Il appuie les collectivités : conseil, ingénierie territoriale, accompagnement de projets.\n3. Il met en œuvre les politiques de l’État au niveau local et anime le réseau des acteurs : maires, intercommunalités, associations, entreprises.\n4. Il gère les situations de crise et de sécurité dans son territoire."}, {"type": "Connaissance du ministère", "question": "Qu’est-ce que l’administration territoriale de l’État ?", "piste": "IDÉE MAÎTRESSE\nC’est l’ensemble des services de l’État présents sur le territoire, organisés autour du préfet à trois niveaux : région, département, arrondissement.\n\nEXPLICATIONS\n1. Région : le préfet de région, le secrétariat général aux affaires régionales et les directions régionales.\n2. Département : le préfet, la préfecture et les directions départementales interministérielles, avec la police, la gendarmerie et les finances publiques.\n3. Arrondissement : les sous-préfets.\n4. Principe : la déconcentration. Le préfet représente l’État et dirige ses services. La réforme en cours renforce ce rôle."}, {"type": "Motivation", "question": "Pourquoi souhaitez-vous devenir attaché principal ?", "piste": "IDÉE MAÎTRESSE\nJe veux exercer pleinement des responsabilités de cadre : piloter, encadrer et conseiller au service de l’État.\n\nEXPLICATIONS\n1. Mon parcours : entrepreneur dans la production graphique et multimédia, puis Canopé, les collectivités territoriales et enfin la préfecture, où je dirige le service de communication interministérielle.\n2. J’exerce déjà ces responsabilités : encadrer une équipe, conseiller la hiérarchie, concevoir des projets.\n3. Le concours reconnaît et prolonge cet engagement.\n4. Mon moteur : le sens du service public.\n\nÀ PERSONNALISER avec vos mots."}, {"type": "Motivation", "question": "Qu’est-ce qui, dans votre parcours, vous prépare à ce poste ?", "piste": "IDÉE MAÎTRESSE\nMon parcours croise trois mondes, l’entreprise, les collectivités et l’État, et me donne une vision d’ensemble de l’action publique.\n\nEXPLICATIONS\n1. Entrepreneur : autonomie, sens du résultat, gestion de projet.\n2. Canopé et collectivités : culture de la formation, relation avec les élus et les territoires.\n3. Préfecture : communication, rédaction de discours, gestion de crise, management d’une petite équipe.\n4. Formateur : une pédagogie que j’applique à l’encadrement.\n\nEn résumé : je sais cadrer, écrire, former et coordonner."}, {"type": "Motivation", "question": "Où vous voyez-vous dans cinq ans ?", "piste": "IDÉE MAÎTRESSE\nDans cinq ans, je me vois cadre confirmé, au service de la cohérence de l’action de l’État dans les territoires.\n\nEXPLICATIONS\n1. Approfondir le pilotage et le conseil stratégique.\n2. Transmettre : former et faire grandir les équipes.\n3. Contribuer à l’innovation : concevoir des outils qui améliorent la productivité des services.\n4. Rester ouvert à la mobilité, y compris géographique et fonctionnelle.\n\nGardez un projet, pas un poste précis : vous montrez de l’ambition sans paraître figé."}, {"type": "Motivation", "question": "Quelle est votre plus grande réussite professionnelle ?", "piste": "IDÉE MAÎTRESSE\nMa plus grande réussite est d’avoir fait de mon service un laboratoire de productivité, avec des outils conçus sur mesure.\n\nEXPLICATIONS (méthode : contexte, action, résultat)\n1. Contexte : des tâches répétitives qui prenaient du temps à l’équipe.\n2. Action : concevoir des outils internes adaptés à nos besoins, en associant l’équipe.\n3. Résultat : gain de temps, productions homogènes, équipe plus autonome.\n\nÀ PERSONNALISER : remplacez par la réussite que vous préférez et chiffrez-la (temps gagné, nombre d’utilisateurs)."}, {"type": "Actualités", "question": "Pensez-vous que le gouvernement n’a pas pris la mesure des incendies de forêt depuis 2022 ?", "piste": "IDÉE MAÎTRESSE\nL’État a pris la mesure du risque et engagé un effort réel, mais les moyens aériens arrivent avec retard et le risque progresse plus vite que les délais.\n\nEXPLICATIONS\n1. Le constat : environ 72 000 hectares brûlés en 2022, record du siècle ; environ 35 000 en 2025, avec l’incendie de l’Aude, le plus grand feu depuis 1949.\n2. La réponse : commande de 36 hélicoptères H145 (loi de programmation de 2023), location d’avions, colonnes de renfort de pompiers, renouvellement des Canadair par 16 DHC-515.\n3. Les limites : les premiers DHC-515 sont attendus vers 2028, et la disponibilité de la flotte actuelle reste fragile.\n4. Mon avis : l’effort est réel, le rythme doit s’accélérer, et la prévention reste le premier levier.\n\nÀ VÉRIFIER : l’état des livraisons d’appareils."}, {"type": "Actualités", "question": "Pensez-vous que la flotte aérienne de la sécurité civile est à la hauteur du risque d’incendie ?", "piste": "IDÉE MAÎTRESSE\nLa flotte est le point de fragilité reconnu : elle vieillit, et son renouvellement s’étale jusqu’à la fin de la décennie.\n\nEXPLICATIONS\n1. Aujourd’hui : 12 Canadair vieillissants. Un rapport du Sénat de fin 2024 note qu’à certains moments de l’été 2024, seuls trois étaient opérationnels.\n2. Le renouvellement : 16 DHC-515, financés en partie par l’Union européenne, dont les premiers sont attendus vers 2028 ; 36 hélicoptères H145 commandés, livrés jusqu’en 2029.\n3. Les palliatifs : location d’avions et d’hélicoptères, renforts de pompiers venus de toute la France.\n4. L’enjeu : éviter une rupture en cas de feux simultanés, d’où l’importance d’attaquer les feux dès leur naissance.\n\nÀ VÉRIFIER : calendrier de livraison actualisé."}, {"type": "Actualités", "question": "Pensez-vous que la prévention est le parent pauvre de la lutte contre les feux de forêt ?", "piste": "IDÉE MAÎTRESSE\nNeuf feux sur dix sont d’origine humaine : la prévention est le premier levier, et elle repose sur la responsabilité de tous.\n\nEXPLICATIONS\n1. L’origine : environ neuf départs de feu sur dix sont d’origine humaine, le plus souvent par imprudence ou accident. La foudre est rare.\n2. Les outils : obligations légales de débroussaillement, renforcées par la loi du 10 juillet 2023 ; interdictions d’accès aux massifs par arrêté préfectoral en période à risque ; surveillance ; sensibilisation.\n3. Le défi : faire appliquer et faire comprendre. Le préfet coordonne avec les maires, l’ONF et les pompiers.\n4. Pas un parent pauvre, mais un travail de long terme, moins visible que les avions."}, {"type": "Actualités", "question": "Pensez-vous que l’incendie de l’Aude en 2025 a révélé les limites du dispositif français ?", "piste": "IDÉE MAÎTRESSE\nL’incendie de l’Aude a montré la vitesse nouvelle des feux et la nécessité d’anticiper davantage, plutôt qu’un échec du dispositif.\n\nEXPLICATIONS\n1. Les faits : environ 16 000 à 17 000 hectares brûlés en un peu plus de 48 heures début août 2025, le plus grand feu depuis 1949 ; un mort et 13 blessés selon les premiers bilans.\n2. Ce qu’il montre : des feux plus rapides, dans des territoires moins habitués au risque, avec sécheresse et vent.\n3. Les réponses : anticipation météo, prépositionnement des moyens, retour d’expérience, adaptation des territoires (débroussaillement, urbanisme).\n4. Ma posture : reconnaître les limites, saluer l’engagement des pompiers, tirer les leçons.\n\nÀ VÉRIFIER : conclusions du retour d’expérience."}, {"type": "Actualités", "question": "Pensez-vous que le ministère de l’Intérieur est défaillant dans la lutte contre les violences intrafamiliales ?", "piste": "IDÉE MAÎTRESSE\nLe mot « défaillant » est excessif : la mobilisation est réelle, mais le dispositif reste inégal et la protection des victimes perfectible.\n\nEXPLICATIONS\n1. L’ampleur : 272 400 victimes de violences conjugales enregistrées en 2024, plus du double de 2017 ; 134 homicides au sein du couple (115 en 2023).\n2. L’action : accueil spécialisé dans les commissariats et gendarmeries, intervenants sociaux (480 pour une cible de 600), dispositifs de protection comme le bracelet anti-rapprochement.\n3. Les limites : une victime sur six seulement porte plainte ; maillage insuffisant en zone rurale ; coordination à renforcer, comme le relève l’inspection générale de la justice (novembre 2025).\n4. La lutte repose sur toute la chaîne : forces de sécurité, justice, associations, services sociaux."}, {"type": "Actualités", "question": "Pensez-vous que la hausse des violences intrafamiliales enregistrées est le signe d’un échec de l’État ?", "piste": "IDÉE MAÎTRESSE\nLa hausse des chiffres enregistrés traduit autant un meilleur accueil des victimes qu’une hausse des violences : ce n’est pas, en soi, un échec.\n\nEXPLICATIONS\n1. Les faits : plus 10 % de violences physiques intrafamiliales en 2023 ; plus 9 % de violences familiales hors couple en 2024, soit 90 000 victimes.\n2. L’explication : le service statistique du ministère relie cette hausse en partie à la libération de la parole et à un meilleur accueil par les forces de sécurité.\n3. La limite : une victime sur six seulement porte plainte, donc la réalité est sous-estimée.\n4. L’objectif n’est pas de faire baisser le nombre de plaintes, mais de protéger et de prévenir."}, {"type": "Actualités", "question": "Pensez-vous que les victimes de violences conjugales sont suffisamment protégées lors du dépôt de plainte ?", "piste": "IDÉE MAÎTRESSE\nLe moment de la plainte est décisif : l’accueil s’est amélioré, mais il doit être homogène sur tout le territoire.\n\nEXPLICATIONS\n1. Les progrès : accueil spécialisé, formation des policiers et gendarmes, évaluation du danger, intervenants sociaux (480 aujourd’hui pour une cible de 600).\n2. Les limites : maillage insuffisant en milieu rural et outre-mer, pratiques inégales selon les territoires.\n3. La clé : la chaîne complète. Police, gendarmerie, justice, associations et services sociaux doivent agir ensemble ; le préfet coordonne les services de l’État avec le procureur.\n4. En résumé : accueil, protection immédiate, suivi."}, {"type": "Actualités", "question": "Pensez-vous que l’État protège suffisamment les enfants victimes de violences intrafamiliales ?", "piste": "IDÉE MAÎTRESSE\nLes enfants sont les premières victimes des violences familiales hors couple : la réponse doit viser le repérage précoce et l’accueil adapté.\n\nEXPLICATIONS\n1. Les chiffres : 90 000 victimes de violences physiques ou sexuelles dans la famille hors couple en 2024 ; les enfants représentent 75 % des victimes de violences physiques et 96 % des victimes de violences sexuelles.\n2. Les dispositifs : auditions adaptées aux enfants, services spécialisés dans les atteintes aux mineurs.\n3. Les limites : unités d’accueil inégalement réparties (17 tribunaux n’en ont pas) ; le repérage dépend aussi de l’école et de la santé.\n4. Message : la protection de l’enfant est l’affaire de tous, bien au-delà du ministère de l’Intérieur."}, {"type": "Actualités", "question": "Pensez-vous que le ministère de l’Intérieur est défaillant dans sa politique de lutte contre l’immigration irrégulière ?", "piste": "IDÉE MAÎTRESSE\nJe ne parlerais pas de défaillance : l’activité progresse, mais certains résultats restent en deçà des objectifs, souvent pour des raisons extérieures au ministère.\n\nEXPLICATIONS\n1. L’activité : 147 156 interpellations d’étrangers en situation irrégulière en 2024, plus de 150 000 attendues en 2025 ; 10 348 retours forcés au 1er septembre 2025, en hausse de 23 % sur un an.\n2. Les limites : environ 11 % d’exécution des obligations de quitter le territoire sur les neuf premiers mois de 2025 (avec des réserves méthodologiques) ; 38,8 % d’éloignement après rétention en 2024, pour un objectif de 60 %.\n3. Les causes : dépendance à la coopération des pays d’origine, capacités de rétention, contentieux.\n4. L’enjeu : l’efficacité plus que le volume."}, {"type": "Actualités", "question": "Pensez-vous que le faible taux d’exécution des OQTF montre l’impuissance de l’État ?", "piste": "IDÉE MAÎTRESSE\nLe taux d’exécution des OQTF est un indicateur imparfait, mais il mesure un vrai problème : prononcer ne suffit pas, il faut pouvoir éloigner.\n\nEXPLICATIONS\n1. Le chiffre : 10,9 % sur les neuf premiers mois de 2025. La commission des lois du Sénat elle-même signale des réserves méthodologiques.\n2. Pourquoi si bas : laissez-passer consulaires refusés ou tardifs, personnes introuvables, recours, durée légale de rétention limitée. Exemple : la coopération consulaire algérienne est suspendue depuis mars 2025, or les Algériens représentent 40 % des retenus en métropole.\n3. Ce que fait l’État : nouveaux accords de réadmission (Kazakhstan, Ouzbékistan), plus 20 % d’éloignements de Marocains en 2025.\n4. Un taux bas n’est pas l’inaction : le levier est diplomatique autant que policier."}, {"type": "Actualités", "question": "Pensez-vous que la France devrait privilégier les retours aidés plutôt que les éloignements forcés ?", "piste": "IDÉE MAÎTRESSE\nLes retours aidés sont une voie complémentaire et moins coûteuse, mais ils ne remplacent pas l’éloignement forcé.\n\nEXPLICATIONS\n1. Les chiffres : 6 909 retours aidés en 2024 pour un objectif de 8 000 ; 7 500 prévus en 2025.\n2. L’intérêt : selon la Cour des comptes, un retour aidé coûte environ quatre fois moins cher qu’un éloignement forcé.\n3. Les limites : il repose sur la volonté de la personne et ne convient pas à tous les publics ; l’aide au retour a été temporairement majorée pour certains.\n4. L’équilibre : combiner retours aidés, éloignements forcés et coopération avec les pays d’origine."}, {"type": "Actualités", "question": "Pensez-vous que la France dispose des capacités de rétention nécessaires pour lutter contre l’immigration irrégulière ?", "piste": "IDÉE MAÎTRESSE\nLes capacités de rétention sont un maillon limitant, et le calendrier d’extension a glissé dans un contexte budgétaire contraint.\n\nEXPLICATIONS\n1. Le constat : le plan « CRA 3000 » d’extension des centres de rétention est reporté à 2029 ; 156 millions d’euros de crédits de paiement d’investissement sont prévus pour 2026.\n2. Le lien avec les résultats : le taux d’éloignement après rétention (38,8 % en 2024) reste sous l’objectif de 60 %, porté à 70 % pour 2026.\n3. Mais la capacité n’est pas la seule cause : la coopération des pays d’origine pèse lourd.\n4. L’arbitrage : investir dans les places, accélérer les procédures et soutenir la diplomatie des retours."}, {"type": "Management", "question": "Votre adjoint ne vous respecte pas : que faites-vous ?", "piste": "IDÉE MAÎTRESSE\nJe traite le problème vite, en privé et sur des faits, avant qu’il ne contamine l’équipe.\n\nEXPLICATIONS\n1. Je distingue les faits du ressenti : comportements précis, dates, effets sur le service.\n2. Entretien en tête-à-tête : j’expose les faits, j’écoute sa version. Il peut y avoir un malentendu, un désaccord sur son rôle ou une frustration.\n3. Je clarifie ses missions et mes attentes, et je fixe un point de suivi.\n4. Si cela persiste, je m’appuie sur ma hiérarchie et les ressources humaines.\n5. Ce que je ne fais pas : le recadrer devant l’équipe, ou laisser durer."}, {"type": "Management", "question": "Un agent vous signale être victime de harcèlement : comment réagissez-vous ?", "piste": "IDÉE MAÎTRESSE\nJ’écoute, je protège l’agent et je déclenche la procédure : je ne traite pas seul.\n\nEXPLICATIONS\n1. J’écoute sans minimiser ni enquêter moi-même, je note les faits et je garantis la confidentialité autant que possible.\n2. Je protège : j’évite tout contact avec la personne mise en cause, en lien avec les ressources humaines. La protection fonctionnelle peut être demandée.\n3. Je signale : j’alerte ma hiérarchie et le dispositif de signalement du ministère. Une enquête administrative peut suivre. Je rends compte à l’agent de la suite donnée.\n4. Je préviens : je reviens sur le climat du service et je rappelle les règles."}, {"type": "Management", "question": "Votre supérieur hiérarchique prend une décision que vous jugez mauvaise : que faites-vous ?", "piste": "IDÉE MAÎTRESSE\nJe dis mon désaccord, en privé et avec des arguments, puis j’applique la décision, sauf si elle est manifestement illégale.\n\nEXPLICATIONS\n1. Je prépare mes arguments : faits, risques, alternative.\n2. Je les expose en tête-à-tête, au bon moment, et je cherche à comprendre ce que je ne vois pas.\n3. Une fois la décision arrêtée, je l’exécute loyalement et je la porte devant mon équipe, sans me désolidariser.\n4. Exception : un ordre manifestement illégal et de nature à compromettre gravement un intérêt public n’a pas à être exécuté (code général de la fonction publique)."}, {"type": "Management", "question": "Un agent compétent se démotive et ses résultats baissent : que faites-vous ?", "piste": "IDÉE MAÎTRESSE\nJe cherche d’abord à comprendre la cause avant de choisir ma réponse.\n\nEXPLICATIONS\n1. Entretien individuel : un constat factuel, une question ouverte, de l’écoute. Les causes possibles : surcharge, manque de reconnaissance, difficulté personnelle, perte de sens.\n2. Réponse adaptée : clarifier le rôle, ajuster la charge, reconnaître le travail, proposer un projet ou une formation ; orienter vers les ressources humaines ou la médecine de prévention si nécessaire.\n3. Suivi : objectifs précis et point régulier.\n4. Si rien ne change : un recadrage formalisé, avec les ressources humaines."}, {"type": "Management", "question": "On vous confie un projet à échéance serrée avec peu de moyens : comment procédez-vous ?", "piste": "IDÉE MAÎTRESSE\nJe cadre vite : objectif clair, périmètre limité, jalons et risques identifiés.\n\nEXPLICATIONS\n1. Cadrage : finalité, livrables, échéance, parties prenantes, validation du commanditaire.\n2. Je hiérarchise : l’essentiel d’abord, le reste simplifié ou différé.\n3. Organisation : rôles, jalons, points courts ; je mobilise l’équipe et les partenaires internes.\n4. Risques : j’anticipe les blocages et je préviens le commanditaire tôt si l’échéance est menacée.\n5. Bilan : un retour d’expérience pour capitaliser."}, {"type": "Management", "question": "Vous devez conduire une réorganisation que l’équipe accueille mal : comment faites-vous ?", "piste": "IDÉE MAÎTRESSE\nOn conduit un changement par le sens, l’explication et l’association de l’équipe, pas par l’ordre.\n\nEXPLICATIONS\n1. J’explique le pourquoi avant le comment : objectifs, contraintes, ce qui ne change pas.\n2. J’écoute les inquiétudes, individuellement et collectivement, et je repère les relais.\n3. J’associe l’équipe à la mise en œuvre partout où il y a de la marge.\n4. J’accompagne : formation, calendrier réaliste, points d’étape.\n5. Je reconnais les difficultés et je tiens le cap."}, {"type": "Questions métiers", "question": "Quel est le rôle d’un service de communication au sein d’une préfecture ?", "piste": "IDÉE MAÎTRESSE\nRendre l’action de l’État lisible, crédible et utile pour les citoyens, les élus et la presse, en appui du préfet.\n\nEXPLICATIONS\n1. Conseil : éclairer le préfet sur la stratégie et le bon moment pour parler.\n2. Production : communiqués, discours, éléments de langage, réseaux sociaux, site internet.\n3. Relations : presse, élus, partenaires, services de l’État.\n4. Événements : déplacements, cérémonies et visites officielles, avec le protocole.\n5. Crise : porte-parole et cellule communication.\n\nÀ ADAPTER à votre cœur de métier."}, {"type": "Questions métiers", "question": "Comment communiquer sur une décision impopulaire de l’État ?", "piste": "IDÉE MAÎTRESSE\nExpliquer le sens, reconnaître la difficulté et dire ce qui est fait, sans se justifier à l’excès.\n\nEXPLICATIONS\n1. J’anticipe : j’informe d’abord les personnes concernées et les élus, avant la presse.\n2. Le message : la décision, son objectif, la règle qui la fonde, ce qu’elle change concrètement.\n3. Le ton : factuel, respectueux, qui reconnaît les difficultés.\n4. Une voix, des supports adaptés, des questions-réponses préparées.\n5. Je suis les réactions, j’ajuste et je corrige les rumeurs."}, {"type": "Questions métiers", "question": "Quelle différence faites-vous entre communication institutionnelle et communication de crise ?", "piste": "IDÉE MAÎTRESSE\nLa communication institutionnelle s’inscrit dans la durée ; la communication de crise répond à l’urgence et à l’incertitude.\n\nEXPLICATIONS\n1. Institutionnelle : elle explique les politiques publiques, valorise l’action, construit la confiance, avec un calendrier maîtrisé.\n2. De crise : elle informe vite, alerte et rassure ; le rythme est imposé par l’événement ; un porte-parole unique, des faits vérifiés.\n3. Le lien : la confiance bâtie en temps normal sert en crise ; les relations avec la presse et les élus se travaillent avant.\n4. Dans les deux cas : cohérence, transparence, fiabilité."}, {"type": "Questions métiers", "question": "Comment préparez-vous la visite officielle d’une autorité dans un département ?", "piste": "IDÉE MAÎTRESSE\nUne visite réussie se prépare comme un projet : objectif, déroulé minuté, sécurité, protocole et communication.\n\nEXPLICATIONS\n1. Cadrage avec le cabinet de l’autorité et le préfet : objectifs, messages, programme.\n2. Déroulé : minutage, lieux, intervenants, repérages.\n3. Sécurité : police et gendarmerie, parcours, accès, plan B en cas de météo défavorable.\n4. Protocole : préséances, accueil des élus et des invités.\n5. Communication : presse, photographes, réseaux sociaux, éléments de langage.\n6. Bilan après la visite."}, {"type": "Questions métiers", "question": "Comment évaluez-vous l’efficacité d’une campagne de communication ?", "piste": "IDÉE MAÎTRESSE\nOn évalue une campagne à l’aune de son objectif : il faut le fixer avant, avec des indicateurs précis.\n\nEXPLICATIONS\n1. Un objectif principal : informer, changer un comportement ou mobiliser.\n2. Des indicateurs : la portée (vues, retombées presse), l’engagement (partages, participations) et surtout l’effet réel, par exemple une baisse des départs de feu pour une campagne de prévention.\n3. La méthode : un état des lieux avant, un suivi pendant, un bilan après, avec les retours du terrain et des partenaires.\n4. Les leçons : ajuster et capitaliser."}, {"type": "Questions métiers", "question": "Une rumeur se propage sur les réseaux sociaux à propos d’une décision de la préfecture : que faites-vous ?", "piste": "IDÉE MAÎTRESSE\nRépondre vite, avec des faits, sur le même canal, sans amplifier la rumeur.\n\nEXPLICATIONS\n1. Je vérifie la source, l’ampleur et le danger.\n2. J’évalue : une rumeur marginale peut ne pas appeler de réponse ; une rumeur dangereuse en exige une rapide.\n3. Je réponds : faits vérifiés, ton calme, sur les réseaux de la préfecture, avec relais des partenaires.\n4. Je surveille et je mets à jour.\n5. Si nécessaire, je signale le contenu à la plateforme, voire j’alerte la justice."}, {"type": "Connaissance du ministère", "question": "Comment le ministère de l’Intérieur est-il organisé ?", "piste": "IDÉE MAÎTRESSE\nUn ministère organisé autour de grandes directions générales opérationnelles, sous l’autorité du ministre et appuyées par un secrétariat général.\n\nEXPLICATIONS\n1. Sécurité : direction générale de la police nationale, direction générale de la gendarmerie nationale, direction générale de la sécurité intérieure.\n2. Sécurité civile : direction générale de la sécurité civile et de la gestion des crises.\n3. Étrangers et collectivités : direction générale des étrangers en France, direction générale des collectivités locales.\n4. Réseau territorial : préfectures et sous-préfectures.\n5. Fonctions support : le secrétariat général.\n\nÀ VÉRIFIER : l’organigramme et le périmètre actuels."}, {"type": "Connaissance du ministère", "question": "Qu’est-ce que la LOPMI ?", "piste": "IDÉE MAÎTRESSE\nLa loi d’orientation et de programmation du ministère de l’Intérieur, du 24 janvier 2023, fixe une trajectoire de moyens et de modernisation sur cinq ans.\n\nEXPLICATIONS\n1. Les moyens : environ 15 milliards d’euros supplémentaires sur la période 2023-2027.\n2. Les priorités : plus de présence sur le terrain, numérique et cybersécurité, renforcement de la sécurité civile.\n3. Un exemple concret : la commande de 36 hélicoptères H145 pour la sécurité civile.\n\nÀ VÉRIFIER : le niveau d’exécution et les chiffres exacts."}, {"type": "Connaissance du ministère", "question": "Quel est le rôle du préfet ?", "piste": "IDÉE MAÎTRESSE\nLe préfet représente l’État dans le département : il garantit l’ordre public, la cohésion et la mise en œuvre des politiques publiques.\n\nEXPLICATIONS\n1. Il représente le Premier ministre et chacun des ministres, et dirige les services de l’État dans le département.\n2. Il assure l’ordre public et la sécurité, y compris la gestion de crise et la protection des populations.\n3. Il contrôle la légalité des actes des collectivités.\n4. Il met en œuvre les politiques publiques et dialogue avec les élus.\n5. L’actualité renforce son rôle de coordination des services et des opérateurs."}, {"type": "Connaissance du ministère", "question": "En quoi consiste le contrôle de légalité exercé par le préfet ?", "piste": "IDÉE MAÎTRESSE\nLe préfet vérifie que les actes des collectivités respectent la loi, mais seul le juge administratif peut les annuler.\n\nEXPLICATIONS\n1. Le principe : certains actes des collectivités sont transmis au préfet, qui en contrôle la conformité.\n2. Les étapes : des observations, puis, si l’illégalité persiste, la saisine du tribunal administratif (déféré préfectoral).\n3. La garantie : le respect de la libre administration des collectivités.\n4. L’objectif : la sécurité juridique, pas la tutelle."}, {"type": "Connaissance du ministère", "question": "Quelle différence entre déconcentration et décentralisation ?", "piste": "IDÉE MAÎTRESSE\nLa déconcentration redistribue le pouvoir au sein de l’État ; la décentralisation le transfère à des collectivités autonomes.\n\nEXPLICATIONS\n1. Déconcentration : l’État confie des pouvoirs à ses représentants locaux (préfet, services). Le pouvoir reste hiérarchique.\n2. Décentralisation : des compétences sont transférées à des collectivités dotées d’une personnalité juridique, d’élus et d’une autonomie (commune, département, région).\n3. Les deux se complètent : le préfet est l’interlocuteur local de l’État face aux collectivités.\n4. Actualité : « Refonder l’État local » et le projet de loi de décentralisation.\n\nÀ VÉRIFIER : l’état du texte."}, {"type": "Motivation", "question": "Pourquoi le ministère de l’Intérieur et pas un autre ministère ?", "piste": "IDÉE MAÎTRESSE\nParce que c’est le ministère où l’État est au plus près des citoyens, dans les moments ordinaires comme dans les crises.\n\nEXPLICATIONS\n1. Le sens : protection des personnes, ordre public, relation avec les élus, présence sur tout le territoire.\n2. La variété : sécurité, gestion de crise, collectivités, communication.\n3. Mon expérience : je le vis déjà en préfecture, avec la communication, les discours et la gestion de crise.\n4. Ce que je veux : y assumer davantage de responsabilités.\n\nÀ PERSONNALISER avec vos mots."}, {"type": "Motivation", "question": "Quelles sont, selon vous, les missions d’un attaché principal ?", "piste": "IDÉE MAÎTRESSE\nUn attaché principal conseille, représente et encadre : trois missions pour porter l’action du service.\n\nEXPLICATIONS\n1. Conseil : éclairer la décision de la hiérarchie, analyser, proposer.\n2. Représentation : porter la parole du service auprès des partenaires, des élus et des usagers.\n3. Management : animer une équipe, conduire des projets, faire évoluer les organisations.\n4. Dimension interministérielle : le corps permet la mobilité entre administrations."}, {"type": "Motivation", "question": "Que pensez-vous apporter au ministère de l’Intérieur ?", "piste": "IDÉE MAÎTRESSE\nUn regard transversal et une expérience de terrain, au service de la qualité du service rendu.\n\nEXPLICATIONS\n1. Mon parcours : entreprise, éducation, collectivités, État. Je comprends les contraintes de chacun.\n2. Mes compétences : rédaction, conseil, conduite de projets, formation.\n3. Ma posture : pédagogie, esprit d’innovation, outils internes pour gagner en efficacité.\n4. Ma valeur : un cadre fiable, qui sécurise le décideur.\n\nÀ PERSONNALISER : appuyez chaque point sur un exemple."}, {"type": "Motivation", "question": "Pourquoi vous et pas un autre candidat ?", "piste": "IDÉE MAÎTRESSE\nJe ne me compare pas aux autres : je montre ce qui est solide chez moi et en quoi cela sert le poste.\n\nEXPLICATIONS\n1. Trois atouts : un parcours multiple, une expérience de conseil auprès de l’autorité, la capacité à former et à faire progresser une équipe.\n2. Des preuves : un exemple concret pour chacun.\n3. De l’humilité : j’ai aussi des axes de progrès et je veux apprendre.\n4. Conclusion : disponibilité et envie de servir.\n\nC’est une question qui cherche à vous provoquer : gardez un ton calme et structuré."}, {"type": "Motivation", "question": "Seriez-vous prêt à occuper un poste très éloigné de votre métier actuel ?", "piste": "IDÉE MAÎTRESSE\nOui : la mobilité est la logique d’un corps interministériel, et mon parcours montre que je sais changer de milieu.\n\nEXPLICATIONS\n1. Mon parcours : entreprise, éducation, collectivités, préfecture : quatre univers différents.\n2. Ma méthode : apprendre vite, m’appuyer sur l’équipe et sur ma capacité d’analyse.\n3. Mes limites assumées : je mesure ce que je ne sais pas encore et je demande de l’appui.\n4. L’intérêt : élargir ma vision de l’État.\n\nÀ PERSONNALISER."}, {"type": "Motivation", "question": "Parlez-moi d’un échec professionnel et de ce que vous en avez appris.", "piste": "IDÉE MAÎTRESSE\nUn échec bien raconté : un fait précis, ma part de responsabilité, ce que j’ai changé ensuite.\n\nEXPLICATIONS\n1. Le contexte, en quelques phrases : un projet ou une situation dont le résultat n’a pas été atteint.\n2. Ma part : ce que j’aurais dû faire autrement, sans accuser les autres.\n3. Ce que j’en ai appris et mis en place : méthode, point d’étape, anticipation.\n4. Le résultat ensuite : un cas où cela a fonctionné.\n\nÀ PERSONNALISER : choisissez un échec réel, modeste mais instructif."}, {"type": "Motivation", "question": "Quelle est votre principale faiblesse professionnelle ?", "piste": "IDÉE MAÎTRESSE\nJe nomme une vraie faiblesse, qui n’est pas rédhibitoire pour le poste, et je montre comment je la compense.\n\nEXPLICATIONS\n1. Je choisis un point réel mais non essentiel : par exemple, la tendance à vouloir tout faire moi-même ou la difficulté à dire non.\n2. Je montre l’effort : outils, délégation, retours de l’équipe.\n3. Je prouve : un exemple récent d’amélioration.\n4. J’évite la fausse faiblesse du type « je suis perfectionniste »."}, {"type": "Actualités", "question": "Faut-il, selon vous, renforcer encore les pouvoirs du préfet ?", "piste": "IDÉE MAÎTRESSE\nUn préfet plus fort peut rendre l’État plus lisible, à condition de préserver l’équilibre avec les élus locaux et le contrôle de la loi.\n\nEXPLICATIONS\n1. Pour : unité de l’État, réactivité en crise, guichet unique pour les collectivités, dérogations pour adapter la règle au terrain.\n2. Contre : risque de concentration, tension avec la libre administration des collectivités, besoin de moyens autant que de pouvoirs.\n3. Ma position : l’autorité doit s’accompagner de transparence (décisions motivées et publiées), de dialogue avec les élus et de moyens.\n4. La condition de réussite : des responsabilités claires.\n\nÀ VÉRIFIER : l’état du texte."}, {"type": "Actualités", "question": "Faut-il, selon vous, mieux réguler les réseaux sociaux pour lutter contre la désinformation en situation de crise ?", "piste": "IDÉE MAÎTRESSE\nLes réseaux sociaux obligent l’État à parler plus vite et plus clairement, sans renoncer à la liberté d’expression.\n\nEXPLICATIONS\n1. Le constat : en crise, les rumeurs circulent avant les informations officielles.\n2. La réponse de l’État : une présence sur les réseaux, des messages courts et vérifiés, un démenti rapide, une coopération avec les plateformes pour retirer les contenus illicites, dans le cadre du règlement européen sur les services numériques.\n3. L’équilibre : la régulation vise les contenus illicites, pas l’opinion ; le juge reste le garant.\n4. Le premier rempart : une information officielle rapide et fiable."}, {"type": "Actualités", "question": "L’intelligence artificielle peut-elle améliorer le service rendu dans les préfectures ?", "piste": "IDÉE MAÎTRESSE\nOui, à condition d’en maîtriser les usages : confiance, transparence et protection des données.\n\nEXPLICATIONS\n1. Les gains : tâches répétitives, tri et analyse de documents, aide à la rédaction, accueil des usagers.\n2. Les risques : erreurs, biais, confidentialité des données, dépendance à des outils externes.\n3. Le cadre : décision humaine maintenue, transparence, respect du règlement sur les données personnelles, outils validés par l’administration.\n4. La méthode : expérimenter à petite échelle, former les agents, évaluer."}, {"type": "Management", "question": "Un agent de votre équipe est régulièrement en retard et cela agace ses collègues. Que faites-vous ?", "piste": "IDÉE MAÎTRESSE\nJ’en parle vite, en tête à tête, pour comprendre avant de sanctionner, puis je fixe une règle claire et je suis son application.\n\nEXPLICATIONS\n1. D’abord un entretien individuel et factuel : dates, impact sur l’équipe. J’écoute les raisons, qui peuvent être personnelles ou liées à l’organisation.\n2. Ensuite un cadre : horaires attendus, ajustement possible si la contrainte est légitime (horaires variables, transports), engagement écrit si besoin.\n3. Un point de suivi à quinze jours. Si rien ne change, je m’appuie sur la hiérarchie et les RH, avec la gradation prévue.\n4. Je protège l’équité : la règle vaut pour tous, et j’informe l’équipe que le sujet est traité, sans exposer l’agent."}, {"type": "Management", "question": "Deux de vos collaborateurs sont en conflit ouvert. Comment intervenez-vous ?", "piste": "IDÉE MAÎTRESSE\nJe n’attends pas que le conflit s’installe : j’écoute chacun séparément, puis je les réunis autour des faits et d’un objectif de travail commun.\n\nEXPLICATIONS\n1. Entretiens séparés pour distinguer faits, ressentis et vrais désaccords d’organisation.\n2. Rencontre à trois, que j’anime : on parle de comportements et d’impacts sur le service, pas de personnes.\n3. Je clarifie ce qui l’alimente souvent : répartition des tâches, circulation de l’information, reconnaissance.\n4. J’obtiens un engagement concret et daté, puis je fais un point de suivi.\n5. Si le conflit persiste ou relève du harcèlement, j’alerte les RH et je protège les personnes."}, {"type": "Management", "question": "Vous devez annoncer à votre équipe une réorganisation qu’elle n’a pas souhaitée. Comment procédez-vous ?", "piste": "IDÉE MAÎTRESSE\nJ’annonce la décision avec clarté et transparence, j’en explique le sens, et j’associe l’équipe à la mise en œuvre pour lui redonner de la prise.\n\nEXPLICATIONS\n1. Je prépare : je connais la décision, ses raisons, ce qui est négociable et ce qui ne l’est pas.\n2. J’annonce moi-même, en réunion, avant que la rumeur ne circule, puis je fais des entretiens individuels pour les agents les plus concernés.\n3. J’écoute les inquiétudes sans les minimiser et je réponds aux questions, y compris par « je ne sais pas encore, je reviens vers vous ».\n4. J’associe l’équipe aux modalités concrètes : planning, répartition, calendrier.\n5. Je fais un point régulier après la mise en place."}, {"type": "Management", "question": "Comment remobilisez-vous une équipe fatiguée après une longue période de crise ?", "piste": "IDÉE MAÎTRESSE\nAprès une crise, on reconnaît d’abord l’effort, on laisse récupérer, puis on retrouve du sens et de la visibilité collective.\n\nEXPLICATIONS\n1. Reconnaître : remercier nominativement, remonter les efforts à la hiérarchie, valoriser concrètement.\n2. Récupérer : permettre les repos compensateurs, alléger temporairement la charge, lever les urgences non essentielles.\n3. Faire un retour d’expérience : on y apprend et on corrige ce qui a été trop dur.\n4. Redonner de la perspective : objectifs réalistes, projets mobilisateurs, temps collectifs.\n5. Surveiller les signaux faibles : arrêts, tensions, désengagement, et orienter vers la médecine de prévention si besoin."}, {"type": "Management", "question": "Un de vos cadres commet une erreur qui a des conséquences devant le préfet. Comment réagissez-vous ?", "piste": "IDÉE MAÎTRESSE\nJe protège la décision de l’administration, je corrige vite et je prends ma part de responsabilité vis-à-vis du préfet ; avec le cadre, je traite l’erreur sans le casser.\n\nEXPLICATIONS\n1. Vis-à-vis du préfet : je l’informe sans délai, avec les faits, les conséquences, et des mesures de correction. Je ne désigne pas de coupable, car le responsable, c’est le service, donc moi.\n2. Je répare : correction du dossier, information des personnes concernées.\n3. Avec le cadre : entretien en tête à tête, analyse de la cause, qui peut être un défaut de procédure ou de moyens.\n4. J’en tire une règle collective : contrôle, délégation clarifiée, formation.\n5. Je le soutiens ensuite, car la confiance se reconstruit par l’exemple."}, {"type": "Questions métiers", "question": "Quel est le rôle du préfet en cas de crise majeure sur son département ?", "piste": "IDÉE MAÎTRESSE\nLe préfet est le directeur des opérations de secours et le pilote de la crise : il mobilise tous les services de l’État, décide, et communique.\n\nEXPLICATIONS\n1. Cadre : le dispositif ORSEC organise la réponse ; le plan communal de sauvegarde reste du ressort du maire pour son niveau.\n2. Organisation : activation du centre opérationnel départemental (COD), qui réunit services de l’État, SDIS, forces de sécurité, opérateurs, collectivités.\n3. Décision : réquisitions, interdictions et restrictions par arrêté, demandes de renforts à la zone de défense.\n4. Communication : informer la population et les élus, avec une parole unique.\n5. Après la crise : retour d’expérience, accompagnement des sinistrés, reconnaissance de catastrophe naturelle si besoin."}, {"type": "Questions métiers", "question": "Comment le préfet exerce-t-il le contrôle de légalité sur les collectivités ?", "piste": "IDÉE MAÎTRESSE\nLe contrôle de légalité est un contrôle a posteriori, juridique et non d’opportunité, qui garantit que les actes des collectivités respectent la loi.\n\nEXPLICATIONS\n1. Principe : depuis la décentralisation de 1982, l’acte est exécutoire dès sa transmission au préfet ; le contrôle intervient après.\n2. Procédure : les actes sont transmis (dématérialisation via @ctes) ; la préfecture cible ses priorités, notamment urbanisme, commande publique et fonction publique.\n3. Moyens : lettre d’observations, recours gracieux, puis déféré devant le tribunal administratif, avec possibilité de demander la suspension.\n4. Esprit : un rôle de conseil et de sécurisation juridique, en dialogue avec les élus.\n\nÀ VÉRIFIER : l’organisation actuelle du contrôle dans votre département."}, {"type": "Questions métiers", "question": "Comment un préfet gère-t-il l’ordre public lors d’une manifestation ?", "piste": "IDÉE MAÎTRESSE\nLe préfet concilie la liberté de manifester et la préservation de l’ordre public, avec une règle de proportionnalité contrôlée par le juge.\n\nEXPLICATIONS\n1. Avant : la manifestation est déclarée en préfecture ; échanges avec les organisateurs sur l’itinéraire et le service d’ordre.\n2. Évaluation : renseignement territorial, risques de troubles ou de débordements.\n3. Mesures : encadrement, déviations, et, si le risque est avéré, interdiction par arrêté motivé. Le juge administratif peut être saisi en référé et vérifie nécessité et proportionnalité.\n4. Pendant : coordination des forces de sécurité, graduation de la réponse.\n5. Après : bilan, retour d’expérience, communication."}, {"type": "Questions métiers", "question": "Quel est le rôle du sous-préfet d’arrondissement ?", "piste": "IDÉE MAÎTRESSE\nLe sous-préfet est le relais de proximité de l’État pour les élus et les habitants, et un acteur d’animation et d’ingénierie des territoires.\n\nEXPLICATIONS\n1. Représentation : il incarne l’État dans l’arrondissement, sous l’autorité du préfet.\n2. Appui aux collectivités : conseil aux élus, accompagnement des projets, mobilisation des financements de l’État (dotations, programmes nationaux).\n3. Coordination : relais des politiques prioritaires, de l’emploi à la sécurité, et gestion de crise de proximité.\n4. Veille : il remonte au préfet les besoins et signaux du terrain.\n\nÀ PERSONNALISER : citer le sous-préfet que vous connaissez."}, {"type": "Questions métiers", "question": "Comment piloteriez-vous un projet de dématérialisation d’une procédure dans votre service ?", "piste": "IDÉE MAÎTRESSE\nUne dématérialisation réussie part de l’usager et de l’agent : on simplifie d’abord la procédure, puis on outille, avec un accompagnement du changement.\n\nEXPLICATIONS\n1. Cadrage : objectifs, périmètre, indicateurs (délais, taux de dossiers complets, satisfaction).\n2. Simplifier avant de numériser : supprimer pièces et étapes inutiles.\n3. Associer les agents et tester sur un périmètre pilote avant de généraliser.\n4. Accompagner l’usager : information claire, solution de repli pour ceux qui sont éloignés du numérique, car l’égalité d’accès au service public l’exige.\n5. Suivi : tableau de bord, retours, ajustements.\n\nÀ PERSONNALISER : donner un exemple vécu, comme l’ANEF ou une autre téléprocédure."}, {"type": "Connaissance du ministère", "question": "Comment est organisé le ministère de l’Intérieur ?", "piste": "IDÉE MAÎTRESSE\nLe ministère rassemble la sécurité, la protection des populations, l’administration territoriale et les relations avec les collectivités, à travers de grandes directions générales.\n\nEXPLICATIONS\n1. Sécurité : la direction générale de la police nationale (DGPN) et la direction générale de la gendarmerie nationale (DGGN).\n2. Protection des populations : la direction générale de la sécurité civile et de la gestion des crises (DGSCGC).\n3. Étrangers : la direction générale des étrangers en France (DGEF), pour l’immigration, l’asile et l’intégration.\n4. Collectivités : la direction générale des collectivités locales (DGCL).\n5. S’y ajoutent le secrétariat général, avec les fonctions support, et la DGSI pour le renseignement intérieur.\n6. Sur le terrain : les préfets représentent l’État dans les départements et régions.\n\nÀ VÉRIFIER : organigramme en vigueur."}, {"type": "Connaissance du ministère", "question": "Quelle est la différence entre la police nationale et la gendarmerie nationale ?", "piste": "IDÉE MAÎTRESSE\nLes deux forces ont des missions proches, mais des statuts et des zones d’intervention différents, désormais réunies sous l’autorité du ministre de l’Intérieur.\n\nEXPLICATIONS\n1. Statut : la police nationale est civile ; la gendarmerie est une force militaire.\n2. Zones : la police intervient surtout en ville ; la gendarmerie, dans les zones rurales et périurbaines, avec un maillage dense de brigades.\n3. Rattachement : depuis la loi du 3 août 2009, la gendarmerie est placée sous l’autorité du ministre de l’Intérieur, y compris pour son emploi.\n4. Complémentarité : coopération opérationnelle, moyens mutualisés, et partage de l’information.\n5. Au niveau local, le préfet dispose des deux forces."}, {"type": "Connaissance du ministère", "question": "Que contient la loi d’orientation et de programmation du ministère de l’Intérieur, la LOPMI ?", "piste": "IDÉE MAÎTRESSE\nLa LOPMI du 24 janvier 2023 programme jusqu’en 2027 un effort budgétaire important pour moderniser les moyens du ministère.\n\nEXPLICATIONS\n1. Budget : environ 15 milliards d’euros supplémentaires sur la période 2023-2027.\n2. Effectifs : création de postes de policiers et de gendarmes, avec un renforcement sur le terrain.\n3. Équipements et numérique : modernisation du parc de véhicules, de l’immobilier et des outils numériques.\n4. Sécurité civile : acquisition d’hélicoptères, dont les 36 H145.\n5. Dispositions de procédure : renforcement de la lutte contre la cybercriminalité et simplification de certaines procédures.\n\nÀ VÉRIFIER : état d’exécution de la programmation."}, {"type": "Connaissance du ministère", "question": "Quel est le rôle des préfectures dans l’organisation des élections ?", "piste": "IDÉE MAÎTRESSE\nLa préfecture est le maître d’œuvre de l’organisation matérielle et juridique des scrutins : elle garantit leur régularité de bout en bout.\n\nEXPLICATIONS\n1. En amont : réception des candidatures et des déclarations, vérification de leur conformité, impression et diffusion de la propagande, ou son remboursement.\n2. Organisation matérielle : relations avec les maires, mise à disposition du matériel, formation des assesseurs.\n3. Le jour du scrutin : suivi en temps réel, remontée des incidents et des résultats.\n4. Résultats : centralisation et proclamation, transmission au ministère.\n5. Elle prépare aussi les procurations et les listes électorales avec les communes.\n\nÀ VÉRIFIER : l’organisation locale, très liée au calendrier électoral."}, {"type": "Connaissance du ministère", "question": "Que sont les directions départementales interministérielles et quel est le lien avec le préfet ?", "piste": "IDÉE MAÎTRESSE\nLes directions départementales interministérielles (DDI) sont les services de l’État de proximité, placés sous l’autorité du préfet de département.\n\nEXPLICATIONS\n1. Origine : créées en 2010 par la réforme de l’administration territoriale, qui a fusionné d’anciens services de ministères différents.\n2. Exemples : direction départementale des territoires (DDT), de la protection des populations (DDPP), de l’emploi, du travail et de la solidarité (DDETS).\n3. Autorité : le préfet dirige les DDI, qui sont rattachées à lui, et relaient les politiques de plusieurs ministères.\n4. Intérêt : une action cohérente de l’État dans le département.\n5. Limite : les directeurs ont un double lien, avec le préfet et leur ministère d’origine, ce qui exige du dialogue.\n\nÀ VÉRIFIER : l’organisation actuelle, qui évolue avec les réformes."}, {"type": "Connaissance du ministère", "question": "Quelles sont les missions de la direction générale des collectivités locales ?", "piste": "IDÉE MAÎTRESSE\nLa DGCL est le pivot entre l’État et les collectivités : elle conçoit les règles, répartit les dotations et accompagne les préfectures.\n\nEXPLICATIONS\n1. Cadre juridique : statut des collectivités, compétences, fonction publique territoriale, élus locaux.\n2. Finances : elle calcule et répartit les concours financiers de l’État, comme la dotation globale de fonctionnement.\n3. Organisation territoriale : projets de réforme de la décentralisation et de l’intercommunalité.\n4. Appui au terrain : elle anime le réseau des préfectures pour le contrôle de légalité et le conseil aux collectivités.\n5. Elle est en lien avec les associations d’élus.\n\nÀ VÉRIFIER : les réformes en cours."}, {"type": "Motivation", "question": "Pourquoi souhaitez-vous devenir attaché principal d’administration de l’État ?", "piste": "IDÉE MAÎTRESSE\nJe veux exercer des responsabilités plus larges d’encadrement et de pilotage, au service de l’action publique, dans la continuité de mon parcours.\n\nEXPLICATIONS\n1. Mon parcours : j’ai appris le terrain et le management dans mes fonctions actuelles.\n2. Le besoin : passer d’un rôle d’animation d’un service à un rôle de pilotage, avec plus de transversalité et de vision.\n3. Le sens : je crois à un État de proximité, qui rend un service utile et équitable.\n4. Le projet : mettre mon expérience au service du ministère et des préfectures, sur des enjeux comme la gestion de crise ou l’accueil des usagers.\n\nÀ PERSONNALISER : citer deux réalisations concrètes de votre dossier RAEP."}, {"type": "Motivation", "question": "Quels sont vos points faibles ?", "piste": "IDÉE MAÎTRESSE\nJe cite un vrai point faible, non rédhibitoire, et je montre ce que je fais pour le corriger.\n\nEXPLICATIONS\n1. Choisir un défaut réel mais compatible avec le poste. Exemples : tendance à trop m’investir dans le détail, difficulté à déléguer, impatience face à la lenteur.\n2. Donner un exemple concret où il s’est manifesté.\n3. Montrer l’action : j’ai fixé des points d’étape, j’ai appris à déléguer en clarifiant l’objectif, j’ai demandé un retour à mes collègues.\n4. Conclure sur le progrès : la vigilance reste nécessaire, mais le défaut est maîtrisé.\n\nÀ PERSONNALISER : choisissez le défaut qui est vrai pour vous."}, {"type": "Motivation", "question": "Quelle est la réalisation professionnelle dont vous êtes le plus fier ?", "piste": "IDÉE MAÎTRESSE\nJe choisis un projet où j’ai joué un rôle personnel clair, avec un résultat mesurable et des effets sur l’équipe ou les usagers.\n\nEXPLICATIONS\n1. Contexte : l’enjeu, le contrat de départ, les contraintes de temps ou de moyens.\n2. Mon rôle : ce que j’ai décidé, organisé, négocié, en disant « je ».\n3. Résultat : un chiffre, un délai gagné, une amélioration pour les usagers.\n4. Enseignement : ce que j’en ai appris, et ce que je referais autrement.\n5. Lien avec le poste visé : cette expérience annonce ce que je ferai comme attaché principal.\n\nÀ PERSONNALISER : prendre un exemple issu de votre dossier RAEP."}];
+
+function demoLoad(){ try{ return JSON.parse(localStorage.getItem('oralConcoursDemo')||'{}'); }catch(e){ return {}; } }
+function demoSave(q){ try{ const s=demoLoad(); s[normQ(q.question)]={nb:q.nb,dernier:q.dernier,boite:q.boite,note:q.note,prochaine:q.prochaine}; localStorage.setItem('oralConcoursDemo', JSON.stringify(s)); }catch(e){} }
 
 async function ensureTables(){
   const tables = await grist.docApi.listTables();
-  const actions = [];
-  if (!tables.includes(T_Q)) actions.push(['AddTable', T_Q, [
-    {id:'Type', type:'Choice', widgetOptions: JSON.stringify({choices: TYPES.map(t=>t.key)})},
-    {id:'Question', type:'Text'},
-    {id:'Piste', type:'Text'},
-    {id:'Ecarter', type:'Bool'},
-    {id:'Nb_tirages', type:'Int'},
-    {id:'Dernier_tirage', type:'Text'}
-  ]]);
-  if (!tables.includes(T_S)) actions.push(['AddTable', T_S, [
-    {id:'Date', type:'Text'},
-    {id:'Ordre', type:'Text'},
-    {id:'Duree_totale', type:'Int'},
-    {id:'Detail', type:'Text'}
-  ]]);
-  if (actions.length) await grist.docApi.applyUserActions(actions);
+  const acts = [];
+  if (!tables.includes(T_Q)) acts.push(['AddTable', T_Q, COLS_Q]);
+  if (!tables.includes(T_S)) acts.push(['AddTable', T_S, COLS_S]);
+  if (acts.length) await grist.docApi.applyUserActions(acts);
+  for (const [name, cols] of [[T_Q, COLS_Q], [T_S, COLS_S]]){      // colonnes ajoutées après coup
+    const t = await grist.docApi.fetchTable(name);
+    const have = new Set(Object.keys(t)), add = [];
+    for (const c of cols) if (!have.has(c.id)) add.push(['AddColumn', name, c.id, Object.assign({type:c.type}, c.widgetOptions?{widgetOptions:c.widgetOptions}:{})]);
+    if (add.length) await grist.docApi.applyUserActions(add);
+  }
 }
 
 async function loadQuestions(){
   if (!inGrist){
-    demoMode = true; let n = 0;
-    QUESTIONS = [];
-    for (const it of DEMO_ITEMS)
-      QUESTIONS.push({id:++n, type:it.type, question:it.question, piste:it.piste, ecarte:false, nb:0, dernier:''});
+    demoMode = true; let n = 0; const saved = demoLoad();
+    QUESTIONS = DEMO_ITEMS.map(it=>{
+      const s = saved[normQ(it.question)] || {};
+      return {id:++n, type:it.type, question:it.question, piste:it.piste, ecarte:false, nb:s.nb||0, dernier:s.dernier||'', boite:s.boite||0, note:s.note||'', prochaine:s.prochaine||''};
+    });
+    try{ demoSessions = JSON.parse(localStorage.getItem('oralConcoursDemoSessions')||'[]'); }catch(e){ demoSessions=[]; }
     return;
   }
   await ensureTables();
@@ -306,24 +249,48 @@ async function loadQuestions(){
   t.id.forEach((id,i)=>{
     const q = String(t.Question[i]||'').trim(); if(!q) return;
     const type = typeFromText(t.Type[i]); if(!type) return;
-    QUESTIONS.push({id, type, question:q, piste:t.Piste[i]||'', ecarte:!!t.Ecarter[i], nb:Number(t.Nb_tirages[i])||0, dernier:t.Dernier_tirage[i]||''});
+    QUESTIONS.push({id, type, question:q, piste:t.Piste[i]||'', ecarte:!!t.Ecarter[i], nb:Number(t.Nb_tirages[i])||0, dernier:t.Dernier_tirage[i]||'',
+      boite:Number(t.Boite[i])||0, note:t.Derniere_note[i]||'', prochaine:t.Prochaine_revision[i]||''});
   });
 }
+async function persistQuestion(q){
+  if (!inGrist){ demoSave(q); return; }
+  try{ await grist.docApi.applyUserActions([['UpdateRecord', T_Q, q.id, {Nb_tirages:q.nb, Dernier_tirage:q.dernier, Boite:q.boite, Derniere_note:q.note, Prochaine_revision:q.prochaine}]]); }catch(e){ console.warn(e); }
+}
 
-/* ============ Tirage ============ */
+/* ============ Tirage (révision espacée) ============ */
+const isRev = q => q.note==='ratee' || q.note==='a_revoir';
+function tierOf(q){
+  const td = today();
+  if (isRev(q)) return q.prochaine<=td ? 0 : 3;     // à revoir et échu : prioritaire
+  if (!q.note) return 1;                            // jamais évaluée
+  return q.prochaine<=td ? 2 : 3;                   // acquise, échue ou non
+}
+function pickQuestions(type, n, reviewOnly){
+  let pool = QUESTIONS.filter(q=>q.type===type && !q.ecarte);
+  if (reviewOnly) return shuffle(pool.filter(isRev)).sort((a,b)=>a.boite-b.boite).slice(0,n);
+  const due = shuffle(pool.filter(q=>tierOf(q)===0)).sort((a,b)=>a.boite-b.boite);
+  const slots = Math.min(due.length, Math.round(n*settings.reviewSlots/3));
+  const chosen = due.slice(0, slots);
+  const rest = shuffle(pool.filter(q=>!chosen.includes(q)));
+  const rank = q => tierOf(q)===0 ? 1.5 : tierOf(q);
+  rest.sort((a,b)=> (rank(a)-rank(b)) || (settings.avoidSeen ? ((a.nb-b.nb) || (a.dernier<b.dernier?-1:a.dernier>b.dernier?1:0)) : 0));
+  return chosen.concat(rest.slice(0, n-chosen.length));
+}
+
 let S = null;   // séance
 function newSession(){
   stopTimer();
-  const order = shuffle(TYPES.map(t=>t.key));
-  const steps = [], lacks = [];
-  order.forEach((key, tabIdx)=>{
-    let pool = shuffle(QUESTIONS.filter(q=>q.type===key && !q.ecarte));
-    if (settings.avoidSeen) pool.sort((a,b)=>(a.nb-b.nb) || (a.dernier<b.dernier?-1:a.dernier>b.dernier?1:0));
-    const pick = pool.slice(0, PER_TAB);
-    if (pick.length < PER_TAB) lacks.push({key, have:pick.length});
-    pick.forEach((q,i)=>steps.push({tabIdx, key, q, n:i+1, counted:false}));
-  });
-  S = {order, steps, idx:-1, times:{}, done:false, saved:false, showPistes:false, lacks};
+  const mode = settings.mode;
+  const keys = mode==='single' ? [settings.singleType] : shuffle(TYPES.map(t=>t.key));
+  const per = mode==='single' ? SINGLE_COUNT : PER_TAB;
+  let groups = keys.map(k=>({k, picks:pickQuestions(k, per, mode==='review')}));
+  const lacks = [];
+  if (mode==='review') groups = groups.filter(g=>g.picks.length>0);
+  else groups.forEach(g=>{ if (g.picks.length<per) lacks.push({key:g.k, have:g.picks.length, need:per}); });
+  const steps = [];
+  groups.forEach((g,tabIdx)=>g.picks.forEach((q,i)=>steps.push({tabIdx, key:g.k, q, n:i+1, counted:false, base:null})));
+  S = {mode, order:groups.map(g=>g.k), steps, idx:-1, times:{}, ratings:{}, done:false, saved:false, showPistes:false, lacks};
   render();
 }
 
@@ -358,7 +325,7 @@ function updateTimerUI(){
   const b = $('btnTimer'); if(b) b.textContent = running ? '⏸ Pause' : (el>0 ? '▶ Reprendre' : '▶ Démarrer le chrono');
 }
 
-/* ============ Navigation pas à pas ============ */
+/* ============ Navigation pas à pas et auto-évaluation ============ */
 function leave(){
   if (S && S.idx>=0 && S.idx<S.steps.length){ const e=Math.round(elapsed()); if(e>0 || S.times[S.idx]==null) S.times[S.idx]=e; }
   stopTimer();
@@ -367,27 +334,54 @@ function go(n){
   leave();
   if (n >= S.steps.length){ S.idx = S.steps.length; S.done = true; render(); saveSession(); return; }
   S.done = false; S.idx = Math.max(-1, n); S.showPistes = false;
-  if (S.idx>=0){ markSeen(S.steps[S.idx]); }
+  if (S.idx>=0) markSeen(S.steps[S.idx]);
   render();
   if (S.idx>=0 && settings.auto) startTimer();
 }
-const next = () => { if(!S) return; if (S.done) return; go(S.idx+1); };
+const next = () => { if(!S || S.done) return; go(S.idx+1); };
 const prev = () => { if(!S || S.idx<=-1) return; if (S.done){ S.done=false; go(S.steps.length-1); } else go(S.idx-1); };
 
-async function markSeen(step){
+function markSeen(step){
   if (step.counted) return; step.counted = true;
-  const q = step.q; q.nb += 1; q.dernier = today();
-  if (inGrist){
-    try{ await grist.docApi.applyUserActions([['UpdateRecord', T_Q, q.id, {Nb_tirages:q.nb, Dernier_tirage:q.dernier}]]); }catch(e){ console.warn(e); }
-  }
+  const q = step.q;
+  step.base = {boite:q.boite, note:q.note, prochaine:q.prochaine};
+  q.nb += 1; q.dernier = today();
+  persistQuestion(q);
+}
+function rate(note){
+  if (!S || S.idx<0 || S.done) return;
+  const step = S.steps[S.idx], q = step.q, base = step.base || {boite:q.boite, note:q.note};
+  let boite;
+  if (note==='ratee') boite = 0;
+  else if (note==='a_revoir') boite = 1;
+  else boite = Math.min(Math.max((base.note ? base.boite : 0)+1, 2), 4);
+  q.boite = boite; q.note = note; q.prochaine = addDays(today(), INTERVALS[boite]);
+  S.ratings[S.idx] = note;
+  persistQuestion(q);
+  renderRating(); renderTabs();
+}
+function renderRating(){
+  const cur = S && S.ratings[S.idx];
+  document.querySelectorAll('.rb').forEach(b=>b.classList.toggle('sel', b.dataset.n===cur));
+}
+function counts(){
+  const c = {acquise:0, a_revoir:0, ratee:0, none:0};
+  S.steps.forEach((_,i)=>{ const r=S.ratings[i]; if(r) c[r]++; else c.none++; });
+  return c;
 }
 async function saveSession(){
   if (S.saved) return; S.saved = true;
-  if (!inGrist) return;
-  const detail = S.steps.map((st,i)=>({onglet:st.key, question:st.q.question, secondes:S.times[i]??null}));
+  const c = counts();
+  const detail = S.steps.map((st,i)=>({onglet:st.key, question:st.q.question, secondes:S.times[i]??null, note:S.ratings[i]||null}));
   const total = Object.values(S.times).reduce((a,b)=>a+(b||0),0);
+  const row = {Date:new Date().toISOString(), Ordre:S.order.join(' > '), Duree_totale:total, Detail:JSON.stringify(detail), Mode:S.mode,
+    Nb_acquises:c.acquise, Nb_a_revoir:c.a_revoir, Nb_ratees:c.ratee, Nb_non_evaluees:c.none};
+  if (!inGrist){
+    demoSessions.push(row); try{ localStorage.setItem('oralConcoursDemoSessions', JSON.stringify(demoSessions.slice(-50))); }catch(e){}
+    return;
+  }
   try{
-    await grist.docApi.applyUserActions([['AddRecord', T_S, null, {Date:new Date().toISOString(), Ordre:S.order.join(' > '), Duree_totale:total, Detail:JSON.stringify(detail)}]]);
+    await grist.docApi.applyUserActions([['AddRecord', T_S, null, row]]);
     setBanner('Séance enregistrée dans la base (table '+T_S+').','info');
   }catch(e){ console.warn(e); }
 }
@@ -403,51 +397,74 @@ function renderTabs(){
     const steps = S.steps.map((s,idx)=>({s,idx})).filter(x=>x.s.tabIdx===i);
     const cur = S.idx>=0 && S.idx<S.steps.length && S.steps[S.idx].tabIdx===i;
     const done = steps.length>0 && steps.every(x=>S.idx>x.idx || S.done);
-    const dots = h('div',{class:'dots'}, Array.from({length:PER_TAB}, (_,k)=>{
-      const x = steps[k]; let c='dot';
-      if (x){ if (S.done || S.idx>x.idx) c+=' done'; else if (S.idx===x.idx) c+=' now'; }
+    const dots = h('div',{class:'dots'}, steps.map(x=>{
+      let c='dot';
+      if (S.ratings[x.idx]) c+=' done'+(S.ratings[x.idx]!=='acquise'?' r-'+S.ratings[x.idx]:'');
+      else if (S.done || S.idx>x.idx) c+=' done';
+      else if (S.idx===x.idx) c+=' now';
       return h('span',{class:c});
     }));
-    const t = h('button',{class:'tab'+(cur?' current':'')+(done?' done':'')+(steps.length===0?' empty':''), type:'button',
-      onclick:()=>{ if(steps.length) go(steps[0].idx); }},
-      h('span',{class:'num',text:'Onglet '+(i+1)}), h('span',{class:'name',text:typeInfo(key).short}), dots);
-    nav.append(t);
+    nav.append(h('button',{class:'tab'+(cur?' current':'')+(done?' done':''), type:'button', onclick:()=>{ if(steps.length) go(steps[0].idx); }},
+      h('span',{class:'num',text:'Onglet '+(i+1)}), h('span',{class:'name',text:typeInfo(key).short}), dots));
   });
+}
+function modeTitle(){
+  if (S.mode==='single') return 'Mini-séance : '+typeInfo(S.order[0]).label;
+  if (S.mode==='review') return 'Questions à revoir';
+  return 'Ordre des onglets tiré au sort';
 }
 function renderStage(){
   const st = $('stage'); st.replaceChildren();
   const total = S.steps.length;
 
   if (total === 0){
-    st.append(h('h2',{class:'big',text:'Aucune question disponible'}),
-      h('p',{text:'La base ne contient pas encore de questions actives. Ouvrez « Base & réglages » pour en importer ou en ajouter.'}),
-      h('div',{class:'controls'}, h('button',{class:'primary',onclick:openDrawer,text:'Ouvrir la base'})));
+    if (S.mode==='review'){
+      st.append(h('h2',{class:'big',text:'Rien à revoir pour l’instant'}),
+        h('p',{text:'Aucune question n’est notée « à revoir » ou « ratée ». Évaluez vos réponses pendant une séance (touches 1, 2, 3) pour alimenter cette liste.'}),
+        h('div',{class:'controls'}, h('button',{class:'primary',onclick:()=>{settings.mode='full'; saveSettings(); syncHeader(); newSession();},text:'Lancer une séance complète'})));
+    } else {
+      st.append(h('h2',{class:'big',text:'Aucune question disponible'}),
+        h('p',{text:'La base ne contient pas encore de questions actives pour ce choix. Ouvrez « Base & réglages » pour en importer ou en ajouter.'}),
+        h('div',{class:'controls'}, h('button',{class:'primary',onclick:()=>openDrawer('base'),text:'Ouvrir la base'})));
+    }
     return;
   }
 
   if (S.idx === -1){   // écran d’ouverture
     const per = {}; S.steps.forEach(s=>per[s.tabIdx]=(per[s.tabIdx]||0)+1);
+    const due = QUESTIONS.filter(q=>!q.ecarte && tierOf(q)===0).length;
     st.append(
       h('div',{class:'kicker'}, h('span',{text:'Nouvelle séance'}), h('span',{text:total+' questions · '+fmt(total*DURATION).replace(/^(\d+):(\d+)$/,'$1 min $2')+' de réponses'})),
-      h('h2',{class:'big',text:'Ordre des onglets tiré au sort'}),
+      h('h2',{class:'big',text:modeTitle()}),
       h('ol',{class:'order'}, S.order.map((k,i)=>h('li',{}, h('span',{class:'n',text:i+1}), h('strong',{text:typeInfo(k).label}), h('span',{class:'c',text:(per[i]||0)+' question'+((per[i]||0)>1?'s':'')})))),
-      h('p',{class:'note',text:'Pour chaque question : 1 min 30 pour répondre. Le pas à pas enchaîne les trois questions d’un onglet, puis passe à l’onglet suivant.'}),
+      h('p',{class:'note',text:'1 min 30 par question. Après chaque réponse, comparez-la à la piste (touche N), puis évaluez-vous : 1 acquise, 2 à revoir, 3 ratée. Les questions à revoir reviennent plus souvent.'+(due?' Aujourd’hui, '+due+' question'+(due>1?'s sont':' est')+' à revoir.':'')}),
       h('div',{class:'controls'}, h('button',{class:'primary',onclick:next,text:'Commencer la séance →'}))
     );
     return;
   }
 
   if (S.done){   // récapitulatif
-    st.append(h('div',{class:'kicker'}, h('span',{text:'Séance terminée'})), h('h2',{class:'big',text:'Récapitulatif'}));
-    const tb = h('table',{class:'recap'}, h('thead',{}, h('tr',{}, h('th',{text:'Question'}), h('th',{text:'Temps'}))));
+    const c = counts();
+    st.append(h('div',{class:'kicker'}, h('span',{text:'Séance terminée'})), h('h2',{class:'big',text:'Récapitulatif'}),
+      h('div',{class:'summary'},
+        h('span',{class:'pill acquise',text:c.acquise+' acquise'+(c.acquise>1?'s':'')}),
+        h('span',{class:'pill a_revoir',text:c.a_revoir+' à revoir'}),
+        h('span',{class:'pill ratee',text:c.ratee+' ratée'+(c.ratee>1?'s':'')}),
+        h('span',{class:'pill',text:c.none+' non évaluée'+(c.none>1?'s':'')})));
+    const tb = h('table',{class:'recap'}, h('thead',{}, h('tr',{}, h('th',{text:'Question'}), h('th',{text:'Évaluation'}), h('th',{text:'Temps'}))));
     const body = h('tbody'); let lastTab = -1, sum = 0;
     S.steps.forEach((s,i)=>{
-      if (s.tabIdx!==lastTab){ lastTab=s.tabIdx; body.append(h('tr',{class:'grp'}, h('td',{colspan:2,text:'Onglet '+(s.tabIdx+1)+' — '+typeInfo(s.key).label}))); }
-      const t = S.times[i]; if (t) sum += t;
-      body.append(h('tr',{}, h('td',{text:s.q.question}), h('td',{class:'t '+(t==null?'':(t>DURATION?'over-t':'ok-t')), text:t==null?'—':fmt(t)+(t>DURATION?' (dépassé)':'')})));
+      if (s.tabIdx!==lastTab){ lastTab=s.tabIdx; body.append(h('tr',{class:'grp'}, h('td',{colspan:3,text:'Onglet '+(s.tabIdx+1)+' — '+typeInfo(s.key).label}))); }
+      const t = S.times[i]; if (t) sum += t; const r = S.ratings[i];
+      body.append(h('tr',{}, h('td',{text:s.q.question}),
+        h('td',{}, h('span',{class:'pill '+(r||''),text:r?NOTE_LABEL[r]:'—'})),
+        h('td',{class:'t '+(t==null?'':(t>DURATION?'over-t':'ok-t')), text:t==null?'—':fmt(t)+(t>DURATION?' (dépassé)':'')})));
     });
-    tb.append(body); st.append(tb, h('p',{class:'note',text:'Temps total de parole : '+fmt(sum)+'.'}),
-      h('div',{class:'controls'}, h('button',{onclick:prev,text:'← Revenir à la dernière question'}), h('button',{class:'primary',onclick:newSession,text:'Nouvelle séance'})));
+    tb.append(body);
+    st.append(tb, h('p',{class:'note',text:'Temps total de parole : '+fmt(sum)+'.'}),
+      h('div',{class:'controls'}, h('button',{onclick:prev,text:'← Revenir à la dernière question'}),
+        h('button',{onclick:()=>openDrawer('progress'),text:'Voir la progression'}),
+        h('button',{class:'primary',onclick:newSession,text:'Nouvelle séance'})));
     return;
   }
 
@@ -458,12 +475,16 @@ function renderStage(){
   else if (nextStep.tabIdx !== s.tabIdx) nextLabel = 'Onglet suivant : '+typeInfo(nextStep.key).short+' →';
 
   st.append(
-    h('div',{class:'kicker'}, h('span',{text:'Onglet '+(s.tabIdx+1)+' / '+TYPES.length+' · '+typeInfo(s.key).label}), h('span',{text:'Question '+s.n+' / '+inTab})),
+    h('div',{class:'kicker'}, h('span',{text:'Onglet '+(s.tabIdx+1)+' / '+S.order.length+' · '+typeInfo(s.key).label}), h('span',{text:'Question '+s.n+' / '+inTab})),
     h('p',{class:'question',text:s.q.question}),
     ...(S.showPistes ? [h('div',{class:'pistes'}, h('small',{text:'Pistes de réponse'}), s.q.piste ? s.q.piste : 'Aucune piste saisie pour cette question.')] : []),
     h('div',{class:'timer',id:'timer'},
       h('div',{class:'digits',id:'tDigits',text:'1:30'}),
       h('div',{class:'barwrap'}, h('div',{class:'bar'}, h('i',{id:'tBar'})), h('div',{class:'tstate',id:'tState'}))),
+    h('div',{class:'rate',id:'rate'}, h('span',{class:'ratelabel',text:'Votre réponse'}),
+      h('button',{class:'rb acquise','data-n':'acquise',onclick:()=>rate('acquise'),text:'1 · Acquise'}),
+      h('button',{class:'rb a_revoir','data-n':'a_revoir',onclick:()=>rate('a_revoir'),text:'2 · À revoir'}),
+      h('button',{class:'rb ratee','data-n':'ratee',onclick:()=>rate('ratee'),text:'3 · Ratée'})),
     h('div',{class:'controls'},
       h('button',{onclick:prev,text:'← Précédente',disabled:S.idx<=0}),
       h('button',{class:'primary',id:'btnTimer',onclick:toggleTimer,text:'▶ Démarrer le chrono'}),
@@ -471,22 +492,73 @@ function renderStage(){
       h('button',{onclick:()=>{S.showPistes=!S.showPistes; render();},text:S.showPistes?'Masquer les pistes':'Voir les pistes'}),
       h('button',{class:'primary',onclick:next,text:nextLabel}))
   );
-  updateTimerUI();
+  updateTimerUI(); renderRating();
+}
+function syncHeader(){
+  $('selMode').value = settings.mode;
+  $('selType').hidden = settings.mode!=='single';
+  $('selType').value = settings.singleType;
 }
 function render(){
-  $('meta').textContent = demoMode ? 'mode démo (hors Grist)' : (S ? S.steps.length+' questions tirées' : '');
+  const dj = daysUntil(settings.examDate);
+  const parts = [];
+  if (demoMode) parts.push('mode démo (hors Grist)');
+  if (dj!=null && dj>=0) parts.push(dj===0 ? 'oral aujourd’hui' : 'oral dans '+dj+' jour'+(dj>1?'s':''));
+  $('meta').textContent = parts.join(' · ');
   if (!S) return;
   const msgs = [];
-  if (demoMode) msgs.push('Mode démo : l’application est ouverte hors de Grist, les questions affichées sont des exemples et rien n’est enregistré.');
-  if (S.lacks.length) msgs.push('Questions insuffisantes dans : ' + S.lacks.map(l=>typeInfo(l.key).short+' ('+l.have+'/'+PER_TAB+')').join(', ')+'.');
+  if (demoMode) msgs.push('Mode démo : l’application est ouverte hors de Grist ; la progression n’est gardée que dans ce navigateur.');
+  if (S.lacks.length) msgs.push('Questions insuffisantes dans : ' + S.lacks.map(l=>typeInfo(l.key).short+' ('+l.have+'/'+l.need+')').join(', ')+'.');
   if (msgs.length && !(S.done && S.saved && inGrist)) setBanner(msgs.join(' '), 'warn'); else if (!(S.saved && inGrist)) setBanner('');
   renderTabs(); renderStage();
 }
 
-/* ============ Tiroir « Base & réglages » ============ */
-function openDrawer(){ buildDrawer(); $('drawer').hidden = false; }
+/* ============ Tiroir : progression, base et réglages ============ */
+let drawerView = 'progress';
+function openDrawer(view){ drawerView = view; $('drawer').hidden = false; if (view==='progress') buildProgress(); else buildBase(); }
 function closeDrawer(){ $('drawer').hidden = true; }
-function buildDrawer(msg){
+function stateCounts(type){
+  const act = QUESTIONS.filter(q=>q.type===type && !q.ecarte);
+  const c = {total:act.length, acquise:0, a_revoir:0, ratee:0, none:0, due:0};
+  act.forEach(q=>{ if(q.note==='acquise') c.acquise++; else if(q.note==='a_revoir') c.a_revoir++; else if(q.note==='ratee') c.ratee++; else c.none++; if(tierOf(q)===0) c.due++; });
+  return c;
+}
+function stackBar(c){
+  const t = c.total || 1, w = n => (n/t*100).toFixed(1)+'%';
+  return h('div',{class:'stack'}, h('i',{style:'width:'+w(c.acquise)+';background:var(--ok)'}), h('i',{style:'width:'+w(c.a_revoir)+';background:var(--warn)'}), h('i',{style:'width:'+w(c.ratee)+';background:var(--bad)'}));
+}
+async function loadHistory(){
+  if (!inGrist) return demoSessions.slice(-10).reverse();
+  try{
+    const t = await grist.docApi.fetchTable(T_S);
+    const rows = t.id.map((id,i)=>({Date:t.Date[i], Mode:t.Mode?t.Mode[i]:'', Duree_totale:t.Duree_totale[i], Nb_acquises:t.Nb_acquises?t.Nb_acquises[i]:0, Nb_a_revoir:t.Nb_a_revoir?t.Nb_a_revoir[i]:0, Nb_ratees:t.Nb_ratees?t.Nb_ratees[i]:0, Nb_non_evaluees:t.Nb_non_evaluees?t.Nb_non_evaluees[i]:0, id}));
+    return rows.sort((a,b)=>b.id-a.id).slice(0,10);
+  }catch(e){ return []; }
+}
+async function buildProgress(){
+  $('drawerTitle').textContent = 'Progression';
+  const b = $('drawerBody'); b.replaceChildren();
+  const all = TYPES.map(t=>({t, c:stateCounts(t.key)}));
+  const tot = all.reduce((a,x)=>{ for(const k of ['total','acquise','a_revoir','ratee','none','due']) a[k]+=x.c[k]; return a; }, {total:0,acquise:0,a_revoir:0,ratee:0,none:0,due:0});
+  const dj = daysUntil(settings.examDate);
+  b.append(
+    h('p',{class:'note',text:(dj!=null&&dj>=0 ? (dj===0?'L’oral a lieu aujourd’hui. ':'Oral dans '+dj+' jour'+(dj>1?'s':'')+'. ') : '')+tot.acquise+' question'+(tot.acquise>1?'s':'')+' acquise'+(tot.acquise>1?'s':'')+' sur '+tot.total+' ; '+tot.due+' à revoir aujourd’hui.'}),
+    h('div',{class:'legend'}, h('span',{},h('b',{style:'background:var(--ok)'}),'Acquises'), h('span',{},h('b',{style:'background:var(--warn)'}),'À revoir'), h('span',{},h('b',{style:'background:var(--bad)'}),'Ratées'), h('span',{},h('b',{style:'background:var(--none)'}),'Non évaluées')),
+    ...all.map(({t,c})=>h('div',{class:'pt'}, h('div',{class:'lab'}, h('strong',{text:t.short}), h('span',{text:c.acquise+' / '+c.total+' acquises'+(c.due?' · '+c.due+' à revoir':'')})), stackBar(c))),
+    h('h4',{text:'Dernières séances'}));
+  const hist = await loadHistory();
+  if (!hist.length) b.append(h('p',{class:'note',text:'Aucune séance enregistrée pour l’instant.'}));
+  else b.append(h('table',{class:'counts'}, h('thead',{}, h('tr',{}, ['Date','Type','Évaluées','Acquises','Durée'].map(x=>h('th',{text:x})))),
+    h('tbody',{}, hist.map(r=>{
+      const ev = (r.Nb_acquises||0)+(r.Nb_a_revoir||0)+(r.Nb_ratees||0);
+      const pct = ev ? Math.round((r.Nb_acquises||0)/ev*100)+' %' : '—';
+      const mode = r.Mode==='single'?'Un onglet':r.Mode==='review'?'À revoir':'Complète';
+      return h('tr',{}, h('td',{text:frDate(r.Date)}), h('td',{text:mode}), h('td',{text:String(ev)}), h('td',{text:pct}), h('td',{text:fmt(r.Duree_totale||0)}));
+    }))));
+  b.append(h('div',{class:'row'}, h('button',{onclick:()=>openDrawer('base'),text:'Base & réglages'})));
+}
+function buildBase(msg){
+  $('drawerTitle').textContent = 'Base & réglages';
   const b = $('drawerBody'); b.replaceChildren();
   const cnt = TYPES.map(t=>{ const all=QUESTIONS.filter(q=>q.type===t.key), act=all.filter(q=>!q.ecarte); return {t, all:all.length, act:act.length, seen:act.filter(q=>q.nb>0).length}; });
   b.append(
@@ -497,21 +569,26 @@ function buildDrawer(msg){
     h('label',{}, h('input',{type:'checkbox',id:'sAuto',checked:settings.auto||false}), 'Démarrer le chrono dès l’affichage de la question'),
     h('label',{}, h('input',{type:'checkbox',id:'sSound',checked:settings.sound||false}), 'Signal sonore à la fin des 1 min 30'),
     h('label',{}, h('input',{type:'checkbox',id:'sAvoid',checked:settings.avoidSeen||false}), 'Privilégier les questions jamais ou le moins tirées'),
+    h('label',{}, 'Questions à revoir par onglet : ', h('select',{id:'sSlots'}, [0,1,2,3].map(n=>h('option',{value:n,selected:settings.reviewSlots===n,text:n+' sur 3'})))),
+    h('label',{}, 'Date de l’oral : ', h('input',{type:'date',id:'sExam',value:settings.examDate||''})),
     h('h4',{text:'Ajouter une question'}),
     h('select',{id:'addType'}, TYPES.map(t=>h('option',{value:t.key,text:t.label}))),
     h('div',{class:'row'}, h('textarea',{id:'addQ',placeholder:'Texte de la question'})),
     h('div',{class:'row'}, h('textarea',{id:'addP',placeholder:'Pistes de réponse (facultatif)'})),
     h('div',{class:'row'}, h('button',{class:'primary',id:'btnAdd',text:'Ajouter à la base'})),
     h('h4',{text:'Importer en lot (JSON)'}),
-    h('p',{class:'note',text:'Format : [{"type":"Management","question":"…","piste":"…"}, …]. Le type peut être abrégé (management, métiers, motivation, actualités, connaissance).'}),
+    h('p',{class:'note',text:'Format : [{"type":"Management","question":"…","piste":"…"}, …]. Les questions déjà présentes sont ignorées. Le type peut être abrégé (management, métiers, motivation, actualités, connaissance).'}),
     h('textarea',{id:'impJson',placeholder:'Collez le JSON ici'}),
-    h('div',{class:'row'}, h('button',{id:'btnImp',text:'Importer'}), h('button',{id:'btnReload',text:'Recharger depuis Grist'})),
+    h('div',{class:'row'}, h('button',{id:'btnImp',text:'Importer'}), h('button',{id:'btnReload',text:'Recharger depuis Grist'}), h('button',{id:'btnProg2',text:'Progression'})),
     h('div',{class:'msg'+(msg&&msg.err?' err':' okk'),id:'drawMsg',text:msg?msg.t:''})
   );
   if (!inGrist){ ['btnAdd','btnImp','btnReload'].forEach(id=>$(id).disabled=true); $('drawMsg').textContent='Mode démo : l’écriture dans la base n’est possible que dans Grist.'; }
   $('sAuto').onchange = e=>{settings.auto=e.target.checked; saveSettings();};
   $('sSound').onchange = e=>{settings.sound=e.target.checked; saveSettings();};
   $('sAvoid').onchange = e=>{settings.avoidSeen=e.target.checked; saveSettings();};
+  $('sSlots').onchange = e=>{settings.reviewSlots=Number(e.target.value); saveSettings();};
+  $('sExam').onchange = e=>{settings.examDate=e.target.value; saveSettings(); render();};
+  $('btnProg2').onclick = ()=>openDrawer('progress');
   $('btnAdd').onclick = async ()=>{
     const q = $('addQ').value.trim(); if(!q) return say('Saisissez le texte de la question.',true);
     await addRows([{type:$('addType').value, question:q, piste:$('addP').value.trim()}]);
@@ -527,23 +604,35 @@ function buildDrawer(msg){
     if(!rows.length) return say('Aucune ligne valide.', true);
     await addRows(rows, bad);
   };
-  $('btnReload').onclick = async ()=>{ try{ await loadQuestions(); buildDrawer({t:'Base rechargée ('+QUESTIONS.length+' questions).'}); }catch(e){ say(e.message,true);} };
+  $('btnReload').onclick = async ()=>{ try{ await loadQuestions(); buildBase({t:'Base rechargée ('+QUESTIONS.length+' questions).'}); }catch(e){ say(e.message,true);} };
 }
 function say(t, err){ const m=$('drawMsg'); if(m){ m.textContent=t; m.className='msg '+(err?'err':'okk'); } }
 async function addRows(rows, bad){
   try{
-    const n = rows.length, col = f=>rows.map(f);
-    await grist.docApi.applyUserActions([['BulkAddRecord', T_Q, rows.map(()=>null), {
-      Type:col(r=>r.type), Question:col(r=>r.question), Piste:col(r=>r.piste), Ecarter:col(()=>false), Nb_tirages:col(()=>0), Dernier_tirage:col(()=>'')
-    }]]);
-    await loadQuestions();
-    buildDrawer({t:n+' question'+(n>1?'s':'')+' ajoutée'+(n>1?'s':'')+(bad&&bad.length?' — lignes ignorées : '+bad.join(', '):'')+'.'});
+    const have = new Set(QUESTIONS.map(q=>normQ(q.question)));
+    const fresh = [], seen = new Set();
+    rows.forEach(r=>{ const k=normQ(r.question); if(have.has(k)||seen.has(k)) return; seen.add(k); fresh.push(r); });
+    const dup = rows.length - fresh.length;
+    if (fresh.length){
+      const col = f=>fresh.map(f);
+      await grist.docApi.applyUserActions([['BulkAddRecord', T_Q, fresh.map(()=>null), {
+        Type:col(r=>r.type), Question:col(r=>r.question), Piste:col(r=>r.piste), Ecarter:col(()=>false), Nb_tirages:col(()=>0), Dernier_tirage:col(()=>''),
+        Boite:col(()=>0), Derniere_note:col(()=>''), Prochaine_revision:col(()=>'')
+      }]]);
+      await loadQuestions();
+    }
+    const n = fresh.length;
+    buildBase({t:n+' question'+(n>1?'s':'')+' ajoutée'+(n>1?'s':'')+(dup?' ; '+dup+' doublon'+(dup>1?'s':'')+' ignoré'+(dup>1?'s':''):'')+(bad&&bad.length?' ; lignes invalides : '+bad.join(', '):'')+'.'});
   }catch(e){ say('Erreur : '+e.message, true); }
 }
 
 /* ============ Événements globaux ============ */
+TYPES.forEach(t=>$('selType').append(h('option',{value:t.key,text:t.short})));
+$('selMode').onchange = e=>{ settings.mode=e.target.value; saveSettings(); syncHeader(); };
+$('selType').onchange = e=>{ settings.singleType=e.target.value; saveSettings(); };
 $('btnNew').onclick = ()=>{ if(!S || S.idx<=-1 || S.done || confirm('Abandonner la séance en cours et tirer une nouvelle séance ?')) newSession(); };
-$('btnBase').onclick = openDrawer;
+$('btnProg').onclick = ()=>openDrawer('progress');
+$('btnBase').onclick = ()=>openDrawer('base');
 $('btnClose').onclick = closeDrawer;
 $('drawer').addEventListener('click', e=>{ if(e.target===$('drawer')) closeDrawer(); });
 $('btnFs').onclick = toggleFs;
@@ -552,17 +641,21 @@ document.addEventListener('keydown', e=>{
   if (!$('drawer').hidden){ if(e.key==='Escape') closeDrawer(); return; }
   if (/^(INPUT|TEXTAREA|SELECT)$/.test((e.target||{}).tagName)) return;
   if (e.ctrlKey||e.metaKey||e.altKey) return;
-  const k = e.key.toLowerCase();
+  const k = e.key.toLowerCase(), live = S && S.idx>=0 && !S.done;
   if (k==='arrowright'){ e.preventDefault(); next(); }
   else if (k==='arrowleft'){ e.preventDefault(); prev(); }
-  else if (k===' ' || k==='t'){ if(S && S.idx>=0 && !S.done){ e.preventDefault(); toggleTimer(); } else if(k===' ' && S && S.idx===-1){ e.preventDefault(); next(); } }
-  else if (k==='r'){ if(S && S.idx>=0 && !S.done) resetTimer(); }
-  else if (k==='n'){ if(S && S.idx>=0 && !S.done){ S.showPistes=!S.showPistes; render(); } }
+  else if (k===' ' || k==='t'){ if(live){ e.preventDefault(); toggleTimer(); } else if(k===' ' && S && S.idx===-1){ e.preventDefault(); next(); } }
+  else if (k==='r'){ if(live) resetTimer(); }
+  else if (k==='n'){ if(live){ S.showPistes=!S.showPistes; render(); } }
+  else if (k==='1'){ if(live) rate('acquise'); }
+  else if (k==='2'){ if(live) rate('a_revoir'); }
+  else if (k==='3'){ if(live) rate('ratee'); }
   else if (k==='f'){ toggleFs(); }
 });
 
 /* ============ Démarrage ============ */
 async function init(){
+  syncHeader();
   $('stage').append(h('p',{class:'note',text:'Chargement de la base…'}));
   try{
     if (inGrist) grist.ready({requiredAccess:'full'});
