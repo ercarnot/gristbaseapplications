@@ -2695,22 +2695,23 @@ function buildExportSections(){
     return notes.length ? [`${t.fields.Titre} : ${notes[0].fields.Contenu}`] : [];
   });
 
-  // Une seule liste, triée par échéance : la catégorie n'est plus un critère de classement,
-  // juste une information affichée sur chaque ligne (pour repérer les priorités d'un coup d'œil).
   const rows = [];
+  const estLong = cat => EXPORT_CATS_LONGUES.includes(exportCatKey(cat));
+  const tacheOuverte = t => t.fields.Statut!=="Annulé" && t.fields.Statut!=="Terminé";
 
   // --- Projets
   STATE.projets.filter(p=>p.fields.Statut!=="Clos").forEach(p=>{
     const dref = fromGristDate(p.fields.DateReference);
     const tasksInWindow = activeTasks.filter(t=>t.fields.Projet===p.id);
     const dateInWindow = dref && dref>=todayISOv && dref<=limiteISO;
-    if(dateInWindow || tasksInWindow.length){
-      // Le projet est déclenché (une tâche tombe dans la fenêtre) : on affiche alors TOUTES ses tâches actives,
-      // même celles dont l'échéance dépasse les 3 semaines, pour donner une vue complète du projet.
+    const long = estLong(p.fields.Categorie);
+    if(dateInWindow || tasksInWindow.length || long){
+      // Tout le projet est affiché (toutes ses tâches non annulées), même au-delà des 3 semaines.
       const toutesTachesProjet = STATE.taches.filter(t=>t.fields.Projet===p.id && t.fields.Statut!=="Annulé")
         .sort((a,b)=>(a.fields.DateEcheance||0)-(b.fields.DateEcheance||0));
+      const ouvertes = toutesTachesProjet.filter(tacheOuverte);
       rows.push({
-        date: dref || earliestDate(tasksInWindow),
+        date: dref || earliestDate(tasksInWindow) || earliestDate(ouvertes) || earliestDate(toutesTachesProjet),
         categorie: p.fields.Categorie || "Non classé",
         nom: p.fields.Nom,
         referent: agentInitiales(p.fields.Agent),
@@ -2720,24 +2721,27 @@ function buildExportSections(){
     }
   });
 
-  // --- Dossiers : leurs tâches SANS projet (les tâches avec projet sont déjà représentées via la ligne du projet)
+  // --- Dossiers : leurs tâches SANS projet (celles avec projet passent par la ligne du projet)
   STATE.dossiers.forEach(d=>{
-    const tasksInWindow = activeTasks.filter(t=>t.fields.Dossier===d.id && !t.fields.Projet);
-    if(tasksInWindow.length){
+    const cat = d.fields.Categorie || "Grands dossiers";
+    const long = estLong(cat);
+    const tasks = long
+      ? STATE.taches.filter(t=>t.fields.Dossier===d.id && !t.fields.Projet && tacheOuverte(t))
+      : activeTasks.filter(t=>t.fields.Dossier===d.id && !t.fields.Projet);
+    if(tasks.length){
       rows.push({
-        date: earliestDate(tasksInWindow),
-        categorie: d.fields.Categorie || "Grands dossiers",
+        date: earliestDate(tasks),
+        categorie: cat,
         nom: d.fields.Nom,
-        referent: referentsOf(tasksInWindow),
-        actions: tasksInWindow.map(actionLabel),
-        observations: notesOf(tasksInWindow)
+        referent: referentsOf(tasks),
+        actions: tasks.map(actionLabel),
+        observations: notesOf(tasks)
       });
     }
   });
 
   // --- Tâches sans dossier ni projet
-  const diversTasks = activeTasks.filter(t=>!t.fields.Dossier && !t.fields.Projet);
-  diversTasks.forEach(t=>{
+  activeTasks.filter(t=>!t.fields.Dossier && !t.fields.Projet).forEach(t=>{
     rows.push({
       date: fromGristDate(t.fields.DateEcheance),
       categorie: "Autres tâches",
@@ -2748,9 +2752,42 @@ function buildExportSections(){
     });
   });
 
-  rows.sort((a,b)=> (a.date||"9999") < (b.date||"9999") ? -1 : 1);
+  // Regroupement par catégorie, dans l'ordre demandé ; puis catégories hors liste ; puis « Autres tâches ».
+  const parCat = new Map();
+  rows.forEach(r=>{
+    const k = exportCatKey(r.categorie);
+    const known = EXPORT_CATS.find(c=>exportCatKey(c)===k);
+    const titre = known || r.categorie;
+    if(!parCat.has(titre)) parCat.set(titre, []);
+    parCat.get(titre).push(r);
+  });
+  const cmp = (a,b)=>{
+    const da=a.date||"9999-99-99", db=b.date||"9999-99-99";
+    return EXPORT_TRI_RECENT_D_ABORD ? (da<db?1:da>db?-1:0) : (da<db?-1:da>db?1:0);
+  };
+  const sections = [];
+  EXPORT_CATS.forEach(c=>{ if(parCat.has(c)){ sections.push({titre:c, rows:parCat.get(c).sort(cmp)}); parCat.delete(c); } });
+  const autres = [...parCat.keys()].filter(k=>k!=="Autres tâches");
+  autres.forEach(k=>sections.push({titre:k, rows:parCat.get(k).sort(cmp)}));
+  if(parCat.has("Autres tâches")) sections.push({titre:"Autres tâches", rows:parCat.get("Autres tâches").sort(cmp)});
 
-  return { rows, todayISOv, limiteISO };
+  return { sections, todayISOv, limiteISO };
+}
+
+// Ordre des sections de la synthèse 3 semaines.
+const EXPORT_CATS = ["Déplacement préfet","Représentation de l'Etat","Distinctions honorifiques","Relations presse","Communication digitale","Grands dossiers"];
+// Ces catégories à échéances longues sont affichées même au-delà des 3 semaines.
+const EXPORT_CATS_LONGUES = ["communication digitale","grands dossiers"];
+// Tri dans chaque catégorie : false = du plus proche au plus lointain ; true = du plus lointain au plus proche.
+const EXPORT_TRI_RECENT_D_ABORD = false;
+function exportCatKey(c){
+  let k = String(c||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[’']/g,"'").replace(/\s+/g," ").trim();
+  if(k==="grand dossier") k="grands dossiers";
+  if(k==="deplacement du prefet"||k==="deplacements prefet"||k==="deplacement prefet") k="deplacement prefet";
+  if(k==="representation de l'etat"||k==="representation etat") k="representation de l'etat";
+  if(k==="distinction honorifique") k="distinctions honorifiques";
+  if(k==="relation presse") k="relations presse";
+  return k;
 }
 
 // Style de cellule partagé entre la vue app/impression et l'email (.eml) — un filet fin, inline pour rester
@@ -2760,11 +2797,16 @@ const EXPORT_TH_STYLE = EXPORT_TD_STYLE + "background:#f1f3f9;";
 // Largeurs de colonnes fixes (table width=926 au total) : Actions et Observation strictement égales.
 const EXPORT_COL_W = { date:60, evenement:210, referent:60, actions:298, observation:298 };
 
-function renderExport3(){
-  const view = document.getElementById('view');
-  const { rows, todayISOv, limiteISO } = buildExportSections();
-
-  const tableHtml = rows.length===0 ? '<p class="empty">Aucune tâche à échéance sur cette période.</p>' : `
+function exportSectionsHtml(sections){
+  const cell = (r)=>`<tr>
+          <td valign="top" style="${EXPORT_TD_STYLE}">${r.date ? fmtDateDDMM(r.date) : ''}</td>
+          <td valign="top" style="${EXPORT_TD_STYLE}">${r.nom}</td>
+          <td valign="top" style="${EXPORT_TD_STYLE}">${r.referent}</td>
+          <td valign="top" style="${EXPORT_TD_STYLE}">${r.actions.length ? '<ul style="margin:0;padding-left:16px;">'+r.actions.map(a=>`<li>${a}</li>`).join("")+'</ul>' : ''}</td>
+          <td valign="top" style="${EXPORT_TD_STYLE}">${(r.observations&&r.observations.length) ? '<ul style="margin:0;padding-left:16px;">'+r.observations.map(o=>`<li>${o}</li>`).join("")+'</ul>' : ''}</td>
+        </tr>`;
+  return sections.map((sec,i)=>`
+    <p style="margin:${i?18:6}px 0 4px 0;font-size:15px;"><b>${i+1<=EXPORT_CATS.length && EXPORT_CATS.includes(sec.titre) ? (EXPORT_CATS.indexOf(sec.titre)+1)+". " : ""}${sec.titre}</b></p>
     <table border="0" cellpadding="0" cellspacing="0" width="926" style="border-collapse:collapse;">
       <tbody>
         <tr>
@@ -2774,19 +2816,19 @@ function renderExport3(){
           <td valign="top" width="${EXPORT_COL_W.actions}" style="${EXPORT_TH_STYLE}width:${EXPORT_COL_W.actions}px;"><small><b>Actions</b></small></td>
           <td valign="top" width="${EXPORT_COL_W.observation}" style="${EXPORT_TH_STYLE}width:${EXPORT_COL_W.observation}px;"><small><b>Observation</b></small></td>
         </tr>
-        ${rows.map(r=>`<tr>
-          <td valign="top" style="${EXPORT_TD_STYLE}">${fmtDateDDMM(r.date)}</td>
-          <td valign="top" style="${EXPORT_TD_STYLE}">${r.nom}</td>
-          <td valign="top" style="${EXPORT_TD_STYLE}">${r.referent}</td>
-          <td valign="top" style="${EXPORT_TD_STYLE}">${r.actions.length ? '<ul style="margin:0;padding-left:16px;">'+r.actions.map(a=>`<li>${a}</li>`).join("")+'</ul>' : ''}</td>
-          <td valign="top" style="${EXPORT_TD_STYLE}">${(r.observations&&r.observations.length) ? '<ul style="margin:0;padding-left:16px;">'+r.observations.map(o=>`<li>${o}</li>`).join("")+'</ul>' : ''}</td>
-        </tr>`).join("")}
+        ${sec.rows.map(cell).join("")}
       </tbody>
-    </table>`;
+    </table>`).join("");
+}
+
+function renderExport3(){
+  const view = document.getElementById('view');
+  const { sections, todayISOv, limiteISO } = buildExportSections();
+  const tableHtml = sections.length===0 ? '<p class="empty">Aucune tâche à échéance sur cette période.</p>' : exportSectionsHtml(sections);
 
   view.innerHTML = `
     <h1 class="no-print">Export — Planning 3 semaines</h1>
-    <p class="sub no-print">Du ${fmtDateHuman(todayISOv)} au ${fmtDateHuman(limiteISO)} — trié par échéance, de la plus proche à la plus lointaine.</p>
+    <p class="sub no-print">Du ${fmtDateHuman(todayISOv)} au ${fmtDateHuman(limiteISO)} — classé par catégorie, puis par échéance. « Communication digitale » et « Grands dossiers » sont affichés au-delà des 3 semaines.</p>
     <div class="no-print" style="margin-bottom:16px;display:flex;gap:10px;">
       <button class="btn" onclick="downloadExportEml()">✉️ Télécharger l'email (.eml)</button>
       <button class="btn secondary" onclick="window.print()">🖨 Imprimer / Enregistrer en PDF</button>
@@ -3099,27 +3141,8 @@ function b64EncodeUnicode(str){
   return btoa(String.fromCharCode(...new TextEncoder().encode(str)));
 }
 
-function buildExportEmailHtml(rows, todayISOv, limiteISO){
-  const tableHtml = rows.length===0 ? '<i>Aucune tâche à échéance sur cette période.</i><br><br>' : `
-    <table border="0" cellpadding="0" cellspacing="0" width="926" style="border-collapse:collapse;">
-      <tbody>
-        <tr>
-          <td valign="top" width="${EXPORT_COL_W.date}" style="${EXPORT_TH_STYLE}width:${EXPORT_COL_W.date}px;"><small><b>Date</b></small></td>
-          <td valign="top" width="${EXPORT_COL_W.evenement}" style="${EXPORT_TH_STYLE}width:${EXPORT_COL_W.evenement}px;"><small><b>Événement</b></small></td>
-          <td valign="top" width="${EXPORT_COL_W.referent}" style="${EXPORT_TH_STYLE}width:${EXPORT_COL_W.referent}px;"><small><b>Référent</b></small></td>
-          <td valign="top" width="${EXPORT_COL_W.actions}" style="${EXPORT_TH_STYLE}width:${EXPORT_COL_W.actions}px;"><small><b>Actions</b></small></td>
-          <td valign="top" width="${EXPORT_COL_W.observation}" style="${EXPORT_TH_STYLE}width:${EXPORT_COL_W.observation}px;"><small><b>Observation</b></small></td>
-        </tr>
-        ${rows.map(r=>`<tr>
-          <td valign="top" style="${EXPORT_TD_STYLE}">${r.date ? fmtDateDDMM(r.date) : ''}</td>
-          <td valign="top" style="${EXPORT_TD_STYLE}">${r.nom}</td>
-          <td valign="top" style="${EXPORT_TD_STYLE}">${r.referent}</td>
-          <td valign="top" style="${EXPORT_TD_STYLE}">${r.actions.length ? '<ul style="margin:0;padding-left:16px;">'+r.actions.map(a=>`<li>${a}</li>`).join("")+'</ul>' : ''}</td>
-          <td valign="top" style="${EXPORT_TD_STYLE}">${(r.observations&&r.observations.length) ? '<ul style="margin:0;padding-left:16px;">'+r.observations.map(o=>`<li>${o}</li>`).join("")+'</ul>' : ''}</td>
-        </tr>`).join("")}
-      </tbody>
-    </table>
-    <br>`;
+function buildExportEmailHtml(sections, todayISOv, limiteISO){
+  const tableHtml = sections.length===0 ? '<i>Aucune tâche à échéance sur cette période.</i><br><br>' : exportSectionsHtml(sections)+'<br>';
 
   return `<html>
   <head><meta http-equiv="content-type" content="text/html; charset=utf-8"></head>
@@ -3133,8 +3156,8 @@ function buildExportEmailHtml(rows, todayISOv, limiteISO){
 }
 
 function downloadExportEml(){
-  const { rows, todayISOv, limiteISO } = buildExportSections();
-  const html = buildExportEmailHtml(rows, todayISOv, limiteISO);
+  const { sections, todayISOv, limiteISO } = buildExportSections();
+  const html = buildExportEmailHtml(sections, todayISOv, limiteISO);
   const subject = `[Planning tâches ${NOM_SERVICE}] - Semaine du ${fmtDateHuman(todayISOv)}`;
   const subjectB64 = b64EncodeUnicode(subject);
 
