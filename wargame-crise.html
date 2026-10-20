@@ -262,7 +262,7 @@ function frictionsOf(v){return{
 
 /* ============ État ============ */
 function newState(){return{scenarioId:'crue',tour:0,running:false,ended:false,paused:false,pauseStart:null,tourMinutes:15,tourEnd:null,presseOn:false,presseAt:null,presseLogged:false,injects:[],situation:[],journal:[],notes:{},rep:{},usedCards:[],dice:null,draft:{},seq:1,rev:0,satFirst:{orange:null,rouge:null},joueurs:{strategie:'',cod:'',presse:''},rfDelay:3,started:null}}
-function newProd(){return{seen:{},items:{},ligne:{objectif:'',messages:'',cibles:'',prochaine:'',publie:false,t:null,v:0,dirty:false},renforts:[],libre:[],libreDraft:{type:'Communiqué',texte:''},rf:{type:'presse',motif:''}}}
+function newProd(){return{seen:{},items:{},prods:[],drafts:[],ligne:{objectif:'',messages:'',cibles:'',prochaine:'',publie:false,t:null,v:0,dirty:false},renforts:[],libre:[],libreDraft:{type:'Communiqué',texte:''},rf:{type:'presse',motif:''}}}
 const url=new URL(location.href);
 const viewParam=((location.hash||'').match(/view=(\w+)/)||(location.search||'').match(/view=(\w+)/)||[])[1]||'';
 let view=viewParam;
@@ -317,7 +317,12 @@ const scen=()=>ALL().find(s=>s.id===S.scenarioId)||ALL()[0];
 const clk=()=>S.paused&&S.pauseStart?S.pauseStart:now();
 const presseActive=()=>!!(S.presseOn||(S.presseAt&&now()>=S.presseAt));
 const routeOf=i=>i.dest==='presse'?(presseActive()?'presse':'cod'):i.dest;
-function delivery(i){for(const v of VIEWS){const it=P[v].items[i.id];if(it&&it.done)return Object.assign({vue:v},it)}return null}
+function delivery(i){
+ for(const v of VIEWS){const it=P[v].items[i.id];if(it&&it.done)return Object.assign({vue:v},it)}
+ let best=null;
+ VIEWS.forEach(v=>{(P[v].prods||[]).forEach(x=>{if(x.ref===i.id&&(!best||x.t<best.t))best={vue:v,t:x.t,texte:x.texte,type:x.type}})});
+ return best;
+}
 const isEchu=i=>clk()>i.t0+i.delai*60000;
 const weight=i=>1+(isEchu(i)?1:0)+((i.g||1)>=3?1:0);
 function openFor(v){return S.injects.filter(i=>i.dest!=='tous'&&routeOf(i)===v&&!delivery(i))}
@@ -435,6 +440,20 @@ const A={
   P[view].libreDraft={type:dr.type,texte:''};savP(view);jrn('production libre',dr.type||'');render();
  },
  chrono(d){chronos[d.id]=now()+90000;render()},
+ newdraft(d){P.cod.drafts=P.cod.drafts||[];P.cod.drafts.push({id:'d'+now(),type:'Communiqué de presse',ref:d.ref||'',texte:''});ptab.cod='production';savP('cod');render()},
+ produire(d){
+  P.cod.drafts=P.cod.drafts||[];
+  if(!P.cod.drafts.find(x=>x.ref===d.id)){const inj=S.injects.find(i=>i.id===d.id)||{};
+   const ty=inj.dest==='presse'?'Réponse à un journaliste':(inj.canal===1?'Post réseaux sociaux':'Communiqué de presse');
+   P.cod.drafts.push({id:'d'+now(),type:ty,ref:d.id,texte:''})}
+  ptab.cod='production';savP('cod');render()},
+ deldraft(d){if(!confirm('Supprimer ce brouillon ?'))return;P.cod.drafts=(P.cod.drafts||[]).filter(x=>x.id!==d.id);savP('cod');render()},
+ livdraft(d){
+  const dr=(P.cod.drafts||[]).find(x=>x.id===d.id);if(!dr)return;
+  if(!(dr.texte||'').trim()){alert('Rédigez la production avant de la livrer.');return}
+  P.cod.prods.push({id:'L'+now(),type:dr.type,ref:dr.ref||'',texte:dr.texte,t:now(),vue:'cod'});
+  P.cod.drafts=P.cod.drafts.filter(x=>x.id!==d.id);savP('cod');jrn('livraison',dr.type+(dr.ref?' (en réponse à une sollicitation)':' (initiative)'));render()},
+ treat(d){const it=P.cod.items[d.id]||(P.cod.items[d.id]={});it.done=true;it.t=now();it.texte='Pris en compte, aucune production nécessaire.';it.sans=true;savP('cod');jrn('traité sans production',(S.injects.find(i=>i.id===d.id)||{}).titre||d.id);render()},
  seen(d){P[view].seen=P[view].seen||{};P[view].seen[d.id]=now();savP(view);render()},
  chatToggle(){chatOpen=!chatOpen;if(chatOpen&&CH.length){chatRead=CH[CH.length-1].t;locset(KRk(),chatRead)}render();if(chatOpen){const m=document.getElementById('chat-msgs');if(m)m.scrollTop=m.scrollHeight;const t=document.getElementById('chat-in');if(t)t.focus()}},
  chatSend(){
@@ -455,6 +474,12 @@ function onInput(e){
  const i=b.indexOf(':'),k=b.slice(0,i),id=b.slice(i+1);
  const val=t.type==='checkbox'?t.checked:t.value;
  if(k==='chat'){if(id==='draft')chatDraft=val;else chatFrom=val;return}
+ if(k==='dtext'||k==='dtype'||k==='dref'){
+  const dr=(P[view].drafts||[]).find(x=>x.id===id);
+  if(dr){dr[({dtext:'texte',dtype:'type',dref:'ref'})[k]]=val;savP(view);
+   if(k==='dtext'){const c=document.getElementById('cnt-'+id);if(c)c.textContent=val.length}
+   else if(e.type==='change')render()}
+  return}
  if(k==='item'){const it=P[view].items[id]||(P[view].items[id]={});it.texte=val;savP(view);const c=document.getElementById('cnt-'+id);if(c)c.textContent=val.length}
  else if(k==='ligne'){P.strategie.ligne[id]=val;P.strategie.ligne.dirty=true;savP('strategie')}
  else if(k==='draft'){S.draft=S.draft||{};S.draft[id]=val;save()}
@@ -552,10 +577,30 @@ function viewStrategie(s){
  else body=`<h2>Déjà rendu (${done.length})</h2>${done.slice().reverse().map(i=>injCard(i,delivery(i).vue)).join('')||'<div class="info">Rien de rendu pour l’instant.</div>'}`;
  return bar+body;
 }
+const PTYPES=['Communiqué de presse','Post réseaux sociaux','Message d’alerte','Point de situation','Réponse à un journaliste','Note / autre'];
+function draftCard(d){
+ const opens=openFor('cod');
+ const cur=S.injects.find(i=>i.id===d.ref);
+ const refs=opens.slice();if(cur&&refs.indexOf(cur)<0)refs.push(cur);
+ const isPost=/Post/.test(d.type),isOral=/journaliste/.test(d.type);
+ return `<div class="card inj"><div class="row"><select data-bind="dtype:${d.id}" id="dt-${d.id}" style="width:auto">${PTYPES.map(t=>`<option ${d.type===t?'selected':''}>${t}</option>`).join('')}</select>
+  <select data-bind="dref:${d.id}" id="dr-${d.id}" class="grow"><option value="">En réponse à : aucune (initiative)</option>${refs.map(i=>`<option value="${i.id}" ${d.ref===i.id?'selected':''}>En réponse à : ${esc(i.titre)}</option>`).join('')}</select></div>
+  <textarea id="dx-${d.id}" data-bind="dtext:${d.id}" style="margin-top:6px;min-height:150px" placeholder="${isOral?'Éléments de langage ou réponse orale':'Rédigez ici'}">${esc(d.texte||'')}</textarea>
+  <div class="row" style="margin-top:6px"><button class="btn" data-act="livdraft" data-id="${d.id}">${isPost||/Communiqué|alerte|Point/.test(d.type)?'Publier':'Livrer'}</button>
+  ${isOral?`<button class="btn sec" data-act="chrono" data-id="${d.id}">Chrono 1 min 30</button><span class="chr" data-id="${d.id}"></span>`:''}
+  <button class="btn sec small" data-act="deldraft" data-id="${d.id}">Supprimer</button>
+  ${isPost?`<span class="muted"><span id="cnt-${d.id}">${(d.texte||'').length}</span> caractères</span>`:''}</div></div>`;
+}
+function infoCard(i){
+ const dl=i.t0+i.delai*60000;const brouillon=(P.cod.drafts||[]).some(x=>x.ref===i.id);
+ return `<div class="card inj g${i.g||1}"><div class="meta"><span class="tag">${i.canal?esc(CANAL[i.canal]):(i.type==='friction'?'Imprévu interne':'Fil rouge')}</span><span>${hhmm(i.t0)}</span><span>échéance <span class="cd" data-end="${dl}"></span></span>${brouillon?'<span class="ok">Brouillon en cours</span>':''}</div>
+ <h4>${esc(i.titre)}</h4><div>${nl(i.texte)}</div><div class="tache"><b>À faire :</b> ${esc(i.tache)}</div>
+ <div class="row"><button class="btn" data-act="produire" data-id="${i.id}">Produire (communiqué, post, réponse…)</button><button class="btn sec small" data-act="treat" data-id="${i.id}">Pris en compte, sans production</button></div></div>`;
+}
 function viewCod(s){
  const L=P.strategie.ligne;const l=loads();
  const arr=S.injects.filter(i=>routeOf(i)==='cod');
- const open=arr.filter(i=>!delivery(i)),done=arr.filter(i=>delivery(i));
+ const open=arr.filter(i=>!delivery(i));
  const pa=presseActive();
  const reps=P.cod.renforts.slice().reverse().slice(0,3).map(r=>{
   const rp=S.rep[r.t];let st='en attente du maître du jeu…';
@@ -567,22 +612,23 @@ function viewCod(s){
   <div class="g"><div class="row"><select id="rf-type" data-bind="rf:type" style="width:auto"><option value="presse" ${rf.type==='presse'?'selected':''}>Binôme gestion presse</option><option value="redaction" ${rf.type==='redaction'?'selected':''}>Relecteur / rédacteur</option><option value="strategie" ${rf.type==='strategie'?'selected':''}>Appui de la stratégie</option></select>
   <input class="grow" type="text" id="rf-motif" data-bind="rf:motif" placeholder="Motif (facultatif)" value="${esc(rf.motif||'')}"><button class="btn red" data-act="renfort">Demander un renfort</button></div>${reps?`<div class="muted" style="margin-top:4px">${reps}</div>`:''}</div></div></div>`;
  const newLigne=L.publie&&P.cod.ligneSeen!==L.v;
+ const drafts=P.cod.drafts||[];
  const cur=ptabOf('cod');
- const bar=tabsBar('cod',[['ligne','Ligne stratégique',newLigne?'nouvelle':''],['situation','Situation'],['traiter','À traiter',open.length||''],['production','Production'],['livre','Déjà livré']]);
+ const bar=tabsBar('cod',[['ligne','Ligne stratégique',newLigne?'nouvelle':''],['situation','Situation'],['traiter','À traiter',open.length||''],['production','Production',drafts.length||''],['livre','Déjà livré']]);
  let body='';
  if(cur==='ligne')body=L.publie?`<div class="card ligne"><h2>Ligne de la stratégie <span class="muted">· v${L.v}, ${hhmm(L.t)}</span></h2>
    <p><b>Objectif :</b> ${esc(L.objectif)}</p><p><b>Messages clés :</b><br>${nl(L.messages)}</p><p><b>Cibles :</b> ${esc(L.cibles)}</p><p><b>Prochaine prise de parole :</b> ${esc(L.prochaine)}</p></div>`:'<div class="info">La stratégie n’a pas encore publié de ligne de communication.</div>';
  else if(cur==='situation')body=`<h2>Situation</h2>${situationBoard()}`;
- else if(cur==='traiter')body=`<h2>À traiter (${open.length})</h2>${open.slice().reverse().map(i=>injCard(i,'cod')).join('')||'<div class="info">Rien en attente. Anticipez : prochain point de situation ?</div>'}`;
- else if(cur==='production'){
-  const dr=P.cod.libreDraft||{type:'Communiqué',texte:''};
-  const lib=P.cod.libre.slice().reverse().map(x=>`<div class="card"><div class="meta"><span class="tag">${esc(x.type)}</span><span>${hhmm(x.t)}</span></div>${nl(x.texte)}</div>`).join('');
-  body=`<div class="card"><h2>Production libre</h2><p class="muted">Un communiqué ou un post que vous décidez de publier sans qu’on vous le demande.</p>
-   <select id="lib-type" data-bind="libre:type" style="width:auto;margin-bottom:6px">${['Communiqué','Post RS','Message d’alerte','Point de situation'].map(t=>`<option ${dr.type===t?'selected':''}>${t}</option>`).join('')}</select>
-   <textarea id="lib-txt" data-bind="libre:texte">${esc(dr.texte||'')}</textarea>
-   <div class="row" style="margin-top:6px"><button class="btn" data-act="libre">Livrer</button></div></div>${lib?`<h3>Productions libres livrées</h3>${lib}`:''}`;
+ else if(cur==='traiter')body=`<h2>À traiter (${open.length})</h2><p class="muted">Instructions et événements à prendre en compte. Pour y répondre, rédigez dans l’onglet Production.</p>${open.slice().reverse().map(infoCard).join('')||'<div class="info">Rien en attente. Anticipez : prochain point de situation ?</div>'}`;
+ else if(cur==='production')body=`<div class="row" style="margin-bottom:10px"><h2 style="margin:0">Production (${drafts.length} en cours)</h2><button class="btn" data-act="newdraft">+ Nouvelle production</button></div>
+  <p class="muted">Communiqués, posts, messages d’alerte, réponses aux journalistes : tout se rédige ici, plusieurs à la fois si besoin.</p>
+  ${drafts.slice().reverse().map(draftCard).join('')||'<div class="info">Aucune production en cours. Cliquez sur « Nouvelle production » ou sur « Produire » depuis une sollicitation.</div>'}`;
+ else{
+  const prods=(P.cod.prods||[]).map(x=>Object.assign({k:'prod'},x));
+  const sans=Object.keys(P.cod.items).filter(k=>P.cod.items[k].done&&P.cod.items[k].sans).map(k=>({k:'sans',id:k,t:P.cod.items[k].t,type:'Pris en compte',texte:P.cod.items[k].texte,ref:k}));
+  const all=prods.concat(sans).sort((a,b)=>b.t-a.t);
+  body=`<h2>Déjà livré (${all.length})</h2>${all.map(x=>{const inj=S.injects.find(i=>i.id===x.ref);return `<div class="card inj done"><div class="meta"><span class="tag">${esc(x.type)}</span><span>${hhmm(x.t)}</span>${inj?`<span>en réponse à : ${esc(inj.titre)}</span>`:'<span>initiative</span>'}</div>${nl(x.texte)}</div>`}).join('')||'<div class="info">Rien de livré pour l’instant.</div>'}`;
  }
- else body=`<h2>Déjà livré (${done.length})</h2>${done.slice().reverse().map(i=>injCard(i,delivery(i).vue)).join('')||'<div class="info">Rien de livré pour l’instant.</div>'}`;
  return strip+bar+body;
 }
 function viewPresse(s){
@@ -663,7 +709,7 @@ function tabPilot(s){
  </div></div>
  <div class="card"><h2>Tous les injects</h2><table><tr><th>Heure</th><th>Cible</th><th>Titre</th><th>Type</th><th>État</th></tr>${rows}</table></div>`;
 }
-function allLibre(){let a=[];VIEWS.forEach(v=>{a=a.concat(P[v].libre||[])});return a.sort((x,y)=>x.t-y.t)}
+function allLibre(){let a=[];VIEWS.forEach(v=>{a=a.concat(P[v].libre||[]);(P[v].prods||[]).filter(x=>!x.ref).forEach(x=>a.push({id:x.id,type:x.type,texte:x.texte,t:x.t,vue:v}))});return a.sort((x,y)=>x.t-y.t)}
 function rateBtns(id){
  const n=(S.notes[id]||{}).n;
  return `<div class="rate"><button class="btn sec small okb ${n==='ok'?'on':''}" data-act="note" data-id="${id}" data-n="ok">✓ Solide</button><button class="btn sec small midb ${n==='mid'?'on':''}" data-act="note" data-id="${id}" data-n="mid">~ À reprendre</button><button class="btn sec small kob ${n==='ko'?'on':''}" data-act="note" data-id="${id}" data-n="ko">✗ Hors cible</button></div>
@@ -672,16 +718,16 @@ function rateBtns(id){
 function tabProd(){
  const L=P.strategie.ligne;
  const inj=S.injects.filter(i=>i.dest!=='tous').slice().reverse();
- const cards=inj.map(i=>{const dv=delivery(i);return `<div class="card inj g${i.g||1} ${dv?'done':''}"><div class="meta"><span class="tag">${DESTL[routeOf(i)]}</span><span>tour ${i.tour}</span>${(P[routeOf(i)].seen||{})[i.id]?`<span>vu à ${hhmm(P[routeOf(i)].seen[i.id])} (+${mmss(P[routeOf(i)].seen[i.id]-i.t0)})</span>`:(i.dest!=='tous'&&!dv?'<span style="color:var(--ko)">pas encore vu</span>':'')}${dv?`<span class="ok">livré en ${mmss(dv.t-i.t0)}${dv.t>i.t0+i.delai*60000?' (hors délai)':''}</span>`:'<span style="color:var(--ko)">non livré</span>'}</div><h4>${esc(i.titre)}</h4><div class="muted">${esc(i.tache)}</div>${dv?`<div class="card" style="background:#f7f7f7;margin-top:6px">${nl(dv.texte)}</div>`:''}${rateBtns(i.id)}</div>`}).join('');
+ const cards=inj.map(i=>{const dv=delivery(i);return `<div class="card inj g${i.g||1} ${dv?'done':''}"><div class="meta"><span class="tag">${DESTL[routeOf(i)]}</span><span>tour ${i.tour}</span>${(P[routeOf(i)].seen||{})[i.id]?`<span>vu à ${hhmm(P[routeOf(i)].seen[i.id])} (+${mmss(P[routeOf(i)].seen[i.id]-i.t0)})</span>`:(i.dest!=='tous'&&!dv?'<span style="color:var(--ko)">pas encore vu</span>':'')}${dv?`<span class="ok">livré en ${mmss(dv.t-i.t0)}${dv.t>i.t0+i.delai*60000?' (hors délai)':''}</span>`:'<span style="color:var(--ko)">non livré</span>'}</div><h4>${esc(i.titre)}</h4><div class="muted">${esc(i.tache)}</div>${dv?`<div class="card" style="background:#f7f7f7;margin-top:6px">${dv.type?'<b>['+esc(dv.type)+']</b><br>':''}${nl(dv.texte)}</div>`:''}${rateBtns(i.id)}</div>`}).join('');
  const lib=allLibre().map(x=>`<div class="card"><div class="meta"><span class="tag">${esc(x.type)}</span><span>${DESTL[x.vue]} · ${hhmm(x.t)}</span></div><div>${nl(x.texte)}</div>${rateBtns(x.id)}</div>`).join('');
  return `<div class="grid2"><div><h2>Livraisons des joueurs</h2>${cards||'<div class="info">Aucun inject pour l’instant.</div>'}</div>
  <div><div class="card"><h2>Ligne de la stratégie</h2>${L.publie?`<p class="muted">v${L.v} publiée à ${hhmm(L.t)}</p><p><b>Objectif :</b> ${esc(L.objectif)}</p><p><b>Messages :</b><br>${nl(L.messages)}</p><p><b>Cibles :</b> ${esc(L.cibles)}</p><p><b>Prochaine prise de parole :</b> ${esc(L.prochaine)}</p>${rateBtns('ligne')}`:'<span class="muted">Rien de publié.</span>'}</div>
- <h2>Productions libres</h2>${lib||'<div class="info">Aucune production libre.</div>'}</div></div>`;
+ <h2>Productions d’initiative</h2>${lib||'<div class="info">Aucune production d’initiative.</div>'}</div></div>`;
 }
 function timeline(){
  const ev=S.journal.map(j=>({t:j.t,txt:j.txt,kind:j.kind}));
  S.injects.forEach(i=>{const dv=delivery(i);if(dv)ev.push({t:dv.t,txt:`${DESTL[dv.vue]} livre : ${i.titre}`,kind:'livraison'})});
- VIEWS.forEach(v=>{(P[v].libre||[]).forEach(x=>ev.push({t:x.t,txt:`${DESTL[v]} publie (libre) : ${x.type}`,kind:'livraison'}))});
+ allLibre().forEach(x=>ev.push({t:x.t,txt:`${DESTL[x.vue]} publie (initiative) : ${x.type}`,kind:'livraison'}));
  if(P.strategie.ligne.publie)ev.push({t:P.strategie.ligne.t,txt:`Ligne stratégique publiée (v${P.strategie.ligne.v})`,kind:'livraison'});
  P.cod.renforts.forEach(r=>ev.push({t:r.t,txt:`COD demande un renfort (${r.type})`,kind:'alerte'}));
  return ev.sort((a,b)=>a.t-b.t);
