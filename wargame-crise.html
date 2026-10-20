@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wargame – Communication de crise</title>
+<style>
+:root{--bleu:#000091;--bleu2:#1212ff;--rouge:#e1000f;--gris:#f3f4f8;--bord:#d9dbe6;--txt:#161616;--ok:#18753c;--warn:#b34000;--ko:#ce0500}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.5 "Segoe UI",system-ui,Arial,sans-serif;color:var(--txt);background:var(--gris)}
+header.hd{background:var(--bleu);color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;border-bottom:4px solid var(--rouge)}
+.brand{display:flex;align-items:center;gap:12px}
+.brand .bar{width:6px;height:38px;background:linear-gradient(var(--bleu2),#fff,var(--rouge))}
+.brand small{opacity:.8;letter-spacing:.04em;text-transform:uppercase;font-size:11px}
+h1{margin:0;font-size:19px}
+h2{font-size:17px;margin:0 0 8px;color:var(--bleu)}
+h3{font-size:15px;margin:14px 0 6px}
+h4{margin:2px 0 4px;font-size:15px}
+.right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.tabs{display:flex;gap:4px;padding:10px 20px 0;background:#fff;border-bottom:1px solid var(--bord);flex-wrap:wrap}
+.tab{border:1px solid var(--bord);border-bottom:none;background:var(--gris);padding:8px 16px;cursor:pointer;font-weight:600;border-radius:6px 6px 0 0;color:#444}
+.tab.on{background:var(--bleu);color:#fff;border-color:var(--bleu)}
+main{padding:18px 20px;max-width:1500px;margin:0 auto}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:1000px){.grid2,.grid3{grid-template-columns:1fr}}
+.card{background:#fff;border:1px solid var(--bord);border-radius:8px;padding:14px;margin-bottom:14px}
+.card.sel{border:2px solid var(--bleu);box-shadow:0 0 0 3px #dfe0ff}
+.card.inj{border-left:6px solid var(--bleu)}
+.card.inj.g2{border-left-color:#e08a00}.card.inj.g3{border-left-color:var(--rouge)}
+.card.inj.done{opacity:.72;border-left-color:var(--ok)}
+.card.sit{border-left:6px solid var(--bleu)}
+.card.sit.old{opacity:.7;padding:8px 14px}
+.meta{display:flex;gap:10px;align-items:center;font-size:12.5px;color:#555;flex-wrap:wrap;margin-bottom:2px}
+.tag{background:#e8edff;color:var(--bleu);border-radius:4px;padding:1px 8px;font-weight:600;font-size:12px}
+.chip{display:inline-block;border-radius:12px;padding:2px 10px;font-size:12.5px;font-weight:700;background:#fff3;color:#fff}
+.chip.warn{background:#ffd;color:var(--warn)}
+.cd,.tcd,.chr{font-variant-numeric:tabular-nums;font-weight:700}
+.cd.late{color:var(--ko)}
+.ok{color:var(--ok);font-weight:700}
+.tache{background:#f5f5ff;border-radius:6px;padding:6px 10px;margin:8px 0;font-size:14px}
+textarea,input[type=text],input[type=number],select{width:100%;font:inherit;padding:8px;border:1px solid #888;border-radius:6px;background:#fff}
+textarea{min-height:110px;resize:vertical}
+button.btn{background:var(--bleu);color:#fff;border:none;border-radius:6px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
+button.btn:hover{background:var(--bleu2)}
+button.btn.sec{background:#fff;color:var(--bleu);border:1px solid var(--bleu)}
+button.btn.red{background:var(--rouge)}
+button.btn.small{padding:4px 10px;font-size:13px}
+button.btn:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row>*{flex:0 0 auto}
+.row .grow{flex:1 1 200px}
+.gauge{background:#e6e6ee;border-radius:8px;height:18px;overflow:hidden;margin:4px 0}
+.gauge i{display:block;height:100%;background:var(--ok);transition:width .4s}
+.gauge.t i{background:#e08a00}.gauge.s i{background:var(--rouge)}
+.dice{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0}
+.die{background:#fff;border:2px solid var(--bleu);border-radius:10px;padding:8px 14px;text-align:center;min-width:150px}
+.die b{display:block;font-size:34px;line-height:1.1;color:var(--bleu)}
+.die span{font-size:12.5px;color:#444}
+.alert{background:#fff0f0;border:1px solid var(--rouge);border-left:6px solid var(--rouge);padding:10px 12px;border-radius:6px;margin-bottom:12px}
+.info{background:#eef;border-left:6px solid var(--bleu);padding:10px 12px;border-radius:6px;margin-bottom:12px}
+.ligne{background:#effaf2;border:1px solid #9bd3ac;border-left:6px solid var(--ok)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border-bottom:1px solid var(--bord);padding:6px 8px;text-align:left;vertical-align:top}
+.rate button{margin-right:4px}
+.rate .on.okb{background:var(--ok);color:#fff;border-color:var(--ok)}
+.rate .on.midb{background:#e08a00;color:#fff;border-color:#e08a00}
+.rate .on.kob{background:var(--ko);color:#fff;border-color:var(--ko)}
+.tl li{margin:3px 0;font-size:14px}
+.tl .alerte{color:var(--ko);font-weight:600}
+.banner{background:var(--rouge);color:#fff;text-align:center;font-weight:700;letter-spacing:.15em;font-size:12px;padding:2px}
+.muted{color:#666;font-size:13px}
+.big{font-size:20px;font-weight:700}
+.tab .badge{background:var(--rouge);color:#fff;border-radius:10px;padding:0 7px;font-size:12px;margin-left:4px}
+.tab.on .badge{background:#fff;color:var(--rouge)}
+.ptabs{padding:0;background:none;margin-bottom:14px;border-bottom:1px solid var(--bord)}
+.strip{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.strip .g{flex:1 1 220px}
+.foot{position:fixed;left:10px;bottom:6px;font-size:12px;color:#555;background:#fffd;padding:2px 8px;border-radius:6px;z-index:800}
+.foot a{color:var(--bleu);cursor:pointer;text-decoration:underline}
+.modal{position:fixed;inset:0;background:rgba(10,10,60,.62);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal .box{background:#fff;border-radius:12px;max-width:640px;width:100%;border-top:10px solid var(--rouge);padding:22px 26px;box-shadow:0 20px 60px #0008;animation:pop .25s}
+.modal .box.g1{border-top-color:var(--bleu)}.modal .box.g2{border-top-color:#e08a00}
+.modal .box h2{font-size:22px;color:var(--rouge);margin:4px 0 8px}
+.modal .box.g1 h2{color:var(--bleu)}.modal .box.g2 h2{color:var(--warn)}
+.modal .q{font-size:12px;color:#666}
+@keyframes pop{from{transform:scale(.92);opacity:0}to{transform:none;opacity:1}}
+.chatw{position:fixed;right:14px;bottom:14px;z-index:900;width:340px;max-width:calc(100vw - 28px)}
+.chatw .tg{width:100%;background:var(--bleu);color:#fff;border:none;border-radius:10px 10px 0 0;padding:9px 14px;font:inherit;font-weight:700;cursor:pointer;text-align:left;display:flex;justify-content:space-between}
+.chatw.closed .tg{border-radius:10px}
+.chatw .badge{background:var(--rouge);color:#fff;border-radius:12px;padding:0 9px;font-size:13px}
+.chatw .body{background:#fff;border:1px solid var(--bord);border-top:none;padding:8px}
+.chatw .msgs{height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:2px}
+.msg{background:#eef;border-radius:8px;padding:5px 9px;font-size:14px;max-width:92%;align-self:flex-start}
+.msg.me{background:#dff3e4;align-self:flex-end}
+.msg small{display:block;color:#555;font-size:11.5px}
+.chatw textarea{min-height:44px;margin-top:6px}
+@media print{
+ .chatw,.modal{display:none!important}
+ .tabs,header.hd,button,.noprint{display:none!important}
+ body{background:#fff}.card{break-inside:avoid;border:1px solid #bbb}
+}
+</style>
+</head>
+<body>
+<div class="banner">EXERCICE — SIMULATION — SCÉNARIO FICTIF</div>
+<div id="app"></div>
+<input type="file" id="imp" accept=".json" style="display:none">
+<script>
+(function(){
+'use strict';
+/* ============ Utilitaires ============ */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nl=s=>esc(s).replace(/\n/g,'<br>');
+const now=()=>Date.now();
+const hhmm=t=>t?new Date(t).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'—';
+const mmss=ms=>{const s=Math.max(0,Math.round(ms/1000));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+const rnd=n=>1+Math.floor(Math.random()*n);
+const pickOne=a=>a[Math.floor(Math.random()*a.length)];
+const VIEWS=['strategie','cod','presse'];
+const KS='wgcc_s',KP=v=>'wgcc_p_'+v,KC='wgcc_custom',KCH='wgcc_chat';
+const CANAL=['','Réseaux sociaux','Presse locale','Presse nationale','Élu · parlementaire','Victimes · familles · riverains','Hiérarchie · cabinet'];
+const DESTL={cod:'COD',presse:'Presse',strategie:'Stratégie',tous:'Tous'};
+const ROLEL={strategie:'Cellule Stratégie',cod:'COD — information presse et public',presse:'Cellule Presse (appui)'};
+let GRIST=false;const GM={},gpend={},gwrote={};let gRows={},gtimer=null,gbusy=false,JR=[],gErr='';
+function locget(k){try{return localStorage.getItem(k)||''}catch(e){return ''}}
+function locset(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+function lraw(k){if(GRIST)return GM[k]||'';return locget(k)}
+function lget(k,d){const r=lraw(k);try{return r?JSON.parse(r):d}catch(e){return d}}
+function lset(k,v){const s=JSON.stringify(v);if(GRIST){GM[k]=s;gqueue(k,s)}else locset(k,s)}
+function gqueue(k,s){gwrote[k]=Date.now();gpend[k]=s;if(!gtimer)gtimer=setTimeout(gflush,350)}
+function gerr(e){gErr=(e&&e.message)||String(e);console.error(e)}
+async function gflush(){
+ gtimer=null;
+ if(gbusy){gtimer=setTimeout(gflush,300);return}
+ gbusy=true;
+ try{
+  const keys=Object.keys(gpend),acts=[];
+  keys.forEach(k=>{const v=gpend[k];delete gpend[k];
+   if(gRows[k])acts.push(['UpdateRecord','WG_Kv',gRows[k].id,{Valeur:v,Maj:gwrote[k]}]);
+   else acts.push(['AddRecord','WG_Kv',null,{Cle:k,Valeur:v,Maj:gwrote[k]}])});
+  if(acts.length)await grist.docApi.applyUserActions(acts);
+  if(keys.some(k=>!gRows[k]))await gfetch();
+  gErr='';
+ }catch(e){gerr(e)}
+ finally{gbusy=false;if(Object.keys(gpend).length&&!gtimer)gtimer=setTimeout(gflush,300)}
+}
+async function gfetch(){
+ const t=await grist.docApi.fetchTable('WG_Kv');
+ const seen={},dup=[];
+ for(let i=0;i<t.id.length;i++){
+  const k=t.Cle[i],m=+t.Maj[i]||0;if(!k)continue;
+  if(!seen[k]||m>=seen[k].maj){if(seen[k])dup.push(seen[k].id);seen[k]={id:t.id[i],maj:m,val:t.Valeur[i]}}else dup.push(t.id[i]);
+ }
+ gRows=seen;
+ Object.keys(seen).forEach(k=>{if(gpend[k]!==undefined)return;if(gwrote[k]&&seen[k].maj<gwrote[k])return;GM[k]=seen[k].val||''});
+ if(dup.length&&!gbusy){try{await grist.docApi.applyUserActions([['BulkRemoveRecord','WG_Kv',dup]])}catch(e){}}
+}
+async function gfetchJ(){
+ const t=await grist.docApi.fetchTable('WG_Journal');
+ const a=[];for(let i=0;i<t.id.length;i++)a.push({t:+t.Quand[i]||0,vue:t.Vue[i]||'',type:t.Type[i]||'',txt:t.Texte[i]||'',auteur:(t.Auteur&&t.Auteur[i])||''});
+ JR=a.sort((x,y)=>x.t-y.t);
+}
+function jrn(type,txt){if(!GRIST)return;try{grist.docApi.applyUserActions([['AddRecord','WG_Journal',null,{Quand:Date.now(),Heure:new Date().toLocaleTimeString('fr-FR'),Vue:view,Type:type,Texte:String(txt).slice(0,400)}]]).catch(gerr)}catch(e){gerr(e)}}
+
+/* ============ Scénarios ============ */
+const SCEN=[
+{id:'crue',icone:'🌊',titre:'Crue torrentielle en Ubaye',niveau:'Intermédiaire',
+ resume:'Vigilance rouge crues. L’Ubaye déborde, un camping est inondé, la RD900 est coupée. Disparus, décès, polémique sur l’alerte, déplacement du ministre.',
+ vars:{lieu:'la vallée de l’Ubaye',commune:'Barcelonnette',elu:'le maire de Barcelonnette',service:'le SDIS 04',media:['Haute-Provence Info','La Provence','France Bleu Provence'],nat:'BFMTV',rumeur:'une dizaine de campeurs auraient été emportés par la crue',ecart:'deux disparus selon le SDIS, quatre selon la gendarmerie'},
+ briefing:'Il est 14 h 10. Météo-France a placé le département en vigilance rouge « crues » à 11 h. L’Ubaye est en crue depuis midi, un camping est partiellement évacué et la RD900 est coupée à deux endroits. Le COD est activé depuis 13 h 30. Vous conseillez la préfète sur la stratégie de communication.',
+ oral:'Il est 14 h 10. Vigilance rouge crues depuis 11 h. L’Ubaye est sortie de son lit, un camping est en cours d’évacuation, la RD900 est coupée. Le COD est activé. Vous avez en face de vous des journalistes qui appellent déjà. Premier tour : vous avez 15 minutes.',
+ fil:[
+ {h:'H+0',titre:'Vigilance rouge, l’Ubaye déborde',faits:'L’Ubaye a dépassé son niveau historique. Un camping est inondé : 60 campeurs évacués par le SDIS, certains par hélicoptère. La RD900 est coupée à deux endroits.',bilan:'0 victime confirmée · 60 évacués · RD900 coupée',cod:'Premier communiqué : vigilance rouge, consignes (ne pas se déplacer), numéros utiles, point de situation. Un post pour les réseaux sociaux.',strat:'Quels sont les 3 messages prioritaires des deux premières heures ? Qui parle (préfète, directeur de cabinet) et quand ?'},
+ {h:'H+20',titre:'Deux personnes disparues',faits:'Deux campeurs sont signalés disparus. Le SDIS engage plongeurs et hélicoptère. Le maire demande à s’exprimer sur les ondes. L’électricité est coupée dans le haut de la vallée.',bilan:'2 disparus · 85 évacués · 1 200 foyers sans électricité',cod:'Point de situation n°2 + post : consignes et numéro d’information du public. Ne pas évoquer les disparus sans validation.',strat:'Faut-il confirmer l’existence de disparus ? Dans quels termes ? Comment s’articuler avec le maire ?'},
+ {h:'H+40',titre:'Un corps retrouvé',faits:'Un corps est découvert par les secours. Identification en cours, la famille n’est pas prévenue. Un hélicoptère de chaîne d’information survole la zone. Le parquet de Digne est informé.',bilan:'1 décès (non identifié) · 1 disparu · 90 évacués',cod:'Réponse écrite à la presse sur le décès : ce que l’on dit, ce que l’on ne dit pas, qui peut en parler.',strat:'La famille n’est pas prévenue. Quelle règle fixer pour la communication sur le décès ? Quel rôle pour le procureur ?'},
+ {h:'H+60',titre:'Éboulement : 120 personnes isolées',faits:'Un éboulement coupe la RD900 en amont : 120 personnes sont isolées sans électricité. Hébergement d’urgence ouvert au gymnase. Le ministre annonce qu’il suit la situation « heure par heure ».',bilan:'1 décès · 1 disparu · 120 isolés · 90 hébergés',cod:'Communiqué sur les personnes isolées et l’hébergement d’urgence + post d’informations pratiques.',strat:'Le cabinet du ministre demande un point dans 15 minutes. Quelles 10 lignes lui envoyer ? Quelle ligne sur les hébergements ?'},
+ {h:'H+80',titre:'Polémique sur l’alerte',faits:'Un élu et des habitants affirment que le camping aurait dû être évacué dès le matin. Une vidéo critiquant les services de l’État circule. Plusieurs médias demandent une conférence de presse.',bilan:'1 décès · 1 disparu · 120 isolés',cod:'Message de réponse à la polémique + déroulé du point presse (qui, quand, quoi).',strat:'Défendre, expliquer ou reconnaître ? Fixer la ligne : chronologie de l’alerte, faits établis, ce que l’on ne dit pas.'},
+ {h:'H+100',titre:'Décrue, premier bilan',faits:'La décrue s’amorce. Le disparu est retrouvé sans vie. Les 120 isolés sont ravitaillés par hélicoptère. Le ministre se déplace demain. Les maires demandent la reconnaissance de l’état de catastrophe naturelle.',bilan:'2 décès · 0 disparu · 120 isolés ravitaillés',cod:'Communiqué de fin de phase aiguë : bilan, remerciements, retour à la normale, prochaines étapes.',strat:'Préparer le déplacement du ministre : messages, dispositif presse, hommage. Quelle clôture pour la phase de crise ?'}],
+ cartes:[
+ {id:'C1',canal:2,g:2,dest:'presse',delai:8,titre:'Le gérant du camping parle',texte:'Le gérant du camping affirme à Haute-Provence Info qu’il n’a reçu « aucune consigne d’évacuation » avant 13 h. Le journaliste vous demande votre réaction avant publication.',tache:'Répondre sur les faits (chronologie de l’alerte) sans polémiquer ni accuser.'},
+ {id:'C2',canal:1,g:3,dest:'cod',delai:6,titre:'Fausse photo virale',texte:'Un compte local publie une photo ancienne d’une autre crue légendée « 10 morts au camping ». 3 000 partages en un quart d’heure.',tache:'Démentir sans amplifier, rétablir les faits vérifiés, signaler le contenu.'},
+ {id:'C3',canal:5,g:2,dest:'strategie',delai:8,titre:'Campeurs étrangers',texte:'Des campeurs néerlandais évacués ne comprennent pas les consignes. Leur consulat appelle la préfecture.',tache:'Décider d’une communication multilingue et d’un interlocuteur dédié.'}]},
+
+{id:'feu',icone:'🔥',titre:'Feu de forêt en zone périurbaine',niveau:'Intermédiaire',
+ resume:'Mistral, départ de feu en lisière de lotissement. Évacuations, pompier grièvement brûlé, rumeur de malveillance, polémique sur les moyens aériens.',
+ vars:{lieu:'les collines au nord de Manosque',commune:'Manosque',elu:'le maire de Manosque',service:'le SDIS 04',media:['La Provence','Haute-Provence Info','France Bleu Provence'],nat:'BFMTV',rumeur:'le feu serait d’origine criminelle et un suspect aurait été arrêté',ecart:'250 hectares selon le SDIS, 400 selon une image satellite diffusée par un média'},
+ briefing:'Il est 13 h 55. Journée de mistral, risque feux de forêt « très sévère ». Un feu vient de se déclarer en lisière d’un lotissement au nord de la ville. Le SDIS engage ses moyens. Le COD est en cours d’activation. Vous conseillez la préfète sur la stratégie de communication.',
+ oral:'Il est 13 h 55. Mistral fort, risque feux très sévère. Un feu s’est déclaré en lisière d’un lotissement et progresse vite. Les premiers appels de journalistes arrivent. Premier tour : 15 minutes.',
+ fil:[
+ {h:'H+0',titre:'Départ de feu, mistral',faits:'Feu déclaré vers 13 h 40 en lisière d’un lotissement. Fort mistral : 60 hectares en vingt minutes. Moyens terrestres engagés, deux Canadair demandés.',bilan:'60 ha · 0 victime · 150 habitants confinés',cod:'Communiqué : consignes de confinement ou d’évacuation, ne pas encombrer les routes, numéros utiles. Un post RS.',strat:'Confinement ou évacuation : quel message ? Qui s’exprime en premier, la préfète ou le maire ?'},
+ {h:'H+20',titre:'Évacuations',faits:'Le feu atteint 250 ha. 600 habitants évacués vers le gymnase et la salle polyvalente. La RD907 est coupée. Un hélicoptère de reportage est signalé dans la zone.',bilan:'250 ha · 600 évacués · RD coupée',cod:'Point de situation n°2 + informations pratiques sur l’accueil des évacués (lieux, animaux, médicaments).',strat:'Comment éviter que l’afflux de journalistes gêne les secours ? Faut-il un point presse sur site ?'},
+ {h:'H+40',titre:'Un pompier gravement brûlé',faits:'Un sapeur-pompier est gravement brûlé, évacué par hélicoptère. Sa famille n’est pas encore prévenue. Deux autres pompiers sont légèrement blessés.',bilan:'300 ha · 3 pompiers blessés dont 1 grave · 600 évacués',cod:'Réponse écrite à la presse sur les blessés : que dire, que taire (identité, état), validation du SDIS.',strat:'Hommage et soutien aux pompiers : qui s’exprime et quand ? La famille d’abord.'},
+ {h:'H+60',titre:'Maisons détruites, rumeur de malveillance',faits:'Une vingtaine de maisons sont détruites. Une rumeur circule : le feu serait d’origine criminelle, un suspect aurait été interpellé. Le parquet n’a rien confirmé.',bilan:'400 ha · 22 habitations détruites · 800 évacués',cod:'Recadrer la rumeur sans empiéter sur l’enquête : communiqué + post RS.',strat:'Que dire de l’origine du feu ? Quelle articulation avec le procureur ?'},
+ {h:'H+80',titre:'Polémique sur les moyens aériens',faits:'Des élus accusent l’État d’avoir tardé à engager les Canadair. Un syndicat de pompiers dénonce un manque de moyens. Les médias nationaux arrivent.',bilan:'400 ha · 22 maisons · 800 évacués',cod:'Message de réponse et déroulé du point presse.',strat:'Fixer la ligne : transparence sur la chronologie des moyens, ton face aux élus et au syndicat.'},
+ {h:'H+100',titre:'Feu fixé, retour des habitants',faits:'Feu fixé à 520 ha. Retour des habitants par secteurs, 15 maisons restent inaccessibles. Le ministre annonce sa venue.',bilan:'520 ha · 22 maisons détruites · 3 pompiers blessés',cod:'Communiqué sur le retour des habitants : calendrier, aides, numéros.',strat:'Préparer le déplacement du ministre, l’accompagnement des sinistrés, le retex public.'}],
+ cartes:[
+ {id:'F1',canal:2,g:2,dest:'presse',delai:8,titre:'Image satellite contradictoire',texte:'Un journaliste a obtenu une image satellite qui laisse penser que le feu est bien plus étendu que votre chiffre. Il publie dans 15 minutes.',tache:'Expliquer l’écart entre surface estimée et surface constatée, sans minimiser.'},
+ {id:'F2',canal:5,g:2,dest:'strategie',delai:8,titre:'Éleveurs et animaux',texte:'Des éleveurs bloqués par les barrages routiers veulent rejoindre leurs bêtes et menacent de forcer le passage. Ils appellent une radio.',tache:'Décider du message et de l’interlocuteur.'},
+ {id:'F3',canal:1,g:3,dest:'cod',delai:6,titre:'Appel à la mobilisation spontanée',texte:'Un groupe local appelle sur les réseaux à venir « aider » avec des tracteurs-citernes. Des centaines de personnes sont prêtes à se rendre sur place.',tache:'Rédiger un message clair pour dissuader, expliquer le danger pour les secours.'}]},
+
+{id:'car',icone:'🚌',titre:'Accident d’un autocar de touristes',niveau:'Avancé',
+ resume:'Autocar de 38 touristes étrangers sorti de route sur la RN85. Bilan lourd, vidéo virale, chauffeur mis en cause, familles et ambassades. Articulation avec le parquet.',
+ vars:{lieu:'la RN85 au sud de Digne-les-Bains',commune:'Digne-les-Bains',elu:'le maire de Digne-les-Bains',service:'le SDIS 04',media:['Haute-Provence Info','La Provence','France Bleu Provence'],nat:'franceinfo',rumeur:'le chauffeur aurait été sous l’emprise de l’alcool',ecart:'quatre morts selon le SDIS, six selon la gendarmerie'},
+ briefing:'Il est 16 h 20. Un autocar transportant 38 touristes étrangers (néerlandais et belges) a quitté la chaussée sur la RN85 au sud de Digne. Le bilan est encore flou. La route est fermée dans les deux sens. Le COD est activé. Vous conseillez la préfète sur la stratégie de communication.',
+ oral:'Il est 16 h 20. Accident d’un autocar de touristes étrangers sur la RN85. Le bilan est flou. Les premiers journalistes appellent, les premières images circulent. Premier tour : 15 minutes.',
+ fil:[
+ {h:'H+0',titre:'Accident d’un autocar de touristes',faits:'Un autocar de 38 touristes néerlandais et belges a quitté la chaussée. Nombreux blessés, bilan flou. La RN85 est fermée dans les deux sens.',bilan:'Bilan en cours · 38 passagers · RN85 fermée',cod:'Premier communiqué : faits avérés, route coupée, déviations, numéro d’information pour les familles.',strat:'Quel niveau de précision accepter alors que le bilan n’est pas consolidé ? Qui parle ?'},
+ {h:'H+20',titre:'Bilan lourd, hôpitaux sollicités',faits:'Bilan provisoire : 4 morts, 19 blessés dont 6 en urgence absolue. Le plan blanc est activé. Une cellule d’urgence médico-psychologique est mise en place.',bilan:'4 morts · 19 blessés (6 UA) · 15 indemnes',cod:'Communiqué n°2 : bilan provisoire, dispositifs d’accueil, numéro d’information des familles.',strat:'Quel ton pour un bilan de décès ? Quelle communication vers les familles à l’étranger ?'},
+ {h:'H+40',titre:'Une vidéo de l’accident circule',faits:'Une vidéo tournée par un automobiliste montre l’autocar et des victimes. Elle est reprise par des chaînes d’information. Plusieurs familles l’apprennent ainsi.',bilan:'4 morts · 19 blessés · identification en cours',cod:'Post RS + réponse presse sur la diffusion d’images : appel à la retenue, respect des familles.',strat:'Faut-il demander aux médias de ne pas diffuser ? Qui prévient les familles ? Qui coordonne avec les consulats ?'},
+ {h:'H+60',titre:'Le chauffeur mis en cause',faits:'Une source non identifiée affirme que le chauffeur aurait dépassé son temps de conduite et serait sous l’emprise de l’alcool. Le procureur n’a pas encore communiqué.',bilan:'5 morts (un blessé décédé) · 18 blessés',cod:'Réponse écrite à la presse : renvoi au procureur, pas d’éléments d’enquête, empathie.',strat:'Comment tenir la ligne « l’enquête appartient au procureur » face à la pression ? Coordination avec le parquet.'},
+ {h:'H+80',titre:'Familles et ambassades',faits:'Les familles arrivent. Les ambassades des Pays-Bas et de Belgique appellent la préfecture. Un collectif de victimes se constitue et demande une réunion publique.',bilan:'5 morts · 18 blessés · 40 proches attendus',cod:'Communiqué sur l’accueil des familles ; message multilingue simple (FR/EN/NL).',strat:'Quelle communication d’accompagnement ? Faut-il un point presse avec le procureur ? Hommage ?'},
+ {h:'H+100',titre:'Réouverture, déplacement ministériel',faits:'La RN85 rouvre. L’expertise de l’autocar est lancée. Le ministre des Transports annonce un déplacement et une inspection des autocars touristiques.',bilan:'5 morts · 18 blessés · route rouverte',cod:'Communiqué de fin de phase aiguë : réouverture, hommages, numéro d’information.',strat:'Préparer le déplacement ministériel et le message sur la sécurité des transports ; clôturer la crise.'}],
+ cartes:[
+ {id:'A1',canal:3,g:3,dest:'presse',delai:6,titre:'Question piège : l’alcool',texte:'Un journaliste national demande, en direct : « Le chauffeur avait-il bu ? Oui ou non ? » Il précise que son confrère local « a la réponse ».',tache:'Répondre sans éléments d’enquête, renvoyer au procureur, rester empathique.'},
+ {id:'A2',canal:5,g:3,dest:'cod',delai:6,titre:'Famille mal informée',texte:'Un proche d’un passager, en larmes sur une chaîne, dit avoir appris le décès de sa sœur par un journaliste. Il accuse la préfecture.',tache:'Réponse écrite ou orale : empathie, dispositif d’information des familles, numéro dédié.'},
+ {id:'A3',canal:6,g:2,dest:'strategie',delai:8,titre:'Le ministère veut un chiffre',texte:'Le cabinet du ministre veut « le bilan définitif » pour une déclaration dans 20 minutes. Votre bilan n’est pas consolidé.',tache:'Décider ce que vous transmettez et à quelles conditions.'}]}
+];
+const ALL=()=>SCEN.concat(lget(KC,[]));
+
+/* ============ Cartes génériques ============ */
+function genCards(v){
+ const m0=v.media[0],m1=v.media[1]||v.media[0],m2=v.media[2]||m0;
+ return [
+ {id:'RS1',canal:1,g:1,dest:'cod',delai:6,titre:'Photo alarmiste',texte:`Une photo de ${v.lieu} circule sur Facebook et X avec une légende alarmiste (« c’est pire que ce qu’on vous dit »). 800 partages en dix minutes.`,tache:'Décider : répondre, ignorer ou rediriger vers vos informations ? Rédiger le post si vous répondez.'},
+ {id:'RS2',canal:1,g:2,dest:'cod',delai:6,titre:'Rumeur sur le bilan',texte:`Un compte local affirme que ${v.rumeur}. Le message est repris par plusieurs comptes.`,tache:'Rectifier sans confirmer ni amplifier la rumeur. Rédiger le message.'},
+ {id:'RS3',canal:1,g:3,dest:'cod',delai:6,titre:'Vidéo virale contre l’État',texte:`Un habitant filme un tir de reproche contre les services de l’État à ${v.commune}. 50 000 vues, reprise par ${v.nat}.`,tache:'Définir une réponse factuelle, en cohérence avec la ligne de la stratégie. Informer la stratégie.'},
+ {id:'RS4',canal:1,g:1,dest:'cod',delai:7,titre:'Questions répétées',texte:`30 commentaires identiques sous votre dernier post : « où trouver des informations ? numéro à appeler ? »`,tache:'Rédiger un post d’information pratique, épinglé.'},
+ {id:'PL1',canal:2,g:1,dest:'presse',delai:6,titre:`${m0} demande un chiffre`,texte:`Un journaliste de ${m0} prépare un direct dans 15 minutes. Il veut un point de situation actualisé et un chiffre précis.`,tache:'Donner les éléments confirmés, annoncer le prochain point.'},
+ {id:'PL2',canal:2,g:2,dest:'presse',delai:8,titre:'« J’ai une source »',texte:`Un journaliste de ${m1} dit détenir une source qui contredit votre bilan. Il publie dans 20 minutes et vous demande de confirmer.`,tache:'Ne pas confirmer ce que vous n’avez pas vérifié ; donner ce qui est établi.'},
+ {id:'PL3',canal:2,g:3,dest:'presse',delai:6,titre:'Interview en direct',texte:`Une radio locale (${m2}) demande une interview en direct d’une autorité dans 10 minutes. Ligne ouverte, auditeurs en direct.`,tache:'Décider qui parle et préparer les trois messages. Réponse orale de 1 min 30.'},
+ {id:'PL4',canal:2,g:1,dest:'presse',delai:7,titre:'Accès au site',texte:`La rédaction de ${m0} demande à se rendre sur site et à photographier les opérations.`,tache:'Répondre : conditions de sécurité, lieu et heure d’un point presse.'},
+ {id:'PN1',canal:3,g:2,dest:'presse',delai:6,titre:'Chaîne d’information en continu',texte:`${v.nat} vous appelle pour la troisième fois en dix minutes et réclame un porte-parole en plateau. « Sinon nous prendrons la version de l’élu. »`,tache:'Décider d’y aller ou non. Sinon, proposer une alternative (message, point presse à heure fixe).'},
+ {id:'PN2',canal:3,g:3,dest:'presse',delai:6,titre:'Interrogation agressive',texte:`Un journaliste national, ton agressif : « Vous saviez, n’est-ce pas ? Pourquoi les alertes n’ont-elles pas été plus tôt ? Est-ce la faute de l’État ? »`,tache:'Répondre par la chronologie des faits, sans défensive. Réponse orale de 1 min 30.'},
+ {id:'PN3',canal:3,g:1,dest:'presse',delai:7,titre:'Agence de presse',texte:`Une agence de presse demande un chiffre à jour et sa source, pour une dépêche.`,tache:'Donner un chiffre sourcé, daté, et indiquer qu’il évoluera.'},
+ {id:'EL1',canal:4,g:1,dest:'strategie',delai:8,titre:'L’élu parle avant vous',texte:`${v.elu} s’exprime à la radio, avec un chiffre différent du vôtre.`,tache:'Décider : réaligner, rectifier ou laisser. Prévenir le COD.'},
+ {id:'EL2',canal:4,g:2,dest:'strategie',delai:8,titre:'Un parlementaire demande des comptes',texte:`Un parlementaire local publie un communiqué demandant « des explications » à la préfète et réclame une cellule d’accueil.`,tache:'Décider de la réponse, du canal et de la personne qui répond.'},
+ {id:'EL3',canal:4,g:3,dest:'strategie',delai:8,titre:'Des maires mettent en cause l’État',texte:`Deux maires voisins réclament publiquement plus de moyens et dénoncent « l’absence de l’État ».`,tache:'Choisir la ligne : contact direct, communiqué commun, silence. Arbitrer.'},
+ {id:'FA1',canal:5,g:1,dest:'cod',delai:7,titre:'Une famille appelle',texte:`Une famille appelle la préfecture : elle demande des nouvelles d’un proche. Personne ne l’a informée.`,tache:'Indiquer le point de contact dédié et rédiger une consigne d’accueil pour les appels.'},
+ {id:'FA2',canal:5,g:2,dest:'strategie',delai:8,titre:'Riverains en colère',texte:`Des riverains évacués se plaignent d’un manque d’information. Un collectif menace d’alerter la presse nationale.`,tache:'Définir une action de proximité (point d’information, référent) et la porter.'},
+ {id:'FA3',canal:5,g:3,dest:'cod',delai:6,titre:'Témoignage en larmes',texte:`Un proche d’une victime témoigne en larmes sur une chaîne : il aurait appris la nouvelle par un journaliste.`,tache:'Rédiger une réponse empathique, expliquer le dispositif d’annonce aux familles.'},
+ {id:'HI1',canal:6,g:1,dest:'strategie',delai:7,titre:'Point de situation du cabinet',texte:`Le cabinet du ministre demande un point de situation de dix lignes dans 15 minutes.`,tache:'Faire la note, la faire valider, la transmettre.'},
+ {id:'HI2',canal:6,g:2,dest:'strategie',delai:8,titre:'Déplacement ministériel',texte:`Le ministre annonce son déplacement demain. La préfète demande un projet de message d’accueil et un dispositif presse.`,tache:'Proposer messages clés, lieu, cadre presse.'},
+ {id:'HI3',canal:6,g:3,dest:'cod',delai:6,titre:'Communiqué publié trop tôt',texte:`Le cabinet s’étonne qu’un communiqué soit sorti avant sa validation et demande l’origine de l’écart.`,tache:'Expliquer, corriger la procédure, ne pas rejeter la faute. Prévenir la stratégie.'}
+ ];
+}
+function frictionsOf(v){return{
+ retard:[
+ {dest:'cod',g:1,delai:6,titre:'Deux bilans contradictoires',texte:`Ce qui vous parvient : ${v.ecart}. Votre communiqué doit partir dans dix minutes.`,tache:'Choisir quel chiffre publier, comment le sourcer, ou publier sans chiffre. Informer la stratégie.'},
+ {dest:'cod',g:2,delai:7,titre:'Validation bloquée',texte:'Le directeur de cabinet est en réunion avec la préfète pour 15 minutes. Votre projet de communiqué attend sa validation.',tache:'Décider : attendre, utiliser un message d’attente déjà validé, solliciter une autre autorité de validation.'},
+ {dest:'cod',g:1,delai:6,titre:'Information clé en retard',texte:`Le point de situation de ${v.service} arrive avec 20 minutes de retard et modifie le bilan.`,tache:'Ajuster le message en cours, annoncer un nouveau point à heure fixe.'}],
+ partenaire:[
+ {dest:'strategie',g:2,delai:7,titre:'Un partenaire communique de son côté',texte:'La gendarmerie vient de publier sur ses réseaux un message plus détaillé que le vôtre, avec un chiffre différent.',tache:'Réaligner : appeler le partenaire, décider de la ligne commune, informer le COD.'},
+ {dest:'strategie',g:2,delai:7,titre:'Communiqué de la mairie',texte:`${v.elu} diffuse son propre communiqué, avec une consigne différente de la vôtre.`,tache:'Réaligner et décider qui corrige.'},
+ {dest:'cod',g:2,delai:6,titre:'Bilan non consolidé en ligne',texte:`${v.service} publie un bilan non consolidé sur ses réseaux. Les journalistes vous le citent.`,tache:'Sécuriser la version : publier votre bilan sourcé ou demander le retrait.'}],
+ panne:[
+ {dest:'cod',g:2,delai:6,titre:'Messagerie et site hors service',texte:'La messagerie institutionnelle est indisponible pendant 20 minutes et le site de la préfecture est inaccessible.',tache:'Basculer sur un canal de secours (téléphone, SMS, comptes RS) et prévenir les médias.'},
+ {dest:'presse',g:2,delai:5,titre:'Ligne presse saturée',texte:'La ligne téléphonique presse est saturée : douze appels en attente.',tache:'Prioriser les appels, décider d’une mise en attente ou d’une communication de masse.'},
+ {dest:'strategie',g:3,delai:7,titre:'Porte-parole injoignable',texte:'Le porte-parole désigné est injoignable : il est en transit, sans réseau pendant 30 minutes.',tache:'Désigner un autre porte-parole, le briefer, prévenir les médias.'}]
+};}
+
+/* ============ État ============ */
+function newState(){return{scenarioId:'crue',tour:0,running:false,ended:false,paused:false,pauseStart:null,tourMinutes:15,tourEnd:null,presseOn:false,presseAt:null,presseLogged:false,injects:[],situation:[],journal:[],notes:{},rep:{},usedCards:[],dice:null,draft:{},seq:1,rev:0,satFirst:{orange:null,rouge:null},joueurs:{strategie:'',cod:'',presse:''},rfDelay:3,started:null}}
+function newProd(){return{seen:{},items:{},ligne:{objectif:'',messages:'',cibles:'',prochaine:'',publie:false,t:null,v:0,dirty:false},renforts:[],libre:[],libreDraft:{type:'Communiqué',texte:''},rf:{type:'presse',motif:''}}}
+const url=new URL(location.href);
+const viewParam=((location.hash||'').match(/view=(\w+)/)||(location.search||'').match(/view=(\w+)/)||[])[1]||'';
+let view=viewParam;
+let S=Object.assign(newState(),lget(KS,{}));
+let P={};VIEWS.forEach(v=>{P[v]=Object.assign(newProd(),lget(KP(v),{}))});
+let tab='prep';
+let lastRaw='';
+const chronos={};
+const CHKEYS=['mj'].concat(VIEWS).map(v=>KCH+'_'+v);
+function loadCH(){let a=[];CHKEYS.forEach(k=>{a=a.concat(lget(k,[]))});return a.sort((x,y)=>x.t-y.t)}
+let CH=[];
+let chatOpen=false,chatDraft='',chatFrom='MJ',lastCount=-1,lastChat=-1;
+const KRk=()=>'wgcc_read_'+view;
+let chatRead=0;
+let ptab={};
+function saveMine(m){const k=KCH+'_'+view;const a=lget(k,[]);a.push(m);lset(k,a);CH=loadCH();lastRaw=snapshot()}
+function snapshot(){return [KS].concat(VIEWS.map(KP),CHKEYS).map(lraw).join('|')}
+function beep(){try{const a=new (window.AudioContext||window.webkitAudioContext)();const o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=880;g.gain.value=.15;o.start();o.stop(a.currentTime+.18);setTimeout(()=>{try{a.close()}catch(e){}},400)}catch(e){}}
+const myLabel=()=>view==='mj'?chatFrom:(({strategie:'Stratégie',cod:'COD',presse:'Presse'})[view]+(S.joueurs[view]?' ('+S.joueurs[view]+')':''));
+function unseenFor(v){return S.injects.filter(i=>i.dest!=='tous'&&routeOf(i)===v&&!delivery(i)&&!(P[v].seen&&P[v].seen[i.id])).sort((a,b)=>a.t0-b.t0)}
+function modalHtml(v){
+ if(!S.running||S.ended)return '';
+ const q=unseenFor(v);if(!q.length)return '';
+ const i=q[0];
+ return `<div class="modal"><div class="box g${i.g||1}"><div class="q">${q.length>1?q.length+' sollicitations en attente — voici la plus ancienne':'Nouvelle sollicitation'}</div>
+ <div class="meta"><span class="tag">${i.canal?esc(CANAL[i.canal]):(i.type==='friction'?'Imprévu interne':'Fil rouge')}</span><span>${hhmm(i.t0)}</span><span>échéance <span class="cd" data-end="${i.t0+i.delai*60000}"></span></span></div>
+ <h2>${esc(i.titre)}</h2><div style="font-size:16px">${nl(i.texte)}</div>
+ <div class="tache"><b>À faire :</b> ${esc(i.tache)}</div>
+ <div class="row"><button class="btn big" data-act="seen" data-id="${i.id}">Pris en compte</button></div></div></div>`;
+}
+function pickerHtml(){
+ return headerBlock('Wargame — Choisissez votre poste','Communication de crise','')+`<main><div class="grid3">${[['mj','Maître du jeu','Pilote l’exercice, lance les dés, note les productions'],['strategie','Stratégie','Cadre la communication, rend les arbitrages'],['cod','COD','Information presse et public, communiqués et réseaux sociaux'],['presse','Cellule presse','Appui : gère la pression médiatique']].map(r=>`<div class="card"><div class="big">${r[1]}</div><p>${r[2]}</p><button class="btn" data-act="role" data-v="${r[0]}">Je suis ${r[1]}</button></div>`).join('')}</div></main>`;
+}
+function footHtml(){
+ if(!GRIST&&!gErr)return '';
+ return `<div class="foot">${GRIST?'Connecté à Grist · ':''}poste : <b>${esc(view)}</b> · <a data-act="changerole">changer de poste</a>${gErr?` · <span style="color:var(--ko)">erreur : ${esc(gErr)}</span>`:''}</div>`;
+}
+function chatHtml(){
+ const unread=CH.filter(m=>m.t>chatRead&&m.v!==view).length;
+ const me=myLabel();
+ const msgs=CH.slice(-80).map(m=>`<div class="msg ${m.v===view?'me':''}"><small>${esc(m.from)} · ${hhmm(m.t).slice(0,5)}</small>${nl(m.txt)}</div>`).join('');
+ return `<div class="chatw ${chatOpen?'':'closed'}"><button class="tg" data-act="chatToggle"><span>💬 Messagerie de crise</span>${unread?`<span class="badge">${unread}</span>`:''}</button>
+ ${chatOpen?`<div class="body"><div class="msgs" id="chat-msgs">${msgs||'<span class="muted">Aucun message.</span>'}</div>
+ ${view==='mj'?`<select id="chat-from" data-bind="chat:from" style="margin-top:6px">${['MJ','Cabinet du ministre','Préfète','Directeur de cabinet','SDIS','Gendarmerie','Mairie','Journaliste'].map(x=>`<option ${chatFrom===x?'selected':''}>${x}</option>`).join('')}</select>`:`<div class="muted" style="margin-top:4px">Vous écrivez en tant que : ${esc(me)}</div>`}
+ <textarea id="chat-in" data-bind="chat:draft" placeholder="Message (Entrée pour envoyer)">${esc(chatDraft)}</textarea>
+ <button class="btn small" data-act="chatSend" style="margin-top:4px">Envoyer</button></div>`:''}</div>`;
+}
+function save(){S.rev=(S.rev||0)+1;lset(KS,S);lastRaw=snapshot()}
+function savP(v){lset(KP(v),P[v]);lastRaw=snapshot()}
+function log(txt,kind){S.journal.push({t:now(),txt:txt,kind:kind||'mj'})}
+const scen=()=>ALL().find(s=>s.id===S.scenarioId)||ALL()[0];
+const clk=()=>S.paused&&S.pauseStart?S.pauseStart:now();
+const presseActive=()=>!!(S.presseOn||(S.presseAt&&now()>=S.presseAt));
+const routeOf=i=>i.dest==='presse'?(presseActive()?'presse':'cod'):i.dest;
+function delivery(i){for(const v of VIEWS){const it=P[v].items[i.id];if(it&&it.done)return Object.assign({vue:v},it)}return null}
+const isEchu=i=>clk()>i.t0+i.delai*60000;
+const weight=i=>1+(isEchu(i)?1:0)+((i.g||1)>=3?1:0);
+function openFor(v){return S.injects.filter(i=>i.dest!=='tous'&&routeOf(i)===v&&!delivery(i))}
+function loads(){const o={};VIEWS.forEach(v=>{o[v]=openFor(v).reduce((a,i)=>a+weight(i),0)});return o}
+function deck(){const s=scen();return genCards(s.vars).concat(s.cartes||[])}
+
+/* ============ Moteur ============ */
+function addInject(o,type){
+ const i=Object.assign({id:'i'+(S.seq++),type:type,tour:S.tour,t0:clk(),g:1,delai:8,canal:0,tache:''},o);
+ S.injects.push(i);
+ log(`Inject (${DESTL[i.dest]}) : ${i.titre}`,'inject');
+ return i;
+}
+function startTour(){
+ const s=scen(),f=s.fil[S.tour-1];if(!f)return;
+ S.situation.push({tour:S.tour,h:f.h,titre:f.titre,faits:f.faits,bilan:f.bilan,t:now()});
+ S.tourEnd=clk()+S.tourMinutes*60000;
+ log(`Tour ${S.tour} (${f.h}) : ${f.titre}`,'tour');
+ const d=Math.max(3,Math.round(S.tourMinutes*0.7));
+ addInject({dest:'cod',g:1,delai:d,titre:'Production attendue : '+f.titre,texte:'Bilan : '+f.bilan,tache:f.cod},'fil');
+ addInject({dest:'strategie',g:1,delai:d,titre:'Arbitrage attendu : '+f.titre,texte:'Bilan : '+f.bilan,tache:f.strat},'fil');
+}
+function startExercise(){
+ S.running=true;S.tour=1;S.started=now();S.ended=false;
+ log('Début de l’exercice','tour');
+ startTour();save();tab='pilot';render();
+}
+function nextTour(){
+ const s=scen();
+ if(S.tour>=s.fil.length){if(confirm('Dernier tour atteint. Clôturer l’exercice et passer au retex ?')){S.ended=true;S.running=false;log('Fin de l’exercice','tour');save();tab='retex';render()}return}
+ S.tour++;startTour();save();render();
+}
+function resetAll(){
+ const keep={scenarioId:S.scenarioId,tourMinutes:S.tourMinutes,presseOn:S.presseOn,joueurs:S.joueurs};
+ S=Object.assign(newState(),keep);
+ VIEWS.forEach(v=>{P[v]=newProd();savP(v)});
+ CHKEYS.forEach(k=>lset(k,[]));CH=[];lastRaw=snapshot();
+ save();tab='prep';render();
+}
+function pickCard(c,level){
+ let pool=deck().filter(x=>x.canal===c&&!S.usedCards.includes(x.id));
+ if(!pool.length)pool=deck().filter(x=>x.canal===c);
+ let sel=pool.filter(x=>x.g===level);
+ if(!sel.length)sel=pool.filter(x=>x.g<=level);
+ if(!sel.length)sel=pool;
+ return sel.length?pickOne(sel):null;
+}
+function frictionCard(f){
+ const fr=frictionsOf(scen().vars);
+ const kind=f<=4?'retard':(f===5?'partenaire':'panne');
+ const c=pickOne(fr[kind]);
+ return Object.assign({id:'FR'+rnd(99999),canal:0,kind:kind},c);
+}
+const AGG=['Situation stable : pas de fait nouveau','Fait nouveau sur le terrain','Fait nouveau + fuite ou rumeur','Rebond majeur'];
+const FRL=f=>f<=2?'Tout fonctionne':(f<=4?'Information en retard ou contradictoire':(f===5?'Un partenaire communique de son côté':'Panne ou indisponibilité'));
+function rollDice(){
+ const a=rnd(6),c=rnd(6),f=rnd(6);
+ const level=a<=2?0:(a<=4?1:(a===5?2:3));
+ S.dice={a:a,c:c,f:f,level:level,card:level?pickCard(c,level):null,fr:f>=3?frictionCard(f):null,t:now()};
+ log(`Dés : aggravation ${a} (${AGG[level]}), canal ${c} (${CANAL[c]}), friction ${f} (${FRL(f)})`,'des');
+ save();render();
+}
+
+/* ============ Actions ============ */
+const A={
+ tab(d){tab=d.k;render()},
+ ptab(d){ptab[view]=d.k;if(view==='cod'&&d.k==='ligne'&&P.strategie.ligne.publie&&P.cod.ligneSeen!==P.strategie.ligne.v){P.cod.ligneSeen=P.strategie.ligne.v;savP('cod')}render()},
+ role(d){view=d.v;locset('wgcc_role',view);chatRead=+(locget(KRk())||0);lastCount=-1;lastChat=-1;render()},
+ changerole(){view='';locset('wgcc_role','');render()},
+ choose(d){if(S.running)return;S.scenarioId=d.id;save();render()},
+ start(){if(!S.running)startExercise()},
+ reset(){if(confirm('Réinitialiser l’exercice ? Toutes les productions seront perdues.'))resetAll()},
+ open(d){window.open(location.href.split('#')[0]+'#view='+d.v,'wg_'+d.v,'width=1180,height=820')},
+ roll(){rollDice()},
+ injcard(){const d=S.dice;if(!d||!d.card)return;S.usedCards.push(d.card.id);addInject(d.card,'carte');d.card=null;save();render()},
+ rerollcard(){const d=S.dice;if(!d)return;d.card=pickCard(d.c,Math.max(1,d.level));save();render()},
+ injfr(){const d=S.dice;if(!d||!d.fr)return;addInject(d.fr,'friction');d.fr=null;save();render()},
+ skipdice(){S.dice=null;save();render()},
+ pause(){if(!S.running||S.paused)return;S.paused=true;S.pauseStart=now();log('Pause','tour');save();render()},
+ resume(){if(!S.paused)return;const dd=now()-S.pauseStart;S.injects.forEach(i=>{i.t0+=dd});if(S.tourEnd)S.tourEnd+=dd;if(S.presseAt)S.presseAt+=dd;S.paused=false;S.pauseStart=null;log('Reprise','tour');save();render()},
+ next(){nextTour()},
+ togglePresse(){S.presseOn=!S.presseOn;if(S.presseOn)log('Cellule presse engagée','alerte');save();render()},
+ manual(){
+  const d=S.draft||{};if(!d.titre){alert('Donnez un titre à l’inject.');return}
+  addInject({dest:d.dest||'cod',titre:d.titre,texte:d.texte||'',tache:d.tache||'',delai:Math.max(1,+d.delai||8),g:+d.g||1},'manuel');
+  S.draft={dest:d.dest,delai:d.delai};save();render();
+ },
+ accord(d){
+  const t=+d.t,r=P.cod.renforts.find(x=>x.t===t);if(!r)return;
+  const dl=Math.max(0,+S.rfDelay||0);
+  S.rep[t]={etat:'accorde',arrivee:clk()+dl*60000};
+  if(r.type==='presse'){S.presseAt=clk()+dl*60000;S.presseLogged=false}
+  log(`Renfort accordé (${r.type}) : arrive dans ${dl} min`,'alerte');save();render();
+ },
+ refuse(d){
+  const t=+d.t,m=prompt('Motif du refus (vu par le COD) ?','Aucun agent disponible pour le moment.')||'Refusé';
+  S.rep[t]={etat:'refuse',motif:m};log('Renfort refusé : '+m,'alerte');save();render();
+ },
+ note(d){S.notes[d.id]=Object.assign(S.notes[d.id]||{},{n:d.n});save();render()},
+ livrer(d){
+  const it=P[view].items[d.id]||(P[view].items[d.id]={});
+  if(!(it.texte||'').trim()){alert('Rédigez votre production avant de la livrer.');return}
+  it.done=true;it.t=now();savP(view);jrn('livraison',(S.injects.find(x=>x.id===d.id)||{}).titre||d.id);render();
+ },
+ reprendre(d){const it=P[view].items[d.id];if(it){it.done=false;savP(view);render()}},
+ publier(){const l=P.strategie.ligne;l.publie=true;l.t=now();l.v=(l.v||0)+1;l.dirty=false;savP('strategie');jrn('ligne','Ligne publiée v'+l.v);render()},
+ renfort(){
+  const rf=P.cod.rf||{type:'presse',motif:''};
+  P.cod.renforts.push({t:now(),type:rf.type||'presse',motif:rf.motif||''});
+  P.cod.rf.motif='';savP('cod');jrn('renfort','Demande de renfort : '+(rf.type||''));render();
+ },
+ libre(){
+  const dr=P[view].libreDraft||{};if(!(dr.texte||'').trim()){alert('Rien à livrer.');return}
+  P[view].libre.push({id:'L'+now(),type:dr.type||'Communiqué',texte:dr.texte,t:now(),vue:view});
+  P[view].libreDraft={type:dr.type,texte:''};savP(view);jrn('production libre',dr.type||'');render();
+ },
+ chrono(d){chronos[d.id]=now()+90000;render()},
+ seen(d){P[view].seen=P[view].seen||{};P[view].seen[d.id]=now();savP(view);render()},
+ chatToggle(){chatOpen=!chatOpen;if(chatOpen&&CH.length){chatRead=CH[CH.length-1].t;locset(KRk(),chatRead)}render();if(chatOpen){const m=document.getElementById('chat-msgs');if(m)m.scrollTop=m.scrollHeight;const t=document.getElementById('chat-in');if(t)t.focus()}},
+ chatSend(){
+  const t=(chatDraft||'').trim();if(!t)return;
+  saveMine({t:now(),v:view,from:myLabel(),txt:t});chatDraft='';jrn('message',t);
+  chatRead=CH[CH.length-1].t;locset(KRk(),chatRead);render();
+  const m=document.getElementById('chat-msgs');if(m)m.scrollTop=m.scrollHeight;
+ },
+ exportdoc(){exportDoc()},
+ exportjson(){download('wargame-'+S.scenarioId+'-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify({S:S,P:P},null,1),'application/json')},
+ print(){window.print()},
+ tplscen(){download('scenario-modele.json',JSON.stringify(SCEN[0],null,1),'application/json')},
+ impscen(){$('#imp').click()}
+};
+document.addEventListener('click',e=>{const a=e.target.closest('[data-act]');if(!a||a.disabled)return;const f=A[a.dataset.act];if(f)f(a.dataset,e)});
+function onInput(e){
+ const t=e.target,b=t.dataset&&t.dataset.bind;if(!b)return;
+ const i=b.indexOf(':'),k=b.slice(0,i),id=b.slice(i+1);
+ const val=t.type==='checkbox'?t.checked:t.value;
+ if(k==='chat'){if(id==='draft')chatDraft=val;else chatFrom=val;return}
+ if(k==='item'){const it=P[view].items[id]||(P[view].items[id]={});it.texte=val;savP(view);const c=document.getElementById('cnt-'+id);if(c)c.textContent=val.length}
+ else if(k==='ligne'){P.strategie.ligne[id]=val;P.strategie.ligne.dirty=true;savP('strategie')}
+ else if(k==='draft'){S.draft=S.draft||{};S.draft[id]=val;save()}
+ else if(k==='param'){S[id]=id==='tourMinutes'?Math.max(1,+val||15):(id==='rfDelay'?Math.max(0,+val||0):val);save()}
+ else if(k==='joueur'){S.joueurs[id]=val;save()}
+ else if(k==='note'){S.notes[id]=S.notes[id]||{};S.notes[id].c=val;save()}
+ else if(k==='rf'){P.cod.rf=P.cod.rf||{};P.cod.rf[id]=val;savP('cod')}
+ else if(k==='libre'){P[view].libreDraft=P[view].libreDraft||{};P[view].libreDraft[id]=val;savP(view)}
+}
+document.addEventListener('keydown',e=>{if(e.target&&e.target.id==='chat-in'&&e.key==='Enter'&&!e.shiftKey){e.preventDefault();A.chatSend()}});
+document.addEventListener('input',onInput);
+document.addEventListener('change',onInput);
+$('#imp').addEventListener('change',e=>{
+ const f=e.target.files[0];if(!f)return;
+ const r=new FileReader();
+ r.onload=()=>{try{
+  const o=JSON.parse(r.result);
+  if(!o.id||!o.titre||!Array.isArray(o.fil)||!o.vars||!Array.isArray(o.vars.media))throw new Error('Structure inattendue (id, titre, vars.media, fil).');
+  const c=lget(KC,[]).filter(x=>x.id!==o.id);c.push(o);lset(KC,c);alert('Scénario « '+o.titre+' » importé.');render();
+ }catch(err){alert('Import impossible : '+err.message)}};
+ r.readAsText(f);e.target.value='';
+});
+function download(name,content,type){
+ const b=new Blob([content],{type:type+';charset=utf-8'});const a=document.createElement('a');
+ a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();
+ setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
+}
+
+/* ============ Rendu commun ============ */
+function gauge(label,val){
+ const pct=Math.min(100,Math.round(val/8*100));const cls=val>=7?'s':(val>=4?'t':'');
+ const txt=val>=7?'SATURÉ':(val>=4?'Tendu':'Maîtrisé');
+ return `<div><div class="row"><b>${esc(label)}</b><span class="muted">charge ${val} — ${txt}</span></div><div class="gauge ${cls}"><i style="width:${pct}%"></i></div></div>`;
+}
+function injCard(i,v){
+ const it=P[v].items[i.id]||{};const dl=i.t0+i.delai*60000;const done=!!it.done;
+ const fmt=i.dest==='presse'?'Réponse au journaliste (éléments de langage, ou ce que vous diriez)':(i.dest==='strategie'?'Décision, message à porter, consignes':'Texte à publier (communiqué, post, réponse)');
+ const rs=/post|RS|réseaux/i.test(i.tache+i.titre);
+ return `<div class="card inj g${i.g||1} ${done?'done':''}">
+ <div class="meta"><span class="tag">${i.canal?esc(CANAL[i.canal]):'Fil rouge'}</span><span>${hhmm(i.t0)}</span>${done?`<span class="ok">Livré à ${hhmm(it.t)}</span>`:`<span>échéance <span class="cd" data-end="${dl}"></span></span>`}</div>
+ <h4>${esc(i.titre)}</h4><div>${nl(i.texte)}</div>
+ <div class="tache"><b>À faire :</b> ${esc(i.tache)}</div>
+ ${done?`<div class="card" style="background:#f7f7f7">${nl(it.texte)}</div><button class="btn sec small" data-act="reprendre" data-id="${i.id}">Reprendre</button>`
+ :`<textarea id="ta-${i.id}" data-bind="item:${i.id}" placeholder="${esc(fmt)}">${esc(it.texte||'')}</textarea>
+ <div class="row" style="margin-top:6px"><button class="btn" data-act="livrer" data-id="${i.id}">Livrer</button>
+ ${i.dest==='presse'?`<button class="btn sec" data-act="chrono" data-id="${i.id}">Chrono 1 min 30</button><span class="chr" data-id="${i.id}"></span>`:''}
+ ${rs?`<span class="muted"><span id="cnt-${i.id}">${(it.texte||'').length}</span> caractères</span>`:''}</div>`}
+ </div>`;
+}
+function situationBoard(){
+ if(!S.situation.length)return '<div class="info">L’exercice n’a pas commencé.</div>';
+ const arr=S.situation.slice().reverse();
+ return arr.map((x,k)=>`<div class="card sit ${k?'old':''}"><div class="meta"><span class="tag">Tour ${x.tour} · ${esc(x.h)}</span></div><h4>${esc(x.titre)}</h4>${k?'':`<div>${nl(x.faits)}</div>`}<div class="muted" style="margin-top:4px"><b>Bilan :</b> ${esc(x.bilan)}</div></div>`).join('');
+}
+function headerBlock(title,sub,right){
+ return `<header class="hd"><div class="brand"><span class="bar"></span><div><small>${esc(sub)}</small><h1>${title}</h1></div></div><div class="right">${right}</div></header>`;
+}
+function tourChip(){
+ const s=scen();
+ return `<span class="chip">Tour ${S.tour}/${s.fil.length}</span>${S.tourEnd&&S.running?`<span class="chip">⏱ <span class="tcd" data-end="${S.tourEnd}"></span></span>`:''}${S.paused?'<span class="chip warn">PAUSE</span>':''}`;
+}
+
+/* ============ Vues joueurs ============ */
+function renderPlayer(v){
+ const s=scen();const nom=S.joueurs[v]?' — '+esc(S.joueurs[v]):'';
+ const head=headerBlock(esc(ROLEL[v])+nom,'Exercice · '+s.titre,tourChip());
+ if(!S.running&&!S.ended){return head+`<main><div class="card"><h2>En attente du démarrage</h2><p>Le maître du jeu va ouvrir l’exercice. Restez prêt(e) : dès le premier tour, la situation s’affichera ici.</p></div></main>`}
+ if(S.ended){return head+`<main><div class="card"><h2>Exercice terminé</h2><p>Place au retour d’expérience avec le maître du jeu.</p></div></main>`}
+ let body='';
+ if(v==='strategie')body=viewStrategie(s);
+ else if(v==='cod')body=viewCod(s);
+ else body=viewPresse(s);
+ return head+'<main>'+body+'</main>';
+}
+function tabsBar(v,list){
+ const cur=ptabOf(v);
+ return `<div class="tabs ptabs">${list.map(t=>`<button class="tab ${cur===t[0]?'on':''}" data-act="ptab" data-k="${t[0]}">${t[1]}${t[2]?` <span class="badge">${t[2]}</span>`:''}</button>`).join('')}</div>`;
+}
+function ptabOf(v){return ptab[v]||(v==='cod'?'traiter':(v==='strategie'?'arbitrages':''))}
+function viewStrategie(s){
+ const L=P.strategie.ligne;const arbs=S.injects.filter(i=>routeOf(i)==='strategie');
+ const open=arbs.filter(i=>!delivery(i)),done=arbs.filter(i=>delivery(i));
+ const cur=ptabOf('strategie');
+ const bar=tabsBar('strategie',[['situation','Situation'],['ligne','Ligne de communication',L.dirty?'!':''],['arbitrages','Arbitrages à rendre',open.length||''],['rendu','Déjà rendu']]);
+ let body='';
+ if(cur==='situation')body=`<div class="card"><h2>Contexte</h2><p>${nl(s.briefing)}</p></div><h2>Situation</h2>${situationBoard()}`;
+ else if(cur==='ligne')body=`<div class="card ${L.publie&&!L.dirty?'ligne':''}"><h2>Ligne de communication</h2>
+   <p class="muted">Ce que vous publiez ici est lu par le COD en temps réel. Republiez à chaque évolution.</p>
+   <label>Objectif de communication</label><input type="text" data-bind="ligne:objectif" id="l-obj" value="${esc(L.objectif)}">
+   <label>Messages clés (3 maximum)</label><textarea id="l-msg" data-bind="ligne:messages" style="min-height:90px">${esc(L.messages)}</textarea>
+   <label>Cibles prioritaires</label><input type="text" data-bind="ligne:cibles" id="l-cib" value="${esc(L.cibles)}">
+   <label>Prochaine prise de parole (qui, quand, où)</label><input type="text" data-bind="ligne:prochaine" id="l-pro" value="${esc(L.prochaine)}">
+   <div class="row" style="margin-top:8px"><button class="btn" data-act="publier">Publier la ligne au COD</button>${L.publie?`<span class="${L.dirty?'':'ok'}">${L.dirty?'Modifiée, non republiée':'Publiée à '+hhmm(L.t)+' (v'+L.v+')'}</span>`:'<span class="muted">Pas encore publiée</span>'}</div></div>`;
+ else if(cur==='arbitrages')body=`<h2>Arbitrages à rendre (${open.length})</h2>${open.slice().reverse().map(i=>injCard(i,'strategie')).join('')||'<div class="info">Aucun arbitrage en attente.</div>'}`;
+ else body=`<h2>Déjà rendu (${done.length})</h2>${done.slice().reverse().map(i=>injCard(i,delivery(i).vue)).join('')||'<div class="info">Rien de rendu pour l’instant.</div>'}`;
+ return bar+body;
+}
+function viewCod(s){
+ const L=P.strategie.ligne;const l=loads();
+ const arr=S.injects.filter(i=>routeOf(i)==='cod');
+ const open=arr.filter(i=>!delivery(i)),done=arr.filter(i=>delivery(i));
+ const pa=presseActive();
+ const reps=P.cod.renforts.slice().reverse().slice(0,3).map(r=>{
+  const rp=S.rep[r.t];let st='en attente du maître du jeu…';
+  if(rp&&rp.etat==='accorde')st=clk()>=rp.arrivee?'renfort arrivé.':`accordé : arrive dans <span class="cd" data-end="${rp.arrivee}"></span>`;
+  if(rp&&rp.etat==='refuse')st='refusé : '+esc(rp.motif);
+  return `${hhmm(r.t)} — ${esc(r.type)} → ${st}`}).join(' · ');
+ const rf=P.cod.rf||{type:'presse',motif:''};
+ const strip=`<div class="card"><div class="strip"><div class="g">${gauge('COD'+(pa?'':' (presse comprise)'),l.cod)}${pa?gauge('Cellule presse',l.presse):''}</div>
+  <div class="g"><div class="row"><select id="rf-type" data-bind="rf:type" style="width:auto"><option value="presse" ${rf.type==='presse'?'selected':''}>Binôme gestion presse</option><option value="redaction" ${rf.type==='redaction'?'selected':''}>Relecteur / rédacteur</option><option value="strategie" ${rf.type==='strategie'?'selected':''}>Appui de la stratégie</option></select>
+  <input class="grow" type="text" id="rf-motif" data-bind="rf:motif" placeholder="Motif (facultatif)" value="${esc(rf.motif||'')}"><button class="btn red" data-act="renfort">Demander un renfort</button></div>${reps?`<div class="muted" style="margin-top:4px">${reps}</div>`:''}</div></div></div>`;
+ const newLigne=L.publie&&P.cod.ligneSeen!==L.v;
+ const cur=ptabOf('cod');
+ const bar=tabsBar('cod',[['ligne','Ligne stratégique',newLigne?'nouvelle':''],['situation','Situation'],['traiter','À traiter',open.length||''],['production','Production'],['livre','Déjà livré']]);
+ let body='';
+ if(cur==='ligne')body=L.publie?`<div class="card ligne"><h2>Ligne de la stratégie <span class="muted">· v${L.v}, ${hhmm(L.t)}</span></h2>
+   <p><b>Objectif :</b> ${esc(L.objectif)}</p><p><b>Messages clés :</b><br>${nl(L.messages)}</p><p><b>Cibles :</b> ${esc(L.cibles)}</p><p><b>Prochaine prise de parole :</b> ${esc(L.prochaine)}</p></div>`:'<div class="info">La stratégie n’a pas encore publié de ligne de communication.</div>';
+ else if(cur==='situation')body=`<h2>Situation</h2>${situationBoard()}`;
+ else if(cur==='traiter')body=`<h2>À traiter (${open.length})</h2>${open.slice().reverse().map(i=>injCard(i,'cod')).join('')||'<div class="info">Rien en attente. Anticipez : prochain point de situation ?</div>'}`;
+ else if(cur==='production'){
+  const dr=P.cod.libreDraft||{type:'Communiqué',texte:''};
+  const lib=P.cod.libre.slice().reverse().map(x=>`<div class="card"><div class="meta"><span class="tag">${esc(x.type)}</span><span>${hhmm(x.t)}</span></div>${nl(x.texte)}</div>`).join('');
+  body=`<div class="card"><h2>Production libre</h2><p class="muted">Un communiqué ou un post que vous décidez de publier sans qu’on vous le demande.</p>
+   <select id="lib-type" data-bind="libre:type" style="width:auto;margin-bottom:6px">${['Communiqué','Post RS','Message d’alerte','Point de situation'].map(t=>`<option ${dr.type===t?'selected':''}>${t}</option>`).join('')}</select>
+   <textarea id="lib-txt" data-bind="libre:texte">${esc(dr.texte||'')}</textarea>
+   <div class="row" style="margin-top:6px"><button class="btn" data-act="libre">Livrer</button></div></div>${lib?`<h3>Productions libres livrées</h3>${lib}`:''}`;
+ }
+ else body=`<h2>Déjà livré (${done.length})</h2>${done.slice().reverse().map(i=>injCard(i,delivery(i).vue)).join('')||'<div class="info">Rien de livré pour l’instant.</div>'}`;
+ return strip+bar+body;
+}
+function viewPresse(s){
+ const L=P.strategie.ligne;const pa=presseActive();
+ if(!pa){return `<div class="grid2"><div><div class="card"><h2>En réserve</h2><p>Vous n’êtes pas encore engagé(e). Observez la situation : le COD peut demander votre appui. En attendant, préparez-vous : quels sont les trois messages ? quelles questions les journalistes poseront-ils ?</p></div></div><div><h2>Situation</h2>${situationBoard()}</div></div>`}
+ const arr=S.injects.filter(i=>routeOf(i)==='presse');
+ const open=arr.filter(i=>!delivery(i)),done=arr.filter(i=>delivery(i));const l=loads();
+ return `<div class="grid2"><div>
+  <div class="card">${gauge('Cellule presse',l.presse)}</div>
+  ${L.publie?`<div class="card ligne"><h2>Ligne de la stratégie <span class="muted">· v${L.v}</span></h2><p><b>Messages clés :</b><br>${nl(L.messages)}</p><p><b>Prochaine prise de parole :</b> ${esc(L.prochaine)}</p></div>`:'<div class="info">La stratégie n’a pas encore publié de ligne.</div>'}
+  <h2>Situation</h2>${situationBoard()}
+ </div><div>
+  <h2>Appels et sollicitations (${open.length})</h2>
+  ${open.slice().reverse().map(i=>injCard(i,'presse')).join('')||'<div class="info">Aucune sollicitation en attente.</div>'}
+  ${done.length?`<h3>Traité</h3>${done.slice().reverse().map(i=>injCard(i,delivery(i).vue)).join('')}`:''}
+ </div></div>`;
+}
+
+/* ============ Poste MJ ============ */
+function renderMJ(){
+ const s=scen();
+ const head=headerBlock('Wargame — Poste du maître du jeu','Communication de crise · '+esc(s.titre),tourChip());
+ const tabs=[['prep','1 · Préparer'],['pilot','2 · Piloter'],['prod','3 · Productions'],['retex','4 · Retex']];
+ return head+`<div class="tabs">${tabs.map(t=>`<button class="tab ${tab===t[0]?'on':''}" data-act="tab" data-k="${t[0]}">${t[1]}</button>`).join('')}</div><main>${tab==='prep'?tabPrep(s):tab==='pilot'?tabPilot(s):tab==='prod'?tabProd():tabRetex(s)}</main>`;
+}
+function tabPrep(s){
+ const cards=ALL().map(x=>`<div class="card ${x.id===S.scenarioId?'sel':''}"><div class="big">${x.icone||'📁'} ${esc(x.titre)}</div><div class="muted">${esc(x.niveau||'')} · ${x.fil.length} tours</div><p>${esc(x.resume||'')}</p><button class="btn ${x.id===S.scenarioId?'':'sec'}" data-act="choose" data-id="${x.id}" ${S.running?'disabled':''}>${x.id===S.scenarioId?'Scénario retenu':'Choisir'}</button></div>`).join('');
+ return `<h2>1. Choisir le scénario</h2><div class="grid3">${cards}</div>
+ <div class="row noprint"><button class="btn sec small" data-act="tplscen">Exporter un scénario modèle (JSON)</button><button class="btn sec small" data-act="impscen">Importer un scénario (JSON)</button></div>
+ <div class="grid2" style="margin-top:16px"><div>
+  <div class="card"><h2>2. Paramètres et joueurs</h2>
+   <label>Durée d’un tour (minutes réelles)</label><input type="number" min="1" max="60" id="p-tm" data-bind="param:tourMinutes" value="${S.tourMinutes}" ${S.running?'disabled':''}>
+   <p><label><input type="checkbox" id="p-presse" ${S.presseOn?'checked':''} data-act="togglePresse"> Cellule presse engagée dès le début</label><br><span class="muted">Décochée, le COD est seul face à la presse : c’est l’épreuve de l’agilité. La cellule presse n’arrive que si le COD demande un renfort et que vous l’accordez.</span></p>
+   <div class="row"><div class="grow"><label>Stratégie</label><input type="text" id="j-s" data-bind="joueur:strategie" value="${esc(S.joueurs.strategie)}" placeholder="Prénom"></div>
+   <div class="grow"><label>COD</label><input type="text" id="j-c" data-bind="joueur:cod" value="${esc(S.joueurs.cod)}" placeholder="Prénom"></div>
+   <div class="grow"><label>Presse (appui)</label><input type="text" id="j-p" data-bind="joueur:presse" value="${esc(S.joueurs.presse)}" placeholder="Prénom"></div></div>
+  </div>
+  ${GRIST?`<div class="card"><h2>3. Postes de l’équipe</h2><p>Chaque équipier ouvre ce même document Grist avec <b>son propre compte</b>, ouvre la page du wargame et choisit son poste (Stratégie, COD ou Presse). Le choix est mémorisé sur son navigateur. Tout est synchronisé en direct.</p></div>`:`<div class="card"><h2>3. Ouvrir les postes</h2>
+   <p class="muted">Chaque vue s’ouvre dans sa propre fenêtre. Placez-la sur l’écran de l’équipier concerné. Les fenêtres se synchronisent en direct sur cet ordinateur.</p>
+   <div class="row"><button class="btn sec" data-act="open" data-v="strategie">Fenêtre Stratégie</button><button class="btn sec" data-act="open" data-v="cod">Fenêtre COD</button><button class="btn sec" data-act="open" data-v="presse">Fenêtre Presse</button></div>
+  </div>`}
+ </div><div>
+  <div class="card"><h2>Brief d’ouverture à lire aux joueurs</h2><p>${nl(s.oral||s.briefing)}</p></div>
+  <div class="card"><h2>Déroulé prévu (vous seul)</h2><table><tr><th>Tour</th><th>Événement</th></tr>${s.fil.map((f,k)=>`<tr><td>${k+1} · ${esc(f.h)}</td><td><b>${esc(f.titre)}</b><br><span class="muted">${esc(f.bilan)}</span></td></tr>`).join('')}</table></div>
+ </div></div>
+ <div class="row" style="margin-top:6px">${S.running?'<span class="ok">Exercice en cours</span>':`<button class="btn red big" data-act="start">▶ Démarrer l’exercice</button>`}<button class="btn sec" data-act="reset">Réinitialiser</button></div>`;
+}
+function tabPilot(s){
+ if(!S.running&&!S.ended)return '<div class="info">Choisissez un scénario et démarrez l’exercice depuis l’onglet « Préparer ».</div>';
+ const l=loads();const d=S.dice;
+ const pend=P.cod.renforts.filter(r=>!S.rep[r.t]);
+ const last=S.tour>=s.fil.length;
+ const dicePanel=`<div class="card"><h2>Hasard : les dés du tour</h2>
+  <div class="row"><button class="btn" data-act="roll" ${S.paused||!S.running?'disabled':''}>🎲 Lancer les dés</button>${d?'<button class="btn sec small" data-act="skipdice">Ignorer ce tirage</button>':''}</div>
+  ${d?`<div class="dice"><div class="die"><span>Aggravation</span><b>${d.a}</b><span>${AGG[d.level]}</span></div><div class="die"><span>Canal</span><b>${d.c}</b><span>${CANAL[d.c]}</span></div><div class="die"><span>Friction interne</span><b>${d.f}</b><span>${FRL(d.f)}</span></div></div>
+  ${d.card?`<div class="card inj g${d.card.g}"><div class="meta"><span class="tag">Carte · ${esc(CANAL[d.card.canal])}</span><span>vers ${DESTL[routeOf(d.card)]}</span><span>gravité ${d.card.g}</span></div><h4>${esc(d.card.titre)}</h4><div>${nl(d.card.texte)}</div><div class="tache">${esc(d.card.tache)}</div><div class="row"><button class="btn" data-act="injcard">Injecter la carte</button><button class="btn sec small" data-act="rerollcard">Autre carte</button></div></div>`:(d.level?'<div class="muted">Aucune carte disponible pour ce canal.</div>':'')}
+  ${d.fr?`<div class="card inj g${d.fr.g}"><div class="meta"><span class="tag">Friction · ${esc(d.fr.kind)}</span><span>vers ${DESTL[routeOf(d.fr)]}</span></div><h4>${esc(d.fr.titre)}</h4><div>${nl(d.fr.texte)}</div><div class="tache">${esc(d.fr.tache)}</div><button class="btn" data-act="injfr">Injecter la friction</button></div>`:''}`:''}
+ </div>`;
+ const rfBlock=pend.length?pend.map(r=>`<div class="alert"><b>Demande de renfort du COD</b> (${esc(r.type)}) à ${hhmm(r.t)}${r.motif?' — '+esc(r.motif):''}<div class="row" style="margin-top:6px"><label>Délai d’arrivée (min)</label><input type="number" min="0" style="width:80px" id="rf-delay" data-bind="param:rfDelay" value="${S.rfDelay}"><button class="btn" data-act="accord" data-t="${r.t}">Accorder</button><button class="btn sec" data-act="refuse" data-t="${r.t}">Refuser</button></div></div>`).join(''):'';
+ const rows=S.injects.slice().reverse().map(i=>{const dv=delivery(i);const st=dv?`<span class="ok">livré ${hhmm(dv.t)}</span>`:(isEchu(i)?'<span class="cd late" data-end="'+(i.t0+i.delai*60000)+'"></span>':'<span class="cd" data-end="'+(i.t0+i.delai*60000)+'"></span>');return `<tr><td>${hhmm(i.t0)}</td><td>${i.dest==='tous'?'Tous':DESTL[routeOf(i)]}</td><td>${esc(i.titre)}</td><td>${i.type}</td><td>${st}</td></tr>`}).join('');
+ const dr=S.draft||{};
+ return `<div class="row card"><span class="big">Tour ${S.tour}/${s.fil.length}</span>${S.tourEnd?`<span class="big">⏱ <span class="tcd" data-end="${S.tourEnd}"></span></span>`:''}
+  ${S.paused?'<button class="btn" data-act="resume">Reprendre</button>':'<button class="btn sec" data-act="pause">Pause</button>'}
+  <button class="btn red" data-act="next">${last?'Clôturer l’exercice':'Tour suivant ▶'}</button>
+  <label><input type="checkbox" id="p-presse2" ${S.presseOn?'checked':''} data-act="togglePresse"> Cellule presse engagée</label>${presseActive()&&!S.presseOn?'<span class="ok">Binôme presse en place</span>':''}</div>
+ ${rfBlock}
+ <div class="grid2"><div>
+  <div class="card"><h2>Charge des cellules</h2>${gauge('COD',l.cod)}${gauge('Presse',l.presse)}${gauge('Stratégie',l.strategie)}
+  <p class="muted">Si le COD tient seul : observez. Un COD à 7 ou plus sans demande de renfort est le signal à débriefer.</p></div>
+  ${dicePanel}
+ </div><div>
+  <div class="card"><h2>Situation en cours</h2>${S.situation.length?`<b>${esc(S.situation[S.situation.length-1].titre)}</b><br>${nl(S.situation[S.situation.length-1].faits)}<br><span class="muted">${esc(S.situation[S.situation.length-1].bilan)}</span>`:''}</div>
+  <div class="card"><h2>Inject manuel</h2>
+   <div class="row"><select id="d-dest" data-bind="draft:dest" style="width:auto"><option value="cod" ${dr.dest==='cod'?'selected':''}>COD</option><option value="presse" ${dr.dest==='presse'?'selected':''}>Presse</option><option value="strategie" ${dr.dest==='strategie'?'selected':''}>Stratégie</option></select><input class="grow" type="text" id="d-titre" data-bind="draft:titre" placeholder="Titre" value="${esc(dr.titre||'')}"><input type="number" id="d-delai" data-bind="draft:delai" style="width:90px" placeholder="min" value="${esc(dr.delai||'')}"></div>
+   <textarea id="d-texte" data-bind="draft:texte" style="min-height:60px;margin-top:6px" placeholder="Texte (ce que vous annoncez)">${esc(dr.texte||'')}</textarea>
+   <input type="text" id="d-tache" data-bind="draft:tache" placeholder="Ce que l’on attend d’eux" value="${esc(dr.tache||'')}" style="margin-top:6px">
+   <div class="row" style="margin-top:6px"><button class="btn" data-act="manual">Injecter</button></div></div>
+ </div></div>
+ <div class="card"><h2>Tous les injects</h2><table><tr><th>Heure</th><th>Cible</th><th>Titre</th><th>Type</th><th>État</th></tr>${rows}</table></div>`;
+}
+function allLibre(){let a=[];VIEWS.forEach(v=>{a=a.concat(P[v].libre||[])});return a.sort((x,y)=>x.t-y.t)}
+function rateBtns(id){
+ const n=(S.notes[id]||{}).n;
+ return `<div class="rate"><button class="btn sec small okb ${n==='ok'?'on':''}" data-act="note" data-id="${id}" data-n="ok">✓ Solide</button><button class="btn sec small midb ${n==='mid'?'on':''}" data-act="note" data-id="${id}" data-n="mid">~ À reprendre</button><button class="btn sec small kob ${n==='ko'?'on':''}" data-act="note" data-id="${id}" data-n="ko">✗ Hors cible</button></div>
+ <textarea id="nt-${id}" data-bind="note:${id}" style="min-height:44px;margin-top:4px" placeholder="Commentaire pour le retex">${esc((S.notes[id]||{}).c||'')}</textarea>`;
+}
+function tabProd(){
+ const L=P.strategie.ligne;
+ const inj=S.injects.filter(i=>i.dest!=='tous').slice().reverse();
+ const cards=inj.map(i=>{const dv=delivery(i);return `<div class="card inj g${i.g||1} ${dv?'done':''}"><div class="meta"><span class="tag">${DESTL[routeOf(i)]}</span><span>tour ${i.tour}</span>${(P[routeOf(i)].seen||{})[i.id]?`<span>vu à ${hhmm(P[routeOf(i)].seen[i.id])} (+${mmss(P[routeOf(i)].seen[i.id]-i.t0)})</span>`:(i.dest!=='tous'&&!dv?'<span style="color:var(--ko)">pas encore vu</span>':'')}${dv?`<span class="ok">livré en ${mmss(dv.t-i.t0)}${dv.t>i.t0+i.delai*60000?' (hors délai)':''}</span>`:'<span style="color:var(--ko)">non livré</span>'}</div><h4>${esc(i.titre)}</h4><div class="muted">${esc(i.tache)}</div>${dv?`<div class="card" style="background:#f7f7f7;margin-top:6px">${nl(dv.texte)}</div>`:''}${rateBtns(i.id)}</div>`}).join('');
+ const lib=allLibre().map(x=>`<div class="card"><div class="meta"><span class="tag">${esc(x.type)}</span><span>${DESTL[x.vue]} · ${hhmm(x.t)}</span></div><div>${nl(x.texte)}</div>${rateBtns(x.id)}</div>`).join('');
+ return `<div class="grid2"><div><h2>Livraisons des joueurs</h2>${cards||'<div class="info">Aucun inject pour l’instant.</div>'}</div>
+ <div><div class="card"><h2>Ligne de la stratégie</h2>${L.publie?`<p class="muted">v${L.v} publiée à ${hhmm(L.t)}</p><p><b>Objectif :</b> ${esc(L.objectif)}</p><p><b>Messages :</b><br>${nl(L.messages)}</p><p><b>Cibles :</b> ${esc(L.cibles)}</p><p><b>Prochaine prise de parole :</b> ${esc(L.prochaine)}</p>${rateBtns('ligne')}`:'<span class="muted">Rien de publié.</span>'}</div>
+ <h2>Productions libres</h2>${lib||'<div class="info">Aucune production libre.</div>'}</div></div>`;
+}
+function timeline(){
+ const ev=S.journal.map(j=>({t:j.t,txt:j.txt,kind:j.kind}));
+ S.injects.forEach(i=>{const dv=delivery(i);if(dv)ev.push({t:dv.t,txt:`${DESTL[dv.vue]} livre : ${i.titre}`,kind:'livraison'})});
+ VIEWS.forEach(v=>{(P[v].libre||[]).forEach(x=>ev.push({t:x.t,txt:`${DESTL[v]} publie (libre) : ${x.type}`,kind:'livraison'}))});
+ if(P.strategie.ligne.publie)ev.push({t:P.strategie.ligne.t,txt:`Ligne stratégique publiée (v${P.strategie.ligne.v})`,kind:'livraison'});
+ P.cod.renforts.forEach(r=>ev.push({t:r.t,txt:`COD demande un renfort (${r.type})`,kind:'alerte'}));
+ return ev.sort((a,b)=>a.t-b.t);
+}
+function stats(){
+ const inj=S.injects.filter(i=>i.dest!=='tous');
+ const st={total:inj.length,livres:0,hors:0,non:0,delais:[],ok:0,mid:0,ko:0};
+ inj.forEach(i=>{const dv=delivery(i);if(dv){st.livres++;st.delais.push(dv.t-i.t0);if(dv.t>i.t0+i.delai*60000)st.hors++}else st.non++;
+  const n=(S.notes[i.id]||{}).n;if(n)st[n]++});
+ allLibre().forEach(x=>{const n=(S.notes[x.id]||{}).n;if(n)st[n]++});
+ st.moy=st.delais.length?st.delais.reduce((a,b)=>a+b,0)/st.delais.length:0;
+ return st;
+}
+function constats(){
+ const c=[],sf=S.satFirst,r1=P.cod.renforts.length?P.cod.renforts[0].t:null,st=stats();
+ if(!sf.orange)c.push('Le COD n’a jamais dépassé le seuil « tendu » : la charge a été absorbée, ou le jeu n’était pas assez dense.');
+ else{
+  c.push(`Seuil « tendu » atteint à ${hhmm(sf.orange)}${sf.rouge?`, seuil « saturé » à ${hhmm(sf.rouge)}`:''}.`);
+  if(!r1)c.push(sf.rouge?'Le COD est arrivé à saturation sans jamais demander de renfort : point central du débrief.':'Aucun renfort n’a été demandé.');
+  else{const dm=(r1-sf.orange)/60000;c.push(dm<=3?`Renfort demandé ${Math.max(0,dm).toFixed(1)} min après le seuil « tendu » : réflexe adapté.`:`Renfort demandé ${dm.toFixed(1)} min après le seuil « tendu » : plus tôt aurait été plus sûr.`)}
+ }
+ if(st.hors)c.push(`${st.hors} production(s) livrée(s) hors délai, ${st.non} non livrée(s).`);else if(st.non)c.push(`${st.non} sollicitation(s) restée(s) sans réponse.`);
+ if(S.presseAt||S.presseOn)c.push('Un binôme presse a été engagé : observez comment la répartition des rôles a été organisée.');
+ if(P.strategie.ligne.publie)c.push(`La stratégie a publié ${P.strategie.ligne.v} version(s) de sa ligne.`);else c.push('La stratégie n’a pas publié de ligne : le COD a travaillé sans cadrage.');
+ return c;
+}
+function retexHtml(s){
+ const st=stats(),tl=timeline();
+ return `<div class="card"><h2>Chiffres</h2><table><tr><th>Sollicitations</th><td>${st.total}</td><th>Livrées</th><td>${st.livres}</td></tr><tr><th>Hors délai</th><td>${st.hors}</td><th>Non livrées</th><td>${st.non}</td></tr><tr><th>Délai moyen</th><td>${mmss(st.moy)}</td><th>Notation</th><td>✓ ${st.ok} · ~ ${st.mid} · ✗ ${st.ko}</td></tr></table></div>
+ <div class="card"><h2>Constats automatiques</h2><ul>${constats().map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+ ${GRIST&&JR.length?`<div class="card"><h2>Qui a fait quoi (comptes Grist)</h2><table><tr><th>Heure</th><th>Compte</th><th>Poste</th><th>Action</th></tr>${JR.map(j=>`<tr><td>${hhmm(j.t)}</td><td>${esc(j.auteur||'—')}</td><td>${esc(j.vue)}</td><td>${esc(j.type)} ${esc(j.txt)}</td></tr>`).join('')}</table></div>`:''}
+ <div class="card"><h2>Chronologie</h2><ul class="tl">${tl.map(e=>`<li class="${e.kind}"><b>${hhmm(e.t)}</b> — ${esc(e.txt)}</li>`).join('')}</ul></div>`;
+}
+function tabRetex(s){
+ return `<div class="row noprint card"><button class="btn" data-act="exportdoc">Exporter pour Word (.doc)</button><button class="btn sec" data-act="print">Imprimer / PDF</button><button class="btn sec" data-act="exportjson">Sauvegarde JSON</button></div>
+ <div class="grid2"><div>${retexHtml(s)}</div><div>
+  <div class="card"><h2>Questions de retex</h2><ol>
+  <li>Quelles décisions avez-vous prises, et pourquoi ?</li><li>Quel a été le moment de bascule ?</li><li>La ligne de la stratégie a-t-elle guidé le COD ? Qu’aurait-il fallu qu’elle contienne ?</li><li>À quel moment auriez-vous dû appeler un appui ? Qu’est-ce qui vous a retenu ?</li><li>Quelle règle ajouter à notre doctrine de crise ?</li></ol></div>
+  <div class="card"><h2>Réflexes du COD seul face à la pression</h2><ol>
+  <li><b>Mesurer</b> : trois demandes ouvertes, ou une échue, c’est le seuil d’alerte.</li>
+  <li><b>Trier</b> : ce qui touche à la sécurité, puis la cohérence, puis le reste.</li>
+  <li><b>Annoncer une cadence</b> : « prochain point à H+30 » achète du temps.</li>
+  <li><b>Standardiser</b> : un message d’attente déjà validé évite l’improvisation.</li>
+  <li><b>Déléguer tôt</b> : presse au binôme, relecture à un tiers. Un renfort inutile coûte peu, un COD saturé coûte une erreur publique.</li>
+  <li><b>Remonter</b> : prévenir la stratégie quand la pression change de nature (mise en cause, famille, élu).</li>
+  <li><b>Ne pas combler les trous</b> : on ne publie que ce qui est établi et validé.</li></ol></div>
+ </div></div>`;
+}
+function exportDoc(){
+ const s=scen(),st=stats();
+ const prods=S.injects.filter(i=>i.dest!=='tous').map(i=>{const dv=delivery(i);const n=(S.notes[i.id]||{});return `<h3>${esc(i.titre)} (${DESTL[routeOf(i)]})</h3><p><i>${esc(i.tache)}</i></p><p>${dv?nl(dv.texte)+`<br><small>Livré en ${mmss(dv.t-i.t0)}</small>`:'<b>Non livré</b>'}</p>${n.n?`<p>Appréciation : ${n.n==='ok'?'solide':(n.n==='mid'?'à reprendre':'hors cible')}${n.c?' — '+esc(n.c):''}</p>`:''}`}).join('');
+ const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>Retex wargame</title></head><body style="font-family:Calibri,Arial"><h1>Retour d’expérience — wargame de communication de crise</h1><p>Scénario : <b>${esc(s.titre)}</b> · ${new Date().toLocaleDateString('fr-FR')}</p>
+ <h2>Chiffres</h2><p>Sollicitations : ${st.total} · livrées : ${st.livres} · hors délai : ${st.hors} · non livrées : ${st.non} · délai moyen : ${mmss(st.moy)}</p>
+ <h2>Constats</h2><ul>${constats().map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
+ <h2>Chronologie</h2><ul>${timeline().map(e=>`<li>${hhmm(e.t)} — ${esc(e.txt)}</li>`).join('')}</ul>
+ <h2>Échanges de la messagerie</h2><ul>${CH.map(m=>`<li>${hhmm(m.t)} — <b>${esc(m.from)}</b> : ${esc(m.txt)}</li>`).join('')||'<li>Aucun échange.</li>'}</ul>
+ <h2>Productions</h2>${prods}
+ <h2>Questions de retex</h2><ol><li>Quelles décisions, et pourquoi ?</li><li>Quel moment de bascule ?</li><li>La ligne de la stratégie a-t-elle guidé le COD ?</li><li>Quand appeler un appui ?</li><li>Quelle règle ajouter à la doctrine ?</li></ol></body></html>`;
+ download('retex-wargame-'+new Date().toISOString().slice(0,10)+'.doc',html,'application/msword');
+}
+
+/* ============ Rendu, minuteurs, synchronisation ============ */
+function render(){
+ const act=document.activeElement;
+ const aid=act&&act.id,ss=act&&act.selectionStart,se=act&&act.selectionEnd;
+ const sc=window.scrollY;
+ if(chatOpen&&CH.length&&CH[CH.length-1].t>chatRead){chatRead=CH[CH.length-1].t;locset(KRk(),chatRead)}
+ try{
+  const isP=VIEWS.indexOf(view)>=0;
+  $('#app').innerHTML=!view?pickerHtml():(view==='mj'?renderMJ():(isP?renderPlayer(view):'<main>Vue inconnue</main>'))+(isP?modalHtml(view):'')+(view?chatHtml():'')+footHtml();
+  const cnt=isP?unseenFor(view).length:0,lastMsg=CH.length?CH[CH.length-1]:null;
+  if(lastCount>=0&&(cnt>lastCount||(lastMsg&&lastChat>=0&&CH.length>lastChat&&lastMsg.v!==view)))beep();
+  lastCount=cnt;lastChat=CH.length;
+  const mm=document.getElementById('chat-msgs');if(mm)mm.scrollTop=mm.scrollHeight;
+ }
+ catch(e){$('#app').innerHTML='<main><div class="alert">Erreur d’affichage : '+esc(e.message)+'</div></main>';console.error(e)}
+ if(aid){const n=document.getElementById(aid);if(n){n.focus();try{if(ss!=null)n.setSelectionRange(ss,se)}catch(e){}}}
+ window.scrollTo(0,sc);
+ tick();
+}
+function tick(){
+ const c=clk();
+ document.querySelectorAll('.cd').forEach(n=>{const r=(+n.dataset.end)-c;n.textContent=r>=0?mmss(r):'échu +'+mmss(-r);n.classList.toggle('late',r<0)});
+ document.querySelectorAll('.tcd').forEach(n=>{const r=(+n.dataset.end)-c;n.textContent=r>=0?mmss(r):'+'+mmss(-r)});
+ document.querySelectorAll('.chr').forEach(n=>{const e=chronos[n.dataset.id];if(!e){n.textContent='';return}const r=e-now();n.textContent=r>0?mmss(r):'Temps écoulé';n.style.color=r>0?'':'var(--ko)'});
+}
+function derive(){
+ if(view!=='mj'||!S.running||S.paused)return;
+ let ch=false;const l=loads();
+ if(l.cod>=4&&!S.satFirst.orange){S.satFirst.orange=now();log('Seuil « tendu » atteint côté COD','alerte');ch=true}
+ if(l.cod>=7&&!S.satFirst.rouge){S.satFirst.rouge=now();log('Seuil « saturé » atteint côté COD','alerte');ch=true}
+ if(S.presseAt&&now()>=S.presseAt&&!S.presseLogged){S.presseLogged=true;log('Le binôme presse prend la main','alerte');ch=true}
+ if(ch){save();render()}
+}
+function poll(){
+ const raw=snapshot();
+ if(raw!==lastRaw){
+  lastRaw=raw;
+  S=Object.assign(newState(),lget(KS,{}));
+  CH=loadCH();
+  VIEWS.forEach(v=>{P[v]=Object.assign(newProd(),lget(KP(v),{}))});
+  render();
+ }
+}
+function reloadAll(){
+ S=Object.assign(newState(),lget(KS,{}));
+ VIEWS.forEach(v=>{P[v]=Object.assign(newProd(),lget(KP(v),{}))});
+ CH=loadCH();
+}
+let started=false;
+function startLoops(){
+ started=true;
+ chatRead=view?+(locget(KRk())||0):0;
+ window.addEventListener('storage',poll);
+ setInterval(()=>{poll();derive();tick()},1000);
+ lastRaw=snapshot();render();
+}
+function startLocal(){
+ if(started)return;
+ GRIST=false;
+ view=viewParam||locget('wgcc_role')||'mj';
+ reloadAll();startLoops();
+}
+async function initGrist(){
+ try{
+  grist.ready({requiredAccess:'full'});
+  const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error('Grist ne répond pas')),ms))]);
+  const tabs=await withTimeout(grist.docApi.listTables(),8000);
+  GRIST=true;
+  const acts=[];
+  if(tabs.indexOf('WG_Kv')<0)acts.push(['AddTable','WG_Kv',[{id:'Cle',type:'Text'},{id:'Valeur',type:'Text'},{id:'Maj',type:'Numeric'}]]);
+  if(tabs.indexOf('WG_Journal')<0)acts.push(['AddTable','WG_Journal',[{id:'Quand',type:'Numeric'},{id:'Heure',type:'Text'},{id:'Vue',type:'Text'},{id:'Type',type:'Text'},{id:'Texte',type:'Text'}]]);
+  if(acts.length)await grist.docApi.applyUserActions(acts);
+  if(tabs.indexOf('WG_Journal')<0){
+   try{await grist.docApi.applyUserActions([['AddColumn','WG_Journal','Auteur',{type:'Text',isFormula:false,formula:'user.Name',recalcWhen:1}]])}
+   catch(e){try{await grist.docApi.applyUserActions([['AddColumn','WG_Journal','Auteur',{type:'Text'}]])}catch(e2){}}
+  }
+  await gfetch();
+  view=viewParam||locget('wgcc_role')||'';
+  reloadAll();startLoops();
+  let busy=false,n=0;
+  setInterval(async()=>{if(busy)return;busy=true;try{await gfetch();if(view==='mj'&&(n++%4===0)){const c=JR.length;await gfetchJ();if(JR.length!==c&&tab==='retex')render()}poll()}catch(e){gerr(e)}busy=false},1500);
+ }catch(e){
+  console.error(e);
+  if(GRIST){$('#app').innerHTML='<main><div class="alert"><b>Connexion à Grist impossible.</b><br>'+esc(e.message||e)+'<br>Le widget doit avoir un accès complet au document (« Accès complet ») et votre compte doit pouvoir modifier le document.</div></main>'}
+  else startLocal();
+ }
+}
+(function init(){
+ if(window.grist&&window.grist.docApi){initGrist();return}
+ let inFrame=false;try{inFrame=window.top!==window.self}catch(e){inFrame=true}
+ if(!inFrame){startLocal();return}
+ $('#app').innerHTML='<main><div class="info">Connexion à Grist…</div></main>';
+ const s=document.createElement('script');
+ s.src='https://docs.getgrist.com/grist-plugin-api.js';
+ s.onload=()=>initGrist();
+ s.onerror=()=>startLocal();
+ document.head.appendChild(s);
+ setTimeout(()=>{if(!started&&!GRIST)startLocal()},9000);
+})();
+})();
+</script>
+</body>
+</html>
