@@ -261,8 +261,8 @@ function frictionsOf(v){return{
 };}
 
 /* ============ État ============ */
-function newState(){return{scenarioId:'crue',tour:0,running:false,ended:false,paused:false,pauseStart:null,tourMinutes:15,tourEnd:null,presseOn:false,presseAt:null,presseLogged:false,injects:[],situation:[],journal:[],notes:{},rep:{},usedCards:[],dice:null,draft:{},seq:1,rev:0,satFirst:{orange:null,rouge:null},joueurs:{strategie:'',cod:'',presse:''},rfDelay:3,started:null}}
-function newProd(){return{seen:{},items:{},prods:[],drafts:[],ligne:{objectif:'',messages:'',cibles:'',prochaine:'',publie:false,t:null,v:0,dirty:false},renforts:[],libre:[],libreDraft:{type:'Communiqué',texte:''},rf:{type:'presse',motif:''}}}
+function newState(){return{validation:true,appelsRep:{},apmods:{},aproll:{},apdraft:{},scenarioId:'crue',tour:0,running:false,ended:false,paused:false,pauseStart:null,tourMinutes:15,tourEnd:null,presseOn:false,presseAt:null,presseLogged:false,injects:[],situation:[],journal:[],notes:{},rep:{},usedCards:[],dice:null,draft:{},seq:1,rev:0,satFirst:{orange:null,rouge:null},joueurs:{strategie:'',cod:'',presse:''},rfDelay:3,started:null}}
+function newProd(){return{requetes:[],directives:[],appels:[],valid:{},dirDraft:{to:'cod',titre:'',texte:'',prio:1,delai:8},appelDraft:{partenaire:'SDIS 04',texte:''},reqDraft:'',seen:{},items:{},prods:[],drafts:[],ligne:{objectif:'',messages:'',cibles:'',prochaine:'',publie:false,t:null,v:0,dirty:false},renforts:[],libre:[],libreDraft:{type:'Communiqué',texte:''},rf:{type:'presse',motif:''}}}
 const url=new URL(location.href);
 const viewParam=((location.hash||'').match(/view=(\w+)/)||(location.search||'').match(/view=(\w+)/)||[])[1]||'';
 let view=viewParam;
@@ -282,13 +282,13 @@ function saveMine(m){const k=KCH+'_'+view;const a=lget(k,[]);a.push(m);lset(k,a)
 function snapshot(){return [KS].concat(VIEWS.map(KP),CHKEYS).map(lraw).join('|')}
 function beep(){try{const a=new (window.AudioContext||window.webkitAudioContext)();const o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=880;g.gain.value=.15;o.start();o.stop(a.currentTime+.18);setTimeout(()=>{try{a.close()}catch(e){}},400)}catch(e){}}
 const myLabel=()=>view==='mj'?chatFrom:(({strategie:'Stratégie',cod:'COD',presse:'Presse'})[view]+(S.joueurs[view]?' ('+S.joueurs[view]+')':''));
-function unseenFor(v){return S.injects.filter(i=>i.dest!=='tous'&&routeOf(i)===v&&!delivery(i)&&!(P[v].seen&&P[v].seen[i.id])).sort((a,b)=>a.t0-b.t0)}
+function unseenFor(v){return INJ().filter(i=>i.dest!=='tous'&&routeOf(i)===v&&!delivery(i)&&!(P[v].seen&&P[v].seen[i.id])).sort((a,b)=>a.t0-b.t0)}
 function modalHtml(v){
  if(!S.running||S.ended)return '';
  const q=unseenFor(v);if(!q.length)return '';
  const i=q[0];
  return `<div class="modal"><div class="box g${i.g||1}"><div class="q">${q.length>1?q.length+' sollicitations en attente — voici la plus ancienne':'Nouvelle sollicitation'}</div>
- <div class="meta"><span class="tag">${i.canal?esc(CANAL[i.canal]):(i.type==='friction'?'Imprévu interne':'Fil rouge')}</span><span>${hhmm(i.t0)}</span><span>échéance <span class="cd" data-end="${i.t0+i.delai*60000}"></span></span></div>
+ <div class="meta"><span class="tag">${esc(typeTag(i))}</span><span>${hhmm(i.t0)}</span><span>échéance <span class="cd" data-end="${i.t0+i.delai*60000}"></span></span></div>
  <h2>${esc(i.titre)}</h2><div style="font-size:16px">${nl(i.texte)}</div>
  <div class="tache"><b>À faire :</b> ${esc(i.tache)}</div>
  <div class="row"><button class="btn big" data-act="seen" data-id="${i.id}">Pris en compte</button></div></div></div>`;
@@ -317,7 +317,32 @@ const scen=()=>ALL().find(s=>s.id===S.scenarioId)||ALL()[0];
 const clk=()=>S.paused&&S.pauseStart?S.pauseStart:now();
 const presseActive=()=>!!(S.presseOn||(S.presseAt&&now()>=S.presseAt));
 const routeOf=i=>i.dest==='presse'?(presseActive()?'presse':'cod'):i.dest;
+const PARTENAIRES=[{nom:'SDIS 04',mod:-1},{nom:'Gendarmerie',mod:0},{nom:'Mairie / maire',mod:-1},{nom:'Cabinet du ministre',mod:1},{nom:'Parquet (procureur)',mod:-2},{nom:'Ambassade / consulat',mod:0},{nom:'Météo-France',mod:0},{nom:'Opérateur (énergie, transport)',mod:0}];
+const MODS=[{k:'argu',l:'Demande argumentée et factuelle',v:1},{k:'ton',l:'Ton courtois, respectueux de leur rôle',v:1},{k:'commun',l:'S’appuie sur un intérêt commun',v:1},{k:'contre',l:'Propose une solution (rectificatif conjoint…)',v:1},{k:'exig',l:'Exigence sans explication',v:-1},{k:'tardif',l:'Appel tardif, information déjà relayée',v:-1},{k:'hors',l:'Hors compétence du partenaire',v:-2},{k:'conflit',l:'Tension préexistante',v:-1}];
+const NEEDVAL=['Communiqué de presse','Post réseaux sociaux','Message d’alerte','Point de situation'];
+const VAL=()=>S.validation!==false;
+function resultOf(t){
+ if(t<=4)return{etat:'Refus',texte:p=>`${p} : « Non, nous ne pouvons pas donner suite. Ce n’est pas à nous de le faire et nous maintenons notre message. »`};
+ if(t<=6)return{etat:'Refus avec alternative',texte:p=>`${p} : « Nous ne retirerons pas le message, mais nous pouvons le compléter par un rectificatif si vous nous transmettez le chiffre à jour. »`};
+ if(t<=8)return{etat:'Accord avec délai',texte:p=>`${p} : « D’accord, ce sera fait d’ici une quinzaine de minutes, le temps de valider en interne. »`};
+ if(t<=10)return{etat:'Accord rapide',texte:p=>`${p} : « C’est fait, vous le verrez en ligne dans cinq minutes. »`};
+ return{etat:'Accord et coordination',texte:p=>`${p} : « Oui, et proposons un message commun : envoyez-nous votre texte, nous le publions en parallèle. »`};
+}
+function pseudo(){
+ const out=[];
+ (P.strategie.directives||[]).forEach(d=>out.push({id:'dir-'+d.id,type:'directive',dest:d.to,titre:'Instruction de la stratégie : '+d.titre,texte:d.texte,tache:'Exécuter, puis rendre compte (bouton « Exécutée »).',delai:d.delai||8,g:d.prio||1,canal:0,t0:d.t,tour:d.tour||1,ref:d.ref||''}));
+ VIEWS.forEach(v=>(P[v].requetes||[]).forEach(r=>out.push({id:'req-'+r.id,type:'demande',dest:'strategie',titre:'Demande du '+DESTL[v],texte:r.texte,tache:'Donner une instruction à la cellule demandeuse.',delai:6,g:2,canal:0,t0:r.t,tour:r.tour||1,from:v})));
+ (P.cod.drafts||[]).forEach(dr=>{if(dr.statut==='soumis')out.push({id:'val-'+dr.id+'#'+(dr.v||0),type:'validation',dest:'strategie',titre:'À valider : '+dr.type,texte:dr.texte,tache:'Valider ou demander des modifications.',delai:5,g:2,canal:0,t0:dr.soumisT||0,tour:1,from:'cod'})});
+ Object.keys(P.strategie.valid||{}).forEach(key=>{const id='val-'+key;if(out.some(o=>o.id===id))return;const v=P.strategie.valid[key];out.push({id:id,type:'validation',dest:'strategie',titre:'À valider : '+(v.type||''),texte:v.texte||'',tache:'',delai:5,g:2,canal:0,t0:v.soumisT||v.t,tour:1,from:'cod'})});
+ return out;
+}
+function INJ(){return S.injects.concat(pseudo())}
+function typeTag(i){if(i.type==='friction')return 'Imprévu interne';return ({directive:'Instruction',demande:'Demande',validation:'Validation',reponse:'Réponse partenaire'})[i.type]||(i.canal?CANAL[i.canal]:'Fil rouge')}
+function dirStatus(d){const id='dir-'+d.id;let seen=null,done=null;VIEWS.forEach(v=>{if(P[v].seen&&P[v].seen[id]&&!seen)seen=P[v].seen[id];const it=P[v].items[id];if(it&&it.done)done=it.t});return{seen:seen,done:done}}
 function delivery(i){
+ if(i.type==='demande'){const d=(P.strategie.directives||[]).find(x=>x.ref===i.id);if(d)return{vue:'strategie',t:d.t,texte:'Instruction donnée : '+d.texte,type:'Instruction'}}
+ if(i.type==='validation'){const v=(P.strategie.valid||{})[i.id.slice(4)];if(v)return{vue:'strategie',t:v.t,texte:(v.etat==='valide'?'Validé':'Modifications demandées')+(v.comm?' : '+v.comm:''),type:'Validation'}}
+
  for(const v of VIEWS){const it=P[v].items[i.id];if(it&&it.done)return Object.assign({vue:v},it)}
  let best=null;
  VIEWS.forEach(v=>{(P[v].prods||[]).forEach(x=>{if(x.ref===i.id&&(!best||x.t<best.t))best={vue:v,t:x.t,texte:x.texte,type:x.type}})});
@@ -325,7 +350,7 @@ function delivery(i){
 }
 const isEchu=i=>clk()>i.t0+i.delai*60000;
 const weight=i=>1+(isEchu(i)?1:0)+((i.g||1)>=3?1:0);
-function openFor(v){return S.injects.filter(i=>i.dest!=='tous'&&routeOf(i)===v&&!delivery(i))}
+function openFor(v){return INJ().filter(i=>i.dest!=='tous'&&routeOf(i)===v&&!delivery(i))}
 function loads(){const o={};VIEWS.forEach(v=>{o[v]=openFor(v).reduce((a,i)=>a+weight(i),0)});return o}
 function deck(){const s=scen();return genCards(s.vars).concat(s.cartes||[])}
 
@@ -425,7 +450,7 @@ const A={
  livrer(d){
   const it=P[view].items[d.id]||(P[view].items[d.id]={});
   if(!(it.texte||'').trim()){alert('Rédigez votre production avant de la livrer.');return}
-  it.done=true;it.t=now();savP(view);jrn('livraison',(S.injects.find(x=>x.id===d.id)||{}).titre||d.id);render();
+  it.done=true;it.t=now();savP(view);jrn('livraison',(INJ().find(x=>x.id===d.id)||{}).titre||d.id);render();
  },
  reprendre(d){const it=P[view].items[d.id];if(it){it.done=false;savP(view);render()}},
  publier(){const l=P.strategie.ligne;l.publie=true;l.t=now();l.v=(l.v||0)+1;l.dirty=false;savP('strategie');jrn('ligne','Ligne publiée v'+l.v);render()},
@@ -443,7 +468,7 @@ const A={
  newdraft(d){P.cod.drafts=P.cod.drafts||[];P.cod.drafts.push({id:'d'+now(),type:'Communiqué de presse',ref:d.ref||'',texte:''});ptab.cod='production';savP('cod');render()},
  produire(d){
   P.cod.drafts=P.cod.drafts||[];
-  if(!P.cod.drafts.find(x=>x.ref===d.id)){const inj=S.injects.find(i=>i.id===d.id)||{};
+  if(!P.cod.drafts.find(x=>x.ref===d.id)){const inj=INJ().find(i=>i.id===d.id)||{};
    const ty=inj.dest==='presse'?'Réponse à un journaliste':(inj.canal===1?'Post réseaux sociaux':'Communiqué de presse');
    P.cod.drafts.push({id:'d'+now(),type:ty,ref:d.id,texte:''})}
   ptab.cod='production';savP('cod');render()},
@@ -451,9 +476,45 @@ const A={
  livdraft(d){
   const dr=(P.cod.drafts||[]).find(x=>x.id===d.id);if(!dr)return;
   if(!(dr.texte||'').trim()){alert('Rédigez la production avant de la livrer.');return}
+  if(VAL()&&NEEDVAL.indexOf(dr.type)>=0){const val=(P.strategie.valid||{})[dr.id+'#'+(dr.v||0)];if(!(dr.statut==='soumis'&&val&&val.etat==='valide')){alert('Cette production doit être validée par la stratégie avant publication.');return}}
   P.cod.prods.push({id:'L'+now(),type:dr.type,ref:dr.ref||'',texte:dr.texte,t:now(),vue:'cod'});
   P.cod.drafts=P.cod.drafts.filter(x=>x.id!==d.id);savP('cod');jrn('livraison',dr.type+(dr.ref?' (en réponse à une sollicitation)':' (initiative)'));render()},
- treat(d){const it=P.cod.items[d.id]||(P.cod.items[d.id]={});it.done=true;it.t=now();it.texte='Pris en compte, aucune production nécessaire.';it.sans=true;savP('cod');jrn('traité sans production',(S.injects.find(i=>i.id===d.id)||{}).titre||d.id);render()},
+ treat(d){const it=P[view].items[d.id]||(P[view].items[d.id]={});it.done=true;it.t=now();it.texte=view==='cod'?'Pris en compte, aucune production nécessaire.':'Pris en compte.';it.sans=true;savP(view);jrn('pris en compte',(INJ().find(i=>i.id===d.id)||{}).titre||d.id);render()},
+ toggleVal(){S.validation=!VAL();log('Validation par la stratégie : '+(VAL()?'activée':'désactivée'),'mj');save();render()},
+ dirsend(){
+  const dd=P.strategie.dirDraft;if(!(dd.titre||'').trim()||!(dd.texte||'').trim()){alert('Renseignez un titre et une consigne.');return}
+  const dest=dd.to==='tous'?['cod','presse']:[dd.to];
+  dest.forEach(t=>P.strategie.directives.push({id:'x'+now()+t,to:t,titre:dd.titre,texte:dd.texte,prio:+dd.prio||1,delai:Math.max(1,+dd.delai||8),t:now(),tour:S.tour}));
+  P.strategie.dirDraft={to:dd.to,titre:'',texte:'',prio:1,delai:dd.delai};savP('strategie');jrn('instruction',dd.titre);render()},
+ appelsend(){
+  const ad=P.strategie.appelDraft;if(!(ad.texte||'').trim()){alert('Rédigez votre demande au partenaire.');return}
+  P.strategie.appels.push({id:'a'+now(),partenaire:ad.partenaire,texte:ad.texte,t:now(),tour:S.tour});
+  P.strategie.appelDraft={partenaire:ad.partenaire,texte:''};savP('strategie');jrn('appel partenaire',ad.partenaire);render()},
+ requete(){
+  const t=(P[view].reqDraft||'').trim();if(!t){alert('Écrivez votre demande.');return}
+  P[view].requetes.push({id:'r'+now(),texte:t,t:now(),tour:S.tour});P[view].reqDraft='';savP(view);jrn('sollicitation stratégie',t);render()},
+ instruire(d){
+  const t=((P.strategie.items[d.id]||{}).texte||'').trim();if(!t){alert('Rédigez l’instruction.');return}
+  P.strategie.directives.push({id:'x'+now(),to:d.from,titre:'Réponse à votre demande',texte:t,prio:2,delai:8,t:now(),tour:S.tour,ref:d.id});
+  savP('strategie');jrn('instruction','Réponse à une demande du '+d.from);render()},
+ soumettre(d){const dr=(P.cod.drafts||[]).find(x=>x.id===d.id);if(!dr)return;if(!(dr.texte||'').trim()){alert('Rédigez la production avant de la soumettre.');return}dr.v=(dr.v||0)+1;dr.statut='soumis';dr.soumisT=now();savP('cod');jrn('soumission validation',dr.type);render()},
+ valider(d){
+  const ok=d.ok==='1';const dr=(P.cod.drafts||[]).find(x=>x.id===d.key.split('#')[0]);
+  const c=((P.strategie.items['val-'+d.key]||{}).texte||'').trim();
+  if(!ok&&!c){alert('Précisez les modifications demandées.');return}
+  P.strategie.valid[d.key]={etat:ok?'valide':'refus',t:now(),comm:c,type:dr?dr.type:'',texte:dr?dr.texte:'',soumisT:dr?dr.soumisT:now()};
+  savP('strategie');jrn('validation',(ok?'Validé : ':'Modifications demandées : ')+(dr?dr.type:''));render()},
+ aproll(d){S.aproll[d.id]={d1:rnd(6),d2:rnd(6)};save();render()},
+ apsend(d){
+  const c=(P.strategie.appels||[]).find(x=>x.id===d.id);if(!c)return;
+  const part=PARTENAIRES.find(p=>p.nom===c.partenaire)||{mod:0};const roll=S.aproll[c.id];
+  const total=roll?roll.d1+roll.d2+part.mod+(S.apmods[c.id]||[]).reduce((a,k)=>a+((MODS.find(m=>m.k===k)||{v:0}).v),0):null;
+  const res=total!=null?resultOf(total):null;
+  const txt=(S.apdraft[c.id]!==undefined?S.apdraft[c.id]:(res?res.texte(c.partenaire):'')).trim();
+  if(!txt){alert('Lancez le jet ou rédigez la réponse.');return}
+  S.appelsRep[c.id]={t:now(),total:total==null?'—':total,etat:res?res.etat:'Réponse libre',texte:txt};
+  addInject({dest:'strategie',titre:'Réponse : '+c.partenaire,texte:txt,tache:'Prendre en compte ; ajuster la ligne et, si besoin, instruire le COD ou la presse.',delai:10,g:1},'reponse');
+  save();render()},
  seen(d){P[view].seen=P[view].seen||{};P[view].seen[d.id]=now();savP(view);render()},
  chatToggle(){chatOpen=!chatOpen;if(chatOpen&&CH.length){chatRead=CH[CH.length-1].t;locset(KRk(),chatRead)}render();if(chatOpen){const m=document.getElementById('chat-msgs');if(m)m.scrollTop=m.scrollHeight;const t=document.getElementById('chat-in');if(t)t.focus()}},
  chatSend(){
@@ -474,9 +535,14 @@ function onInput(e){
  const i=b.indexOf(':'),k=b.slice(0,i),id=b.slice(i+1);
  const val=t.type==='checkbox'?t.checked:t.value;
  if(k==='chat'){if(id==='draft')chatDraft=val;else chatFrom=val;return}
+ if(k==='dir'){P.strategie.dirDraft[id]=(id==='prio'||id==='delai')?+val:val;savP('strategie');return}
+ if(k==='app'){P.strategie.appelDraft[id]=val;savP('strategie');return}
+ if(k==='req'){P[view].reqDraft=val;savP(view);return}
+ if(k==='apmod'){const cid=id.split('|')[0],mk=id.split('|')[1];const a=S.apmods[cid]||(S.apmods[cid]=[]);const x=a.indexOf(mk);if(val&&x<0)a.push(mk);if(!val&&x>=0)a.splice(x,1);save();render();return}
+ if(k==='aptxt'){S.apdraft[id]=val;save();return}
  if(k==='dtext'||k==='dtype'||k==='dref'){
   const dr=(P[view].drafts||[]).find(x=>x.id===id);
-  if(dr){dr[({dtext:'texte',dtype:'type',dref:'ref'})[k]]=val;savP(view);
+  if(dr){dr[({dtext:'texte',dtype:'type',dref:'ref'})[k]]=val;if(k!=='dref'&&dr.statut)dr.statut='brouillon';savP(view);
    if(k==='dtext'){const c=document.getElementById('cnt-'+id);if(c)c.textContent=val.length}
    else if(e.type==='change')render()}
   return}
@@ -559,11 +625,46 @@ function tabsBar(v,list){
  return `<div class="tabs ptabs">${list.map(t=>`<button class="tab ${cur===t[0]?'on':''}" data-act="ptab" data-k="${t[0]}">${t[1]}${t[2]?` <span class="badge">${t[2]}</span>`:''}</button>`).join('')}</div>`;
 }
 function ptabOf(v){return ptab[v]||(v==='cod'?'traiter':(v==='strategie'?'arbitrages':''))}
+function doneCard(i){const dv=delivery(i)||{};return `<div class="card inj done"><div class="meta"><span class="tag">${esc(typeTag(i))}</span><span>${hhmm(i.t0)}</span><span class="ok">traité à ${hhmm(dv.t)}</span></div><h4>${esc(i.titre)}</h4><div class="muted">${nl(dv.texte||'')}</div></div>`}
+function stratCard(i){
+ const dl=i.t0+i.delai*60000;
+ const head=`<div class="meta"><span class="tag">${esc(typeTag(i))}</span><span>${hhmm(i.t0)}</span><span>échéance <span class="cd" data-end="${dl}"></span></span></div><h4>${esc(i.titre)}</h4>`;
+ const it=P.strategie.items[i.id]||{};
+ if(i.type==='demande')return `<div class="card inj g2">${head}<div>${nl(i.texte)}</div><textarea id="ta-${i.id}" data-bind="item:${i.id}" style="margin-top:6px" placeholder="Votre instruction à ${DESTL[i.from]}">${esc(it.texte||'')}</textarea><div class="row" style="margin-top:6px"><button class="btn" data-act="instruire" data-id="${i.id}" data-from="${i.from}">Donner l’instruction</button><button class="btn sec small" data-act="treat" data-id="${i.id}">Pris en compte, sans instruction</button></div></div>`;
+ if(i.type==='validation')return `<div class="card inj g2">${head}<div class="card" style="background:#f7f7f7">${nl(i.texte)}</div><textarea id="ta-${i.id}" data-bind="item:${i.id}" style="min-height:70px" placeholder="Commentaire (obligatoire si vous demandez des modifications)">${esc(it.texte||'')}</textarea><div class="row" style="margin-top:6px"><button class="btn" data-act="valider" data-key="${i.id.slice(4)}" data-ok="1">Valider</button><button class="btn red" data-act="valider" data-key="${i.id.slice(4)}" data-ok="0">Demander des modifications</button></div></div>`;
+ if(i.type==='reponse'||i.type==='directive')return `<div class="card inj g${i.g||1}">${head}<div>${nl(i.texte)}</div><div class="tache"><b>À faire :</b> ${esc(i.tache)}</div><button class="btn" data-act="treat" data-id="${i.id}">Pris en compte</button></div>`;
+ return injCard(i,'strategie');
+}
+function coordTab(){
+ const dd=P.strategie.dirDraft;const ad=P.strategie.appelDraft;
+ const dirs=(P.strategie.directives||[]).slice().reverse();
+ const apps=(P.strategie.appels||[]).slice().reverse();
+ return `<div class="grid2"><div>
+  <div class="card"><h2>Donner une instruction</h2>
+   <p class="muted">Pour faire agir le COD ou la cellule presse.</p>
+   <div class="row"><select id="dir-to" data-bind="dir:to" style="width:auto"><option value="cod" ${dd.to==='cod'?'selected':''}>au COD</option><option value="presse" ${dd.to==='presse'?'selected':''}>à la cellule presse</option><option value="tous" ${dd.to==='tous'?'selected':''}>à tous</option></select>
+   <select id="dir-prio" data-bind="dir:prio" style="width:auto"><option value="1" ${+dd.prio===1?'selected':''}>Normale</option><option value="2" ${+dd.prio===2?'selected':''}>Haute</option><option value="3" ${+dd.prio===3?'selected':''}>Critique</option></select>
+   <label>échéance</label><input type="number" min="1" style="width:80px" id="dir-delai" data-bind="dir:delai" value="${esc(dd.delai)}"><span class="muted">min</span></div>
+   <input type="text" id="dir-titre" data-bind="dir:titre" placeholder="Titre (ex. Rectifier le bilan publié)" value="${esc(dd.titre)}" style="margin-top:6px">
+   <textarea id="dir-texte" data-bind="dir:texte" style="min-height:90px;margin-top:6px" placeholder="Consigne précise : quoi, quand, avec quel message">${esc(dd.texte)}</textarea>
+   <div class="row" style="margin-top:6px"><button class="btn" data-act="dirsend">Envoyer l’instruction</button></div></div>
+  <div class="card"><h2>Appeler un partenaire</h2>
+   <p class="muted">Vous ne pouvez pas imposer : vous demandez, vous argumentez. Le maître du jeu répond.</p>
+   <select id="app-part" data-bind="app:partenaire">${PARTENAIRES.map(p=>`<option ${ad.partenaire===p.nom?'selected':''}>${esc(p.nom)}</option>`).join('')}</select>
+   <textarea id="app-texte" data-bind="app:texte" style="min-height:90px;margin-top:6px" placeholder="Ce que vous dites au partenaire : demande, arguments, ce que vous proposez">${esc(ad.texte)}</textarea>
+   <div class="row" style="margin-top:6px"><button class="btn" data-act="appelsend">Passer l’appel</button></div></div>
+ </div><div>
+  <h2>Instructions données (${dirs.length})</h2>
+  ${dirs.map(d=>{const s=dirStatus(d);return `<div class="card"><div class="meta"><span class="tag">${DESTL[d.to]}</span><span>${hhmm(d.t)}</span><span>${s.seen?'✓ reçue '+hhmm(s.seen):'non lue'}</span><span class="${s.done?'ok':''}">${s.done?'✓ exécutée '+hhmm(s.done):'à exécuter'}</span></div><h4>${esc(d.titre)}</h4><div class="muted">${nl(d.texte)}</div></div>`}).join('')||'<div class="info">Aucune instruction donnée.</div>'}
+  <h2>Appels passés (${apps.length})</h2>
+  ${apps.map(c=>{const r=S.appelsRep[c.id];return `<div class="card"><div class="meta"><span class="tag">${esc(c.partenaire)}</span><span>${hhmm(c.t)}</span>${r?`<span class="ok">réponse à ${hhmm(r.t)} : ${esc(r.etat)}</span>`:'<span class="muted">en attente de réponse…</span>'}</div><div class="muted">${nl(c.texte)}</div>${r?`<p><b>Réponse :</b> ${nl(r.texte)}</p>`:''}</div>`}).join('')||'<div class="info">Aucun appel passé.</div>'}
+ </div></div>`;
+}
 function viewStrategie(s){
- const L=P.strategie.ligne;const arbs=S.injects.filter(i=>routeOf(i)==='strategie');
+ const L=P.strategie.ligne;const arbs=INJ().filter(i=>routeOf(i)==='strategie');
  const open=arbs.filter(i=>!delivery(i)),done=arbs.filter(i=>delivery(i));
  const cur=ptabOf('strategie');
- const bar=tabsBar('strategie',[['situation','Situation'],['ligne','Ligne de communication',L.dirty?'!':''],['arbitrages','Arbitrages à rendre',open.length||''],['rendu','Déjà rendu']]);
+ const bar=tabsBar('strategie',[['situation','Situation'],['ligne','Ligne de communication',L.dirty?'!':''],['arbitrages','À traiter et à valider',open.length||''],['coord','Instructions et appels'],['rendu','Déjà traité']]);
  let body='';
  if(cur==='situation')body=`<div class="card"><h2>Contexte</h2><p>${nl(s.briefing)}</p></div><h2>Situation</h2>${situationBoard()}`;
  else if(cur==='ligne')body=`<div class="card ${L.publie&&!L.dirty?'ligne':''}"><h2>Ligne de communication</h2>
@@ -573,33 +674,50 @@ function viewStrategie(s){
    <label>Cibles prioritaires</label><input type="text" data-bind="ligne:cibles" id="l-cib" value="${esc(L.cibles)}">
    <label>Prochaine prise de parole (qui, quand, où)</label><input type="text" data-bind="ligne:prochaine" id="l-pro" value="${esc(L.prochaine)}">
    <div class="row" style="margin-top:8px"><button class="btn" data-act="publier">Publier la ligne au COD</button>${L.publie?`<span class="${L.dirty?'':'ok'}">${L.dirty?'Modifiée, non republiée':'Publiée à '+hhmm(L.t)+' (v'+L.v+')'}</span>`:'<span class="muted">Pas encore publiée</span>'}</div></div>`;
- else if(cur==='arbitrages')body=`<h2>Arbitrages à rendre (${open.length})</h2>${open.slice().reverse().map(i=>injCard(i,'strategie')).join('')||'<div class="info">Aucun arbitrage en attente.</div>'}`;
- else body=`<h2>Déjà rendu (${done.length})</h2>${done.slice().reverse().map(i=>injCard(i,delivery(i).vue)).join('')||'<div class="info">Rien de rendu pour l’instant.</div>'}`;
+ else if(cur==='arbitrages')body=`<h2>À traiter et à valider (${open.length})</h2>${open.slice().sort((a,b)=>b.t0-a.t0).map(stratCard).join('')||'<div class="info">Rien en attente.</div>'}`;
+ else if(cur==='coord')body=coordTab();
+ else body=`<h2>Déjà traité (${done.length})</h2>${done.slice().sort((a,b)=>b.t0-a.t0).map(doneCard).join('')||'<div class="info">Rien de traité pour l’instant.</div>'}`;
  return bar+body;
 }
 const PTYPES=['Communiqué de presse','Post réseaux sociaux','Message d’alerte','Point de situation','Réponse à un journaliste','Note / autre'];
 function draftCard(d){
  const opens=openFor('cod');
- const cur=S.injects.find(i=>i.id===d.ref);
+ const cur=INJ().find(i=>i.id===d.ref);
  const refs=opens.slice();if(cur&&refs.indexOf(cur)<0)refs.push(cur);
  const isPost=/Post/.test(d.type),isOral=/journaliste/.test(d.type);
+ const needs=VAL()&&NEEDVAL.indexOf(d.type)>=0;
+ const val=(P.strategie.valid||{})[d.id+'#'+(d.v||0)];
+ let st='libre';if(needs){st=d.statut==='soumis'?(val?(val.etat==='valide'?'valide':'refus'):'attente'):'brouillon'}
+ const pub=(isPost||/Communiqué|alerte|Point/.test(d.type))?'Publier':'Livrer';
+ let btns='';
+ if(st==='libre'||st==='valide')btns=`<button class="btn" data-act="livdraft" data-id="${d.id}">${pub}</button>`;
+ else if(st==='brouillon'||st==='refus')btns=`<button class="btn" data-act="soumettre" data-id="${d.id}">${st==='refus'?'Resoumettre à validation':'Soumettre à validation'}</button>`;
+ else btns=`<button class="btn" disabled>En attente de validation depuis ${hhmm(d.soumisT)}</button>`;
+ const badge=st==='valide'?`<div class="ok" style="margin-top:6px">✓ Validé par la stratégie à ${hhmm(val.t)}${val.comm?' : '+esc(val.comm):''}</div>`:(st==='refus'?`<div class="alert" style="margin:6px 0 0"><b>Modifications demandées :</b> ${nl(val.comm)}</div>`:'');
  return `<div class="card inj"><div class="row"><select data-bind="dtype:${d.id}" id="dt-${d.id}" style="width:auto">${PTYPES.map(t=>`<option ${d.type===t?'selected':''}>${t}</option>`).join('')}</select>
   <select data-bind="dref:${d.id}" id="dr-${d.id}" class="grow"><option value="">En réponse à : aucune (initiative)</option>${refs.map(i=>`<option value="${i.id}" ${d.ref===i.id?'selected':''}>En réponse à : ${esc(i.titre)}</option>`).join('')}</select></div>
-  <textarea id="dx-${d.id}" data-bind="dtext:${d.id}" style="margin-top:6px;min-height:150px" placeholder="${isOral?'Éléments de langage ou réponse orale':'Rédigez ici'}">${esc(d.texte||'')}</textarea>
-  <div class="row" style="margin-top:6px"><button class="btn" data-act="livdraft" data-id="${d.id}">${isPost||/Communiqué|alerte|Point/.test(d.type)?'Publier':'Livrer'}</button>
+  <textarea id="dx-${d.id}" data-bind="dtext:${d.id}" ${st==='attente'?'readonly':''} style="margin-top:6px;min-height:150px" placeholder="${isOral?'Éléments de langage ou réponse orale':'Rédigez ici'}">${esc(d.texte||'')}</textarea>
+  ${badge}
+  <div class="row" style="margin-top:6px">${btns}
   ${isOral?`<button class="btn sec" data-act="chrono" data-id="${d.id}">Chrono 1 min 30</button><span class="chr" data-id="${d.id}"></span>`:''}
   <button class="btn sec small" data-act="deldraft" data-id="${d.id}">Supprimer</button>
-  ${isPost?`<span class="muted"><span id="cnt-${d.id}">${(d.texte||'').length}</span> caractères</span>`:''}</div></div>`;
+  ${isPost?`<span class="muted"><span id="cnt-${d.id}">${(d.texte||'').length}</span> caractères</span>`:''}</div>
+  ${needs?'<div class="muted">Ce type de production passe par la validation de la stratégie.</div>':''}</div>`;
+}
+function requeteForm(v){
+ const mine=(P[v].requetes||[]).slice().reverse().slice(0,4);
+ const st=r=>{const d=(P.strategie.directives||[]).find(x=>x.ref==='req-'+r.id);return d?`<span class="ok">instruction reçue à ${hhmm(d.t)}</span>`:'<span class="muted">sans réponse</span>'};
+ return `<div class="card"><h2>Solliciter la stratégie</h2><textarea id="rq-${v}" data-bind="req:texte" style="min-height:70px" placeholder="Votre question ou besoin d’arbitrage (ex. le SDIS a publié un bilan différent : que faisons-nous ?)">${esc(P[v].reqDraft||'')}</textarea><div class="row" style="margin-top:6px"><button class="btn" data-act="requete">Envoyer à la stratégie</button></div>${mine.length?`<ul class="tl">${mine.map(r=>`<li>${hhmm(r.t)} — ${esc(r.texte.slice(0,80))} → ${st(r)}</li>`).join('')}</ul>`:''}</div>`;
 }
 function infoCard(i){
  const dl=i.t0+i.delai*60000;const brouillon=(P.cod.drafts||[]).some(x=>x.ref===i.id);
- return `<div class="card inj g${i.g||1}"><div class="meta"><span class="tag">${i.canal?esc(CANAL[i.canal]):(i.type==='friction'?'Imprévu interne':'Fil rouge')}</span><span>${hhmm(i.t0)}</span><span>échéance <span class="cd" data-end="${dl}"></span></span>${brouillon?'<span class="ok">Brouillon en cours</span>':''}</div>
+ return `<div class="card inj g${i.g||1}"><div class="meta"><span class="tag">${esc(typeTag(i))}</span><span>${hhmm(i.t0)}</span><span>échéance <span class="cd" data-end="${dl}"></span></span>${brouillon?'<span class="ok">Brouillon en cours</span>':''}</div>
  <h4>${esc(i.titre)}</h4><div>${nl(i.texte)}</div><div class="tache"><b>À faire :</b> ${esc(i.tache)}</div>
  <div class="row"><button class="btn" data-act="produire" data-id="${i.id}">Produire (communiqué, post, réponse…)</button><button class="btn sec small" data-act="treat" data-id="${i.id}">Pris en compte, sans production</button></div></div>`;
 }
 function viewCod(s){
  const L=P.strategie.ligne;const l=loads();
- const arr=S.injects.filter(i=>routeOf(i)==='cod');
+ const arr=INJ().filter(i=>routeOf(i)==='cod');
  const open=arr.filter(i=>!delivery(i));
  const pa=presseActive();
  const reps=P.cod.renforts.slice().reverse().slice(0,3).map(r=>{
@@ -619,7 +737,7 @@ function viewCod(s){
  if(cur==='ligne')body=L.publie?`<div class="card ligne"><h2>Ligne de la stratégie <span class="muted">· v${L.v}, ${hhmm(L.t)}</span></h2>
    <p><b>Objectif :</b> ${esc(L.objectif)}</p><p><b>Messages clés :</b><br>${nl(L.messages)}</p><p><b>Cibles :</b> ${esc(L.cibles)}</p><p><b>Prochaine prise de parole :</b> ${esc(L.prochaine)}</p></div>`:'<div class="info">La stratégie n’a pas encore publié de ligne de communication.</div>';
  else if(cur==='situation')body=`<h2>Situation</h2>${situationBoard()}`;
- else if(cur==='traiter')body=`<h2>À traiter (${open.length})</h2><p class="muted">Instructions et événements à prendre en compte. Pour y répondre, rédigez dans l’onglet Production.</p>${open.slice().reverse().map(infoCard).join('')||'<div class="info">Rien en attente. Anticipez : prochain point de situation ?</div>'}`;
+ else if(cur==='traiter')body=`<h2>À traiter (${open.length})</h2>${requeteForm('cod')}<p class="muted">Instructions et événements à prendre en compte. Pour y répondre, rédigez dans l’onglet Production.</p>${open.slice().reverse().map(infoCard).join('')||'<div class="info">Rien en attente. Anticipez : prochain point de situation ?</div>'}`;
  else if(cur==='production')body=`<div class="row" style="margin-bottom:10px"><h2 style="margin:0">Production (${drafts.length} en cours)</h2><button class="btn" data-act="newdraft">+ Nouvelle production</button></div>
   <p class="muted">Communiqués, posts, messages d’alerte, réponses aux journalistes : tout se rédige ici, plusieurs à la fois si besoin.</p>
   ${drafts.slice().reverse().map(draftCard).join('')||'<div class="info">Aucune production en cours. Cliquez sur « Nouvelle production » ou sur « Produire » depuis une sollicitation.</div>'}`;
@@ -627,17 +745,18 @@ function viewCod(s){
   const prods=(P.cod.prods||[]).map(x=>Object.assign({k:'prod'},x));
   const sans=Object.keys(P.cod.items).filter(k=>P.cod.items[k].done&&P.cod.items[k].sans).map(k=>({k:'sans',id:k,t:P.cod.items[k].t,type:'Pris en compte',texte:P.cod.items[k].texte,ref:k}));
   const all=prods.concat(sans).sort((a,b)=>b.t-a.t);
-  body=`<h2>Déjà livré (${all.length})</h2>${all.map(x=>{const inj=S.injects.find(i=>i.id===x.ref);return `<div class="card inj done"><div class="meta"><span class="tag">${esc(x.type)}</span><span>${hhmm(x.t)}</span>${inj?`<span>en réponse à : ${esc(inj.titre)}</span>`:'<span>initiative</span>'}</div>${nl(x.texte)}</div>`}).join('')||'<div class="info">Rien de livré pour l’instant.</div>'}`;
+  body=`<h2>Déjà livré (${all.length})</h2>${all.map(x=>{const inj=INJ().find(i=>i.id===x.ref);return `<div class="card inj done"><div class="meta"><span class="tag">${esc(x.type)}</span><span>${hhmm(x.t)}</span>${inj?`<span>en réponse à : ${esc(inj.titre)}</span>`:'<span>initiative</span>'}</div>${nl(x.texte)}</div>`}).join('')||'<div class="info">Rien de livré pour l’instant.</div>'}`;
  }
  return strip+bar+body;
 }
 function viewPresse(s){
  const L=P.strategie.ligne;const pa=presseActive();
  if(!pa){return `<div class="grid2"><div><div class="card"><h2>En réserve</h2><p>Vous n’êtes pas encore engagé(e). Observez la situation : le COD peut demander votre appui. En attendant, préparez-vous : quels sont les trois messages ? quelles questions les journalistes poseront-ils ?</p></div></div><div><h2>Situation</h2>${situationBoard()}</div></div>`}
- const arr=S.injects.filter(i=>routeOf(i)==='presse');
+ const arr=INJ().filter(i=>routeOf(i)==='presse');
  const open=arr.filter(i=>!delivery(i)),done=arr.filter(i=>delivery(i));const l=loads();
  return `<div class="grid2"><div>
   <div class="card">${gauge('Cellule presse',l.presse)}</div>
+  ${requeteForm('presse')}
   ${L.publie?`<div class="card ligne"><h2>Ligne de la stratégie <span class="muted">· v${L.v}</span></h2><p><b>Messages clés :</b><br>${nl(L.messages)}</p><p><b>Prochaine prise de parole :</b> ${esc(L.prochaine)}</p></div>`:'<div class="info">La stratégie n’a pas encore publié de ligne.</div>'}
   <h2>Situation</h2>${situationBoard()}
  </div><div>
@@ -662,6 +781,7 @@ function tabPrep(s){
   <div class="card"><h2>2. Paramètres et joueurs</h2>
    <label>Durée d’un tour (minutes réelles)</label><input type="number" min="1" max="60" id="p-tm" data-bind="param:tourMinutes" value="${S.tourMinutes}" ${S.running?'disabled':''}>
    <p><label><input type="checkbox" id="p-presse" ${S.presseOn?'checked':''} data-act="togglePresse"> Cellule presse engagée dès le début</label><br><span class="muted">Décochée, le COD est seul face à la presse : c’est l’épreuve de l’agilité. La cellule presse n’arrive que si le COD demande un renfort et que vous l’accordez.</span></p>
+   <p><label><input type="checkbox" ${VAL()?'checked':''} data-act="toggleVal"> Validation par la stratégie avant toute publication</label><br><span class="muted">Communiqués, posts, messages d’alerte et points de situation du COD doivent être validés avant publication. À désactiver pour une séance plus rapide.</span></p>
    <div class="row"><div class="grow"><label>Stratégie</label><input type="text" id="j-s" data-bind="joueur:strategie" value="${esc(S.joueurs.strategie)}" placeholder="Prénom"></div>
    <div class="grow"><label>COD</label><input type="text" id="j-c" data-bind="joueur:cod" value="${esc(S.joueurs.cod)}" placeholder="Prénom"></div>
    <div class="grow"><label>Presse (appui)</label><input type="text" id="j-p" data-bind="joueur:presse" value="${esc(S.joueurs.presse)}" placeholder="Prénom"></div></div>
@@ -676,6 +796,29 @@ function tabPrep(s){
  </div></div>
  <div class="row" style="margin-top:6px">${S.running?'<span class="ok">Exercice en cours</span>':`<button class="btn red big" data-act="start">▶ Démarrer l’exercice</button>`}<button class="btn sec" data-act="reset">Réinitialiser</button></div>`;
 }
+function callCard(c){
+ const part=PARTENAIRES.find(p=>p.nom===c.partenaire)||{nom:c.partenaire,mod:0};
+ const rep=S.appelsRep[c.id];
+ if(rep)return `<div class="card inj done"><div class="meta"><span class="tag">${esc(c.partenaire)}</span><span>${hhmm(c.t)}</span><span class="ok">réponse à ${hhmm(rep.t)} (jet ${rep.total} · ${esc(rep.etat)})</span></div><p>${nl(c.texte)}</p><p><b>Réponse :</b> ${nl(rep.texte)}</p></div>`;
+ const mods=S.apmods[c.id]||[];const roll=S.aproll[c.id];
+ const msum=mods.reduce((a,k)=>a+((MODS.find(m=>m.k===k)||{v:0}).v),0);
+ const total=roll?roll.d1+roll.d2+part.mod+msum:null;
+ const res=total!=null?resultOf(total):null;
+ const txt=S.apdraft[c.id]!==undefined?S.apdraft[c.id]:(res?res.texte(c.partenaire):'');
+ return `<div class="card inj g2"><div class="meta"><span class="tag">${esc(c.partenaire)}</span><span>${hhmm(c.t)}</span><span>disposition de base : ${part.mod>=0?'+':''}${part.mod}</span></div>
+ <p><b>La stratégie dit :</b> ${nl(c.texte)}</p>
+ <div class="muted">Modificateurs selon la qualité de l’appel :</div>
+ <div>${MODS.map(m=>`<label style="display:inline-block;margin-right:12px;font-size:13px"><input type="checkbox" data-bind="apmod:${c.id}|${m.k}" ${mods.indexOf(m.k)>=0?'checked':''}> ${esc(m.l)} (${m.v>0?'+':''}${m.v})</label>`).join('')}</div>
+ <div class="row" style="margin:6px 0"><button class="btn" data-act="aproll" data-id="${c.id}">🎲 Lancer 2d6</button>${roll?`<span class="big">${roll.d1} + ${roll.d2} ${part.mod?(part.mod>0?'+ ':'− ')+Math.abs(part.mod):''} ${msum?(msum>0?'+ ':'− ')+Math.abs(msum):''} = ${total}</span><span class="tag">${esc(res.etat)}</span>`:'<span class="muted">Sans jet, rédigez librement la réponse.</span>'}</div>
+ <textarea id="apt-${c.id}" data-bind="aptxt:${c.id}" style="min-height:70px" placeholder="Réponse du partenaire">${esc(txt)}</textarea>
+ <div class="row" style="margin-top:6px"><button class="btn red" data-act="apsend" data-id="${c.id}">Envoyer la réponse à la stratégie</button></div>
+ <div class="muted" style="margin-top:4px">≤ 4 refus · 5-6 refus avec alternative · 7-8 accord avec délai · 9-10 accord rapide · 11 et plus accord et message commun</div></div>`;
+}
+function appelsPanel(){
+ const calls=(P.strategie.appels||[]).slice().reverse();if(!calls.length)return '';
+ const pend=calls.filter(c=>!S.appelsRep[c.id]).length;
+ return `<div class="card"${pend?' style="border:2px solid var(--rouge)"':''}><h2>Appels sortants de la stratégie (${pend} en attente)</h2>${calls.map(callCard).join('')}</div>`;
+}
 function tabPilot(s){
  if(!S.running&&!S.ended)return '<div class="info">Choisissez un scénario et démarrez l’exercice depuis l’onglet « Préparer ».</div>';
  const l=loads();const d=S.dice;
@@ -688,13 +831,14 @@ function tabPilot(s){
   ${d.fr?`<div class="card inj g${d.fr.g}"><div class="meta"><span class="tag">Friction · ${esc(d.fr.kind)}</span><span>vers ${DESTL[routeOf(d.fr)]}</span></div><h4>${esc(d.fr.titre)}</h4><div>${nl(d.fr.texte)}</div><div class="tache">${esc(d.fr.tache)}</div><button class="btn" data-act="injfr">Injecter la friction</button></div>`:''}`:''}
  </div>`;
  const rfBlock=pend.length?pend.map(r=>`<div class="alert"><b>Demande de renfort du COD</b> (${esc(r.type)}) à ${hhmm(r.t)}${r.motif?' — '+esc(r.motif):''}<div class="row" style="margin-top:6px"><label>Délai d’arrivée (min)</label><input type="number" min="0" style="width:80px" id="rf-delay" data-bind="param:rfDelay" value="${S.rfDelay}"><button class="btn" data-act="accord" data-t="${r.t}">Accorder</button><button class="btn sec" data-act="refuse" data-t="${r.t}">Refuser</button></div></div>`).join(''):'';
- const rows=S.injects.slice().reverse().map(i=>{const dv=delivery(i);const st=dv?`<span class="ok">livré ${hhmm(dv.t)}</span>`:(isEchu(i)?'<span class="cd late" data-end="'+(i.t0+i.delai*60000)+'"></span>':'<span class="cd" data-end="'+(i.t0+i.delai*60000)+'"></span>');return `<tr><td>${hhmm(i.t0)}</td><td>${i.dest==='tous'?'Tous':DESTL[routeOf(i)]}</td><td>${esc(i.titre)}</td><td>${i.type}</td><td>${st}</td></tr>`}).join('');
+ const rows=INJ().slice().reverse().map(i=>{const dv=delivery(i);const st=dv?`<span class="ok">livré ${hhmm(dv.t)}</span>`:(isEchu(i)?'<span class="cd late" data-end="'+(i.t0+i.delai*60000)+'"></span>':'<span class="cd" data-end="'+(i.t0+i.delai*60000)+'"></span>');return `<tr><td>${hhmm(i.t0)}</td><td>${i.dest==='tous'?'Tous':DESTL[routeOf(i)]}</td><td>${esc(i.titre)}</td><td>${i.type}</td><td>${st}</td></tr>`}).join('');
  const dr=S.draft||{};
  return `<div class="row card"><span class="big">Tour ${S.tour}/${s.fil.length}</span>${S.tourEnd?`<span class="big">⏱ <span class="tcd" data-end="${S.tourEnd}"></span></span>`:''}
   ${S.paused?'<button class="btn" data-act="resume">Reprendre</button>':'<button class="btn sec" data-act="pause">Pause</button>'}
   <button class="btn red" data-act="next">${last?'Clôturer l’exercice':'Tour suivant ▶'}</button>
-  <label><input type="checkbox" id="p-presse2" ${S.presseOn?'checked':''} data-act="togglePresse"> Cellule presse engagée</label>${presseActive()&&!S.presseOn?'<span class="ok">Binôme presse en place</span>':''}</div>
+  <label><input type="checkbox" ${VAL()?'checked':''} data-act="toggleVal"> Validation par la stratégie</label> <label><input type="checkbox" id="p-presse2" ${S.presseOn?'checked':''} data-act="togglePresse"> Cellule presse engagée</label>${presseActive()&&!S.presseOn?'<span class="ok">Binôme presse en place</span>':''}</div>
  ${rfBlock}
+ ${appelsPanel()}
  <div class="grid2"><div>
   <div class="card"><h2>Charge des cellules</h2>${gauge('COD',l.cod)}${gauge('Presse',l.presse)}${gauge('Stratégie',l.strategie)}
   <p class="muted">Si le COD tient seul : observez. Un COD à 7 ou plus sans demande de renfort est le signal à débriefer.</p></div>
@@ -717,7 +861,7 @@ function rateBtns(id){
 }
 function tabProd(){
  const L=P.strategie.ligne;
- const inj=S.injects.filter(i=>i.dest!=='tous').slice().reverse();
+ const inj=INJ().filter(i=>i.dest!=='tous').slice().reverse();
  const cards=inj.map(i=>{const dv=delivery(i);return `<div class="card inj g${i.g||1} ${dv?'done':''}"><div class="meta"><span class="tag">${DESTL[routeOf(i)]}</span><span>tour ${i.tour}</span>${(P[routeOf(i)].seen||{})[i.id]?`<span>vu à ${hhmm(P[routeOf(i)].seen[i.id])} (+${mmss(P[routeOf(i)].seen[i.id]-i.t0)})</span>`:(i.dest!=='tous'&&!dv?'<span style="color:var(--ko)">pas encore vu</span>':'')}${dv?`<span class="ok">livré en ${mmss(dv.t-i.t0)}${dv.t>i.t0+i.delai*60000?' (hors délai)':''}</span>`:'<span style="color:var(--ko)">non livré</span>'}</div><h4>${esc(i.titre)}</h4><div class="muted">${esc(i.tache)}</div>${dv?`<div class="card" style="background:#f7f7f7;margin-top:6px">${dv.type?'<b>['+esc(dv.type)+']</b><br>':''}${nl(dv.texte)}</div>`:''}${rateBtns(i.id)}</div>`}).join('');
  const lib=allLibre().map(x=>`<div class="card"><div class="meta"><span class="tag">${esc(x.type)}</span><span>${DESTL[x.vue]} · ${hhmm(x.t)}</span></div><div>${nl(x.texte)}</div>${rateBtns(x.id)}</div>`).join('');
  return `<div class="grid2"><div><h2>Livraisons des joueurs</h2>${cards||'<div class="info">Aucun inject pour l’instant.</div>'}</div>
@@ -726,14 +870,18 @@ function tabProd(){
 }
 function timeline(){
  const ev=S.journal.map(j=>({t:j.t,txt:j.txt,kind:j.kind}));
- S.injects.forEach(i=>{const dv=delivery(i);if(dv)ev.push({t:dv.t,txt:`${DESTL[dv.vue]} livre : ${i.titre}`,kind:'livraison'})});
+ INJ().forEach(i=>{const dv=delivery(i);if(dv)ev.push({t:dv.t,txt:`${DESTL[dv.vue]} livre : ${i.titre}`,kind:'livraison'})});
  allLibre().forEach(x=>ev.push({t:x.t,txt:`${DESTL[x.vue]} publie (initiative) : ${x.type}`,kind:'livraison'}));
  if(P.strategie.ligne.publie)ev.push({t:P.strategie.ligne.t,txt:`Ligne stratégique publiée (v${P.strategie.ligne.v})`,kind:'livraison'});
+ (P.strategie.directives||[]).forEach(d=>ev.push({t:d.t,txt:`Stratégie → ${DESTL[d.to]} : instruction « ${d.titre} »`,kind:'livraison'}));
+ (P.strategie.appels||[]).forEach(c=>{ev.push({t:c.t,txt:`Stratégie appelle : ${c.partenaire}`,kind:'livraison'});const r=S.appelsRep[c.id];if(r)ev.push({t:r.t,txt:`${c.partenaire} répond : ${r.etat}`,kind:'alerte'})});
+ Object.keys(P.strategie.valid||{}).forEach(k=>{const v=P.strategie.valid[k];ev.push({t:v.t,txt:`Validation ${v.etat==='valide'?'accordée':'refusée'} : ${v.type}`,kind:'livraison'})});
+ VIEWS.forEach(v=>(P[v].requetes||[]).forEach(r=>ev.push({t:r.t,txt:`${DESTL[v]} sollicite la stratégie`,kind:'alerte'})));
  P.cod.renforts.forEach(r=>ev.push({t:r.t,txt:`COD demande un renfort (${r.type})`,kind:'alerte'}));
  return ev.sort((a,b)=>a.t-b.t);
 }
 function stats(){
- const inj=S.injects.filter(i=>i.dest!=='tous');
+ const inj=INJ().filter(i=>i.dest!=='tous');
  const st={total:inj.length,livres:0,hors:0,non:0,delais:[],ok:0,mid:0,ko:0};
  inj.forEach(i=>{const dv=delivery(i);if(dv){st.livres++;st.delais.push(dv.t-i.t0);if(dv.t>i.t0+i.delai*60000)st.hors++}else st.non++;
   const n=(S.notes[i.id]||{}).n;if(n)st[n]++});
@@ -754,9 +902,27 @@ function constats(){
  if(P.strategie.ligne.publie)c.push(`La stratégie a publié ${P.strategie.ligne.v} version(s) de sa ligne.`);else c.push('La stratégie n’a pas publié de ligne : le COD a travaillé sans cadrage.');
  return c;
 }
+function coordStats(){
+ const ds=P.strategie.directives||[];const rc=[],ex=[];
+ ds.forEach(d=>{const s=dirStatus(d);if(s.seen)rc.push(s.seen-d.t);if(s.done)ex.push(s.done-d.t)});
+ const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+ const vals=Object.values(P.strategie.valid||{});
+ const rq=[];VIEWS.forEach(v=>(P[v].requetes||[]).forEach(r=>{const d=ds.find(x=>x.ref==='req-'+r.id);rq.push(d?d.t-r.t:null)}));
+ const ap=P.strategie.appels||[];
+ return{dirs:ds.length,exec:ex.length,dExec:avg(ex),vals:vals.length,ok:vals.filter(v=>v.etat==='valide').length,refus:vals.filter(v=>v.etat==='refus').length,dVal:avg(vals.map(v=>v.t-v.soumisT)),req:rq.length,reqOk:rq.filter(x=>x!==null).length,dReq:avg(rq.filter(x=>x!==null)),ap:ap.length,issues:ap.map(c=>c.partenaire+' : '+(S.appelsRep[c.id]?S.appelsRep[c.id].etat:'sans réponse'))};
+}
+function coordHtml(){
+ const c=coordStats();
+ return `<div class="card"><h2>Coordination</h2><table>
+ <tr><th>Instructions données</th><td>${c.dirs} (exécutées : ${c.exec}, délai moyen ${mmss(c.dExec)})</td></tr>
+ <tr><th>Demandes d’arbitrage</th><td>${c.req} (traitées : ${c.reqOk}, délai moyen ${mmss(c.dReq)})</td></tr>
+ <tr><th>Validations</th><td>${c.vals} (validées : ${c.ok}, modifications demandées : ${c.refus}, délai moyen ${mmss(c.dVal)})</td></tr>
+ <tr><th>Appels aux partenaires</th><td>${c.ap}${c.issues.length?' — '+c.issues.map(esc).join(' · '):''}</td></tr></table></div>`;
+}
 function retexHtml(s){
  const st=stats(),tl=timeline();
  return `<div class="card"><h2>Chiffres</h2><table><tr><th>Sollicitations</th><td>${st.total}</td><th>Livrées</th><td>${st.livres}</td></tr><tr><th>Hors délai</th><td>${st.hors}</td><th>Non livrées</th><td>${st.non}</td></tr><tr><th>Délai moyen</th><td>${mmss(st.moy)}</td><th>Notation</th><td>✓ ${st.ok} · ~ ${st.mid} · ✗ ${st.ko}</td></tr></table></div>
+ ${coordHtml()}
  <div class="card"><h2>Constats automatiques</h2><ul>${constats().map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
  ${GRIST&&JR.length?`<div class="card"><h2>Qui a fait quoi (comptes Grist)</h2><table><tr><th>Heure</th><th>Compte</th><th>Poste</th><th>Action</th></tr>${JR.map(j=>`<tr><td>${hhmm(j.t)}</td><td>${esc(j.auteur||'—')}</td><td>${esc(j.vue)}</td><td>${esc(j.type)} ${esc(j.txt)}</td></tr>`).join('')}</table></div>`:''}
  <div class="card"><h2>Chronologie</h2><ul class="tl">${tl.map(e=>`<li class="${e.kind}"><b>${hhmm(e.t)}</b> — ${esc(e.txt)}</li>`).join('')}</ul></div>`;
@@ -778,11 +944,12 @@ function tabRetex(s){
 }
 function exportDoc(){
  const s=scen(),st=stats();
- const prods=S.injects.filter(i=>i.dest!=='tous').map(i=>{const dv=delivery(i);const n=(S.notes[i.id]||{});return `<h3>${esc(i.titre)} (${DESTL[routeOf(i)]})</h3><p><i>${esc(i.tache)}</i></p><p>${dv?nl(dv.texte)+`<br><small>Livré en ${mmss(dv.t-i.t0)}</small>`:'<b>Non livré</b>'}</p>${n.n?`<p>Appréciation : ${n.n==='ok'?'solide':(n.n==='mid'?'à reprendre':'hors cible')}${n.c?' — '+esc(n.c):''}</p>`:''}`}).join('');
+ const prods=INJ().filter(i=>i.dest!=='tous').map(i=>{const dv=delivery(i);const n=(S.notes[i.id]||{});return `<h3>${esc(i.titre)} (${DESTL[routeOf(i)]})</h3><p><i>${esc(i.tache)}</i></p><p>${dv?nl(dv.texte)+`<br><small>Livré en ${mmss(dv.t-i.t0)}</small>`:'<b>Non livré</b>'}</p>${n.n?`<p>Appréciation : ${n.n==='ok'?'solide':(n.n==='mid'?'à reprendre':'hors cible')}${n.c?' — '+esc(n.c):''}</p>`:''}`}).join('');
  const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>Retex wargame</title></head><body style="font-family:Calibri,Arial"><h1>Retour d’expérience — wargame de communication de crise</h1><p>Scénario : <b>${esc(s.titre)}</b> · ${new Date().toLocaleDateString('fr-FR')}</p>
  <h2>Chiffres</h2><p>Sollicitations : ${st.total} · livrées : ${st.livres} · hors délai : ${st.hors} · non livrées : ${st.non} · délai moyen : ${mmss(st.moy)}</p>
  <h2>Constats</h2><ul>${constats().map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
  <h2>Chronologie</h2><ul>${timeline().map(e=>`<li>${hhmm(e.t)} — ${esc(e.txt)}</li>`).join('')}</ul>
+ <h2>Coordination</h2><p>Instructions : ${coordStats().dirs} · demandes d’arbitrage : ${coordStats().req} · validations : ${coordStats().vals} · appels : ${coordStats().issues.map(esc).join(' ; ')||'aucun'}</p>
  <h2>Échanges de la messagerie</h2><ul>${CH.map(m=>`<li>${hhmm(m.t)} — <b>${esc(m.from)}</b> : ${esc(m.txt)}</li>`).join('')||'<li>Aucun échange.</li>'}</ul>
  <h2>Productions</h2>${prods}
  <h2>Questions de retex</h2><ol><li>Quelles décisions, et pourquoi ?</li><li>Quel moment de bascule ?</li><li>La ligne de la stratégie a-t-elle guidé le COD ?</li><li>Quand appeler un appui ?</li><li>Quelle règle ajouter à la doctrine ?</li></ol></body></html>`;
