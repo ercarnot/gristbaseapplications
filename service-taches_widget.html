@@ -240,7 +240,11 @@ const GristAPI = {
         {id:"Statut", fields:{label:"Statut", type:"Choice",
           widgetOptions: JSON.stringify({choices:["Actif","Clos"]})}},
         {id:"Marquant", fields:{label:"Marquant", type:"Bool"}},
-        {id:"Bilan", fields:{label:"Bilan", type:"Text"}}
+        {id:"Bilan", fields:{label:"Bilan", type:"Text"}},
+        {id:"Media", fields:{label:"Media", type:"Text"}},
+        {id:"DemandePresse", fields:{label:"DemandePresse", type:"Text"}},
+        {id:"SignatureDemandeur", fields:{label:"SignatureDemandeur", type:"Text"}},
+        {id:"ReponsePresse", fields:{label:"ReponsePresse", type:"Text"}}
       ],
       Taches:[
         {id:"Titre", fields:{label:"Titre", type:"Text"}},
@@ -665,7 +669,7 @@ function renderDashboard(){
    TACHES (liste + édition + notes)
 ========================================================= */
 let tacheFilters = { agent:"", dossier:"", projet:"", statut:"" };
-let mailProjetState = { brut:"", nom:"", modeleId:"", categorie:"", agent:"", dateRef:"", demandeur:"", extrait:"" };
+let mailProjetState = { brut:"", nom:"", modeleId:"", categorie:"", agent:"", dateRef:"", demandeur:"", extrait:"", media:"", demande:"", signature:"" };
 
 function renderTaches(){
   const view = document.getElementById('view');
@@ -1479,6 +1483,50 @@ function mpDetecterDate(texte){
 function mpDetecterObjet(texte){ const m = texte.match(/^\s*(objet|sujet|subject)\s*:\s*(.+)$/im); return m ? m[2].trim() : ""; }
 function mpDetecterDemandeur(texte){ const m = texte.match(/^\s*(de|from|exp[ée]diteur)\s*:\s*(.+)$/im); return m ? m[2].trim() : ""; }
 
+// --- Demandes presse : détection du modèle, découpage du mail, devinette du média
+function isPressModele(modeleId){
+  const m = STATE.modeles.find(x=>String(x.id)===String(modeleId));
+  if(!m) return false;
+  return String(m.fields.Nom||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").includes("demande presse");
+}
+function mpSeparerMail(brut){
+  const lignes = String(brut||"").replace(/\r/g,"").split("\n");
+  let i = 0;
+  while(i<lignes.length && (/^\s*(objet|sujet|subject|de|from|exp[ée]diteur|à|a|to|cc|date|envoy[ée]|r[ée]f[ée]rences?)\s*:/i.test(lignes[i]) || !lignes[i].trim())) i++;
+  const corps = lignes.slice(i).join("\n").trim();
+  const blocs = corps.split(/\n\s*\n/);
+  let demande = corps, signature = "";
+  if(blocs.length>=2){
+    const dernier = blocs[blocs.length-1].trim();
+    const nb = dernier.split("\n").length;
+    if(nb<=7 && /@|t[ée]l|\+33|\b0\d[ .]?\d{2}/i.test(dernier)){
+      signature = dernier;
+      demande = blocs.slice(0,-1).join("\n\n").trim();
+    }
+  }
+  return { demande, signature };
+}
+function mpDevinerMedia(demandeurLigne, signature){
+  const m = String(demandeurLigne||"").match(/@([A-Za-z0-9.-]+)/) || String(signature||"").match(/@([A-Za-z0-9.-]+)/);
+  if(!m) return "";
+  const parts = m[1].toLowerCase().split(".");
+  const label = parts.length>=2 ? parts[parts.length-2] : parts[0];
+  if(["gmail","yahoo","orange","wanadoo","free","hotmail","outlook","laposte","sfr","icloud","live","gouv"].includes(label)) return "";
+  return label.length<=4 ? label.toUpperCase() : label.charAt(0).toUpperCase()+label.slice(1);
+}
+function mpPressHtml(s){
+  return `<div class="card" id="mpPressBloc">
+      <strong>Demande presse</strong>
+      <p class="sub" style="margin-top:2px;">Ces éléments sont conservés dans le projet et servent à produire le document ODT « demande + réponse ».</p>
+      <label>Média</label>
+      <input type="text" id="mpMedia" value="${xmlEscapeHtml(s.media||"")}" placeholder="ex. AFP">
+      <label>Texte de la demande</label>
+      <textarea id="mpDemande" style="min-height:120px;">${xmlEscapeHtml(s.demande||"")}</textarea>
+      <label>Signature / coordonnées du journaliste</label>
+      <textarea id="mpSignature" style="min-height:70px;">${xmlEscapeHtml(s.signature||"")}</textarea>
+    </div>`;
+}
+
 function renderMailProjet(){
   const view = document.getElementById('view');
   const s = mailProjetState;
@@ -1522,18 +1570,20 @@ function renderMailProjet(){
           <input type="text" id="mpDemandeur" value="${s.demandeur||""}">
         </div>
       </div>
-      <label>Extrait du mail (repris dans le bilan du projet)</label>
-      <textarea id="mpExtrait" style="min-height:90px;">${s.extrait||""}</textarea>
+      ${isPressModele(s.modeleId) ? '' : `<label>Extrait du mail (repris dans le bilan du projet)</label>
+      <textarea id="mpExtrait" style="min-height:90px;">${s.extrait||""}</textarea>`}
 
       <div style="margin-top:14px;"><button class="btn" id="mpCreer">✅ Créer le projet</button></div>
       <div id="mpMsg" style="margin-top:10px;font-size:.86rem;"></div>
     </div>
+    ${isPressModele(s.modeleId) ? mpPressHtml(s) : ''}
   `;
 
   // sync la saisie brute vers l'état, pour survivre à un re-render (ex. après analyse)
   const bind = (id, key)=>{ const el = document.getElementById(id); if(el) el.oninput = ()=>{ s[key] = el.value; }; };
   bind('mpBrut','brut'); bind('mpNom','nom'); bind('mpDateRef','dateRef'); bind('mpDemandeur','demandeur'); bind('mpExtrait','extrait');
-  document.getElementById('mpModele').onchange = e=>{ s.modeleId = e.target.value; };
+  bind('mpMedia','media'); bind('mpDemande','demande'); bind('mpSignature','signature');
+  document.getElementById('mpModele').onchange = e=>{ const avant = isPressModele(s.modeleId); s.modeleId = e.target.value; if(avant!==isPressModele(s.modeleId)) renderMailProjet(); };
   document.getElementById('mpCategorie').onchange = e=>{ s.categorie = e.target.value; };
   document.getElementById('mpAgent').onchange = e=>{ s.agent = e.target.value; };
 
@@ -1548,6 +1598,10 @@ function renderMailProjet(){
     if(demandeur) s.demandeur = demandeur;
     if(date) s.dateRef = date;
     s.extrait = texte.slice(0, 3000);
+    const sep = mpSeparerMail(texte);
+    s.demande = sep.demande; s.signature = sep.signature;
+    const med = mpDevinerMedia(demandeur, sep.signature);
+    if(med) s.media = med;
     renderMailProjet();
     if(!objet) toast("Objet non détecté automatiquement — complétez le nom du projet à la main.", true);
   };
@@ -1561,15 +1615,21 @@ function renderMailProjet(){
     const agent = document.getElementById('mpAgent').value;
     const dateRef = document.getElementById('mpDateRef').value || todayISO();
     const demandeur = document.getElementById('mpDemandeur').value.trim();
-    const extrait = document.getElementById('mpExtrait').value.trim();
+    const press = isPressModele(modeleId);
+    const extrait = document.getElementById('mpExtrait') ? document.getElementById('mpExtrait').value.trim() : "";
     let bilan = "";
     if(demandeur) bilan = `Demandeur : ${demandeur}`;
     if(extrait) bilan = `${bilan}${bilan?'\n':''}\n— Extrait du mail d'origine —\n${extrait}`.trim();
+    const pressFields = press ? {
+      Media: document.getElementById('mpMedia').value.trim(),
+      DemandePresse: document.getElementById('mpDemande').value.trim(),
+      SignatureDemandeur: document.getElementById('mpSignature').value.trim()
+    } : {};
 
     try{
       const projetId = await GristAPI.addRecord("Projets", {
         Nom: nom, Modele: modeleId, Categorie: categorie,
-        DateReference: toGristDate(dateRef), Agent: agent, Statut: "Actif", Bilan: bilan
+        DateReference: toGristDate(dateRef), Agent: agent, Statut: "Actif", Bilan: bilan, ...pressFields
       });
       let nbTaches = 0;
       if(modeleId){
@@ -1586,7 +1646,7 @@ function renderMailProjet(){
           nbTaches++;
         }
       }
-      mailProjetState = { brut:"", nom:"", modeleId:"", categorie:"", agent:"", dateRef:"", demandeur:"", extrait:"" };
+      mailProjetState = { brut:"", nom:"", modeleId:"", categorie:"", agent:"", dateRef:"", demandeur:"", extrait:"", media:"", demande:"", signature:"" };
       await refreshAll();
       currentTab = "projets";
       render();
@@ -1669,6 +1729,19 @@ function openEditProjetModal(id){
       <label>Bilan / Retex</label>
       <textarea id="peBilan" style="min-height:110px;">${f.Bilan||""}</textarea>
 
+      <div id="pePressBloc" style="display:${(isPressModele(f.Modele) || f.DemandePresse || f.ReponsePresse) ? 'block' : 'none'};margin-top:16px;padding:12px 14px;border:1px solid var(--gris-bord);border-radius:8px;background:#fafbfd;">
+        <strong>Demande presse</strong>
+        <label>Média</label>
+        <input type="text" id="peMedia" value="${xmlEscapeHtml(f.Media||"")}" placeholder="ex. AFP">
+        <label>Texte de la demande</label>
+        <textarea id="peDemande" style="min-height:120px;">${xmlEscapeHtml(f.DemandePresse||"")}</textarea>
+        <label>Signature / coordonnées du journaliste</label>
+        <textarea id="peSignature" style="min-height:70px;">${xmlEscapeHtml(f.SignatureDemandeur||"")}</textarea>
+        <label>Projet de réponse <span class="muted">— optionnel</span></label>
+        <textarea id="peReponse" style="min-height:140px;">${xmlEscapeHtml(f.ReponsePresse||"")}</textarea>
+        <div style="margin-top:10px;"><button type="button" class="btn small secondary" id="peExportPresse">📄 Demande + réponse (.odt)</button></div>
+      </div>
+
       <hr style="margin:18px 0;border:none;border-top:1px solid var(--gris-bord)">
       <strong>Contacts</strong>
       <div id="peContacts" style="margin-top:10px;"></div>
@@ -1744,6 +1817,20 @@ function openEditProjetModal(id){
     }catch(e){ toast(e.message, true); }
   };
 
+  document.getElementById('peModele').addEventListener('change', e=>{
+    const bloc = document.getElementById('pePressBloc');
+    if(isPressModele(e.target.value)) bloc.style.display = 'block';
+  });
+  document.getElementById('peExportPresse').onclick = ()=>{
+    // exporte l'état courant de la fiche, sans exiger d'enregistrer d'abord
+    exportDemandePresseOdt(id, {
+      Media: document.getElementById('peMedia').value,
+      DemandePresse: document.getElementById('peDemande').value,
+      SignatureDemandeur: document.getElementById('peSignature').value,
+      ReponsePresse: document.getElementById('peReponse').value
+    });
+  };
+
   document.getElementById('peSave').onclick = async ()=>{
     const fields = {
       Nom: document.getElementById('peNom').value,
@@ -1754,7 +1841,11 @@ function openEditProjetModal(id){
       Axe: document.getElementById('peAxe').value ? Number(document.getElementById('peAxe').value) : null,
       Statut: document.getElementById('peStatut').value,
       Marquant: document.getElementById('peMarquant').checked,
-      Bilan: document.getElementById('peBilan').value
+      Bilan: document.getElementById('peBilan').value,
+      Media: document.getElementById('peMedia').value.trim(),
+      DemandePresse: document.getElementById('peDemande').value,
+      SignatureDemandeur: document.getElementById('peSignature').value,
+      ReponsePresse: document.getElementById('peReponse').value
     };
     try{
       await GristAPI.updateRecord("Projets", id, fields);
@@ -3135,6 +3226,72 @@ function exportProjetOdt(projetId){
   a.remove();
   URL.revokeObjectURL(url);
   toast("Fichier ODT généré.");
+}
+
+function odtPressParas(text, style){
+  return String(text||"").split(/\r?\n/).map(l=> l.trim()==="" ? `<text:p text:style-name="Vide"/>` : `<text:p text:style-name="${style}">${xmlEscape(l)}</text:p>`).join("");
+}
+
+function buildDemandePresseContentXml(f){
+  const aReponse = String(f.ReponsePresse||"").trim() !== "";
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"
+  xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0"
+  xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"
+  xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0"
+  office:version="1.2">
+  <office:automatic-styles>
+    <style:style style:name="Titre" style:family="paragraph"><style:text-properties fo:font-family="Marianne" fo:font-size="16pt" fo:font-weight="bold"/></style:style>
+    <style:style style:name="Gras" style:family="paragraph"><style:text-properties fo:font-family="Marianne" fo:font-size="11pt" fo:font-weight="bold"/></style:style>
+    <style:style style:name="Texte" style:family="paragraph"><style:text-properties fo:font-family="Marianne" fo:font-size="10.5pt"/></style:style>
+    <style:style style:name="Droite" style:family="paragraph"><style:paragraph-properties fo:text-align="end"/><style:text-properties fo:font-family="Marianne" fo:font-size="10.5pt"/></style:style>
+    <style:style style:name="Vide" style:family="paragraph"><style:text-properties fo:font-family="Marianne" fo:font-size="10.5pt"/></style:style>
+  </office:automatic-styles>
+  <office:body>
+    <office:text>
+      <text:p text:style-name="Titre">DEMANDE PRESSE</text:p>
+      <text:p text:style-name="Vide"/>
+      <text:p text:style-name="Gras">${xmlEscape(f.Media||"")}</text:p>
+      <text:p text:style-name="Vide"/>
+      ${odtPressParas(f.DemandePresse, "Texte")}
+      <text:p text:style-name="Vide"/>
+      ${odtPressParas(f.SignatureDemandeur, "Droite")}
+      ${aReponse ? `<text:p text:style-name="Vide"/>
+      <text:p text:style-name="Gras">PROJET DE RÉPONSE</text:p>
+      <text:p text:style-name="Vide"/>
+      ${odtPressParas(f.ReponsePresse, "Texte")}` : ''}
+    </office:text>
+  </office:body>
+</office:document-content>`;
+}
+
+// Export « demande + réponse » d'une demande presse. `override` : valeurs saisies dans la fiche, non encore enregistrées.
+function exportDemandePresseOdt(projetId, override){
+  const p = STATE.projets.find(x=>x.id===projetId);
+  if(!p) return;
+  const f = Object.assign({}, p.fields, override||{});
+  if(!String(f.DemandePresse||"").trim()){ toast("Aucun texte de demande à exporter — renseignez « Texte de la demande ».", true); return; }
+  const enc = new TextEncoder();
+  const titre = [f.Media, p.fields.Nom].filter(Boolean).join(" - ");
+  const iso = fromGristDate(p.fields.DateReference);
+  const dateTxt = iso ? iso.split("-").reverse().join("_") : "";
+  const files = [
+    {name:"mimetype", data: enc.encode("application/vnd.oasis.opendocument.text")},
+    {name:"META-INF/manifest.xml", data: enc.encode(ODT_MANIFEST)},
+    {name:"content.xml", data: enc.encode(buildDemandePresseContentXml(f))},
+    {name:"styles.xml", data: enc.encode(ODT_STYLES)},
+    {name:"meta.xml", data: enc.encode(buildOdtMetaXml(titre))}
+  ];
+  const blob = buildZipBlob(files, "application/vnd.oasis.opendocument.text");
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${[titre, dateTxt].filter(Boolean).join(" - ").replace(/[\\/:*?"<>|]/g,'-')}.odt`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  toast(String(f.ReponsePresse||"").trim() ? "Document demande + réponse généré." : "Document généré (sans réponse : section omise).");
 }
 
 function b64EncodeUnicode(str){
