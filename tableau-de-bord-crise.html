@@ -82,6 +82,16 @@ dialog::backdrop{background:#0006}
 #sas.rev #sasB1,#sas.rev #sasB2,#sas.rev #sasDero,#sas.rev #sasStatus{display:none}
 #sas.rev .sasgrid{grid-template-columns:1fr}
 button:disabled,input:disabled,select:disabled,textarea:disabled{opacity:.5;cursor:not-allowed}
+
+.bib{margin-top:14px;border:1px solid var(--bord);border-radius:8px;background:#fafbff;padding:10px}
+.bib h3{margin:0 0 4px;font-size:.95rem}
+#bibList{max-height:430px;overflow:auto;display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.bloc{border:1px solid var(--bord);border-radius:6px;background:#fff;padding:7px 9px}
+.bloc b{font-size:.86rem}
+.bloc p{margin:3px 0 6px;font-size:.8rem;color:var(--gris);white-space:pre-line}
+.bloc .rub{font-size:.72rem;color:var(--bleu)}
+.cpopt{display:flex;gap:8px;align-items:center;margin:8px 0}
+.cpopt input[type=checkbox]{width:auto}
 </style>
 </head>
 <body>
@@ -153,20 +163,34 @@ button:disabled,input:disabled,select:disabled,textarea:disabled{opacity:.5;curs
 <!-- ============ COMMUNIQUE ============ -->
 <section class="panel" id="p-cp">
   <h2>Communiqué de presse — modèle de la préfecture</h2>
-  <p class="hint">Le fichier créé reprend votre modèle : bloc-marque, polices Marianne, mise en page et pied de page du service. Il s'ouvre dans LibreOffice, il ne reste qu'à relire.</p>
+  <p class="hint">Composez le texte avec les blocs prêts à l'emploi (colonne de gauche), complétez les passages entre [crochets], puis créez le fichier : il reprend votre modèle (bloc-marque, polices Marianne, pied de page) et s'ouvre dans LibreOffice.</p>
   <div class="grid">
     <div>
       <div class="row"><div><label>Ville</label><input id="cVille" type="text"></div><div><label>Date</label><input id="cDate" type="text"></div></div>
       <label>Titre (une ligne = un retour à la ligne dans le titre)</label>
-      <textarea id="cTitre" rows="3" placeholder="Journée de mobilisation du samedi 24 octobre 2026&#10;dans les Alpes-de-Haute-Provence"></textarea>
-      <div class="actions"><button class="sec" id="cTrame">Insérer la trame type</button></div>
-      <p class="hint">Trame : rappel du cadre · « Dans les Alpes-de-Haute-Provence… » · « À ce stade… » · « En conséquence… ».</p>
+      <textarea id="cTitre" rows="3" placeholder="ÉVACUATION DU CAMPING DES EAUX CHAUDES"></textarea>
+      <label>Point de situation (facultatif, sous le titre)</label>
+      <input id="cPoint" type="text" placeholder="Point de situation n° 2 à 15h15">
+      <label class="cpopt"><input type="checkbox" id="cExo"> Exercice : bandeau « EXERCICE * * * EXERCICE » en haut et en bas</label>
+      <div class="bib">
+        <h3>Blocs prêts à l'emploi</h3>
+        <input id="bibQ" class="keep" type="text" placeholder="Rechercher un mot dans tous les blocs…">
+        <div class="chips" id="bibTabs"></div>
+        <div id="bibList"></div>
+        <div class="actions"><button class="sec small" id="bibSave">💾 Enregistrer la sélection du texte comme bloc</button></div>
+        <p class="hint">Les blocs personnels sont conservés sur ce poste (pas encore partagés entre agents).</p>
+      </div>
     </div>
     <div>
-      <label>Texte (une ligne = un paragraphe ; « - » = puce ; « ## » = intertitre ; une ligne vide n'est pas nécessaire)</label>
-      <textarea id="cCorps" rows="13"></textarea>
+      <label>Texte (une ligne = un paragraphe ; « - » = puce ; « ## » = intertitre)</label>
+      <textarea id="cCorps" rows="18"></textarea>
+      <div class="actions">
+        <span id="cFields" class="hint"></span>
+        <button class="sec small" id="cNext">Aller au prochain [passage à compléter]</button>
+      </div>
       <div class="actions">
         <button class="ok big" id="cGo">📄 Créer le communiqué (.odt)</button>
+        <button class="sec" id="cTrame">Insérer la trame type</button>
         <button class="sec" id="cVide">Modèle vide</button>
       </div>
       <p class="hint">Le fichier se nomme CP_jj_mm_aaaa_-_titre.odt. Après relecture, exportez-le en PDF depuis LibreOffice pour l'envoi.</p>
@@ -539,7 +563,7 @@ function onData(){ applyState(); renderMedia(); renderLog(); renderSasCommunes()
 
 /* ---------- réglages ---------- */
 const SETF={sOrg:'org',sVille:'ville',sBoite:'boite',sSign:'sign',sGabarits:'gabarits'};
-Object.entries(SETF).forEach(([id,k])=>{ $(id).value=S.settings[k]||''; $(id).oninput=e=>{ S.settings[k]=e.target.value; save(); if(k==='ville') $('cVille').value=e.target.value; if(k==='gabarits') loadVigFrame(); applyModele(false); }; });
+Object.entries(SETF).forEach(([id,k])=>{ $(id).value=S.settings[k]||''; $(id).oninput=e=>{ S.settings[k]=e.target.value; save(); if(k==='ville') $('cVille').value=e.target.value; if(k==='gabarits') pushGabarits(); applyModele(false); }; });
 $('sBackup').onclick=()=>download(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}),`sauvegarde-tdb-crise-${fileStamp()}.json`);
 $('sRestore').onchange=e=>{ const f=e.target.files[0]; if(!f) return; f.text().then(t=>{ try{ S=Object.assign({},DEF,JSON.parse(t)); save(); location.reload(); }catch(err){ toast('Fichier illisible'); } }); };
 
@@ -551,6 +575,9 @@ function loadVigFrame(){
   const g=(S.settings.gabarits||'').trim(), q=g?'gabarits='+encodeURIComponent(g):'';
   $('vigFrame').src='vignettes.html?embed=1'+(q?'&'+q:'');
   $('vigOpen').href='vignettes.html'+(q?'?'+q:'');
+}
+function pushGabarits(){
+  try{ $('vigFrame').contentWindow.postMessage({type:'tdb-gabarits',dossier:(S.settings.gabarits||'').trim()},'*'); }catch(e){}
 }
 function pushCtx(){
   try{ $('vigFrame').contentWindow.postMessage({type:'tdb-ctx',crise:S.crise.nom||'',date:longDate()},'*'); }catch(e){}
@@ -600,12 +627,14 @@ function odtCorps(txt){
   String(txt||'').split('\n').map(l=>l.replace(/\s+$/,'')).filter(l=>l.trim()).forEach(l=>{
     if(/^[-•]\s+/.test(l)){ const t=l.replace(/^[-•]\s+/,''), last=blocks[blocks.length-1]; if(last&&last.k==='ul') last.items.push(t); else blocks.push({k:'ul',items:[t]}); }
     else if(l.startsWith('## ')) blocks.push({k:'h',t:l.slice(3)});
+    else if(l.startsWith('== ')) blocks.push({k:'c',t:l.slice(3)});
     else blocks.push({k:'p',t:l.trim()});
   });
   const xml=[];
   blocks.forEach((b,i)=>{
     if(b.k==='p') xml.push(`<text:p text:style-name="P11">${xe(b.t)}</text:p>`);
     else if(b.k==='h') xml.push(`<text:p text:style-name="PI">${xe(b.t)}</text:p>`);
+    else if(b.k==='c') xml.push(`<text:p text:style-name="PX">${xe(b.t)}</text:p>`);
     else xml.push(`<text:list text:style-name="L1">${b.items.map(t=>`<text:list-item><text:p text:style-name="P12">${xe(t)}</text:p></text:list-item>`).join('')}</text:list>`);
     if(i<blocks.length-1) xml.push('<text:p text:style-name="P11"/>');
   });
@@ -614,7 +643,8 @@ function odtCorps(txt){
 function buildOdt({ville,date,titre,corps}){
   const enc=new TextEncoder();
   const titreXml=String(titre||'').split('\n').map(l=>xe(l.trim())).filter(Boolean).join('<text:line-break/>');
-  const content=TPL.content.replace('@@VILLE@@',()=>xe(ville)).replace('@@DATE@@',()=>xe(date)).replace('@@TITRE@@',()=>titreXml).replace('@@CORPS@@',()=>odtCorps(corps));
+  const PXS='<style:style style:name="PX" style:family="paragraph" style:parent-style-name="Standard"><style:paragraph-properties fo:text-align="center" style:justify-single-word="false"/><style:text-properties style:font-name="Marianne Medium" fo:font-size="10pt" fo:font-weight="bold" style:font-size-asian="10pt" style:font-weight-asian="bold" style:font-name-complex="Marianne Medium"/></style:style>';
+  const content=TPL.content.replace('</office:automatic-styles>',()=>PXS+'</office:automatic-styles>').replace('@@VILLE@@',()=>xe(ville)).replace('@@DATE@@',()=>xe(date)).replace('@@TITRE@@',()=>titreXml).replace('@@CORPS@@',()=>odtCorps(corps));
   const now=new Date().toISOString().replace(/\.\d+Z$/,'');
   const meta=`<?xml version="1.0" encoding="UTF-8"?>\n<office:document-meta xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:meta="urn:oasis:names:tc:opendocument:xmlns:meta:1.0" office:version="1.3"><office:meta><meta:generator>Tableau de bord de crise</meta:generator><dc:title>${xe(String(titre||'').replace(/\n/g,' '))}</dc:title><meta:creation-date>${now}</meta:creation-date></office:meta></office:document-meta>`;
   const manifest=`<?xml version="1.0" encoding="UTF-8"?>
@@ -638,15 +668,148 @@ function buildOdt({ville,date,titre,corps}){
 const TRAME='[Rappel du cadre : instruction nationale ou contexte de la crise.]\nDans les Alpes-de-Haute-Provence, [appréciation locale de la situation], la préfète [action engagée].\nÀ ce stade, [situation constatée].\nEn conséquence, la préfète [mesure prise ou consigne donnée].';
 $('cDate').value=longDate(); $('cVille').value=S.settings.ville||'';
 $('cTrame').onclick=()=>{ if(!$('cCorps').value.trim()||$('cCorps').value.trim()===TRAME) $('cCorps').value=TRAME; else toast('Le texte existant est conservé : videz-le pour insérer la trame'); };
-function genCP(vide){
-  const titre=(vide?'':$('cTitre').value.trim())||'[Titre du communiqué]';
-  const corps=(vide||!$('cCorps').value.trim())?TRAME:$('cCorps').value;
+/* =====================================================
+   BIBLIOTHÈQUE DE BLOCS — gabarit des communiqués de la préfecture
+   1 Contexte/situation · 2 Organisation de l'État et maires · 3 Forces de secours et de sécurité
+   4 Premiers éléments d'observation · 5 Consignes de sécurité/sauvegarde · 6 Canaux officiels
+   Une ligne = un paragraphe ; « - » = puce ; « ## » = intertitre ; [crochets] = à compléter.
+   ===================================================== */
+const BLOCS_R=['Contexte / situation','Organisation de l\'État et maires','Forces de secours et de sécurité','Premiers éléments d\'observation','Consignes de sécurité / sauvegarde','Canaux officiels'];
+const BLOCS=[
+/* ---- 1. Contexte / situation ---- */
+[0,'Alerte Météo-France (vigilance)',`Ce [jour] [date] à [heure], Météo-France a informé la préfecture des Alpes-de-Haute-Provence que le département est placé en vigilance [orange / rouge] [phénomènes : pluie-inondation, crues, orages, vent violent], avec un épisode intense attendu [sur la commune de …] autour de [heure].`],
+[0,'Événement porté à la connaissance de la préfète',`Ce [jour] [date], la préfète des Alpes-de-Haute-Provence a été informée à [heure] [description factuelle de l'événement] [lieu précis].`],
+[0,'Événement majeur de sécurité publique (premier point)',`Ce [jour] [date], la préfète des Alpes-de-Haute-Provence a été informée à [heure] qu'un événement majeur de sécurité publique est en cours [lieu précis].`],
+[0,'Intrusion de personnes armées',`Ce [jour] [date], la préfète des Alpes-de-Haute-Provence a été informée à [heure] que [plusieurs personnes armées] se sont introduites dans [établissement, commune].`],
+[0,'Cadre national (instruction du ministre)',`[À l'approche de …], le ministre de l'Intérieur a demandé aux préfets de [consigne nationale]. Cette appréciation tient notamment compte de :\n- [critère 1] ;\n- [critère 2] ;\n- [critère 3].`],
+[0,'Rappel du contexte local',`Dans les Alpes-de-Haute-Provence, [appréciation locale de la situation], la préfète [action engagée].`],
+[0,'Retour à la normale (météo)',`À cette heure, la situation météorologique est revenue à la normale.`],
+[0,'Fin de l\'événement',`La préfète a mis fin à l'activation du Centre Opérationnel Départemental (COD) à [heure]. La situation est revenue à la normale [sur la commune de …].`],
+
+/* ---- 2. Organisation de l'État et maires ---- */
+[1,'Activation du COD',`La préfète a activé son Centre Opérationnel Départemental (COD) à [heure] afin de coordonner l'action des forces de secours et de sécurité [autour de … / sur le secteur de …].`],
+[1,'PCC de la commune ouvert',`La ville de [commune] a ouvert son PCC (Poste de Commandement Communal).`],
+[1,'Plan communal de sauvegarde (maire)',`Le maire de [commune] a déclenché le plan communal de sauvegarde (PCS) et [mesure prise : ouverture d'un lieu d'accueil, information de la population…].`],
+[1,'Mairie en lien avec la préfecture',`En lien avec la préfecture et la mairie, [le directeur / la directrice de …] a engagé la mise en sécurité de [personnes concernées]. En anticipation, la mairie de [commune] a demandé à [responsable] de [mesure].`],
+[1,'Poste de commandement sous l\'autorité du sous-préfet',`Un Poste de Commandement Sécurité et de Secours est activé sous l'autorité de [la sous-préfète / du sous-préfet] de [Forcalquier / Barcelonnette / Castellane].`],
+[1,'Préfète sur place',`La préfète est sur place [, ainsi que …].`],
+[1,'Autorités de l\'Éducation nationale',`La préfète est sur place ainsi que le Directeur Académique des Services de l'Éducation Nationale (DASEN).`],
+[1,'Mise en sûreté de l\'établissement (PPMS)',`Le Plan Particulier de Mise en Sûreté (PPMS) est enclenché au sein de l'établissement par [le proviseur / la proviseure / le directeur / la directrice].`],
+[1,'Parquet et enquête',`Le parquet de Digne-les-Bains a ouvert une enquête. Le procureur de la République est présent sur place.`],
+[1,'Décision de la préfète (arrêté)',`En conséquence, la préfète a été amenée à prendre un arrêté [d'interdiction de manifester / de fermeture / de restriction de circulation] [sur la commune de …].`],
+
+/* ---- 3. Forces de secours et de sécurité ---- */
+[2,'Forces mobilisées (SDIS, polices)',`Le SDIS, la Police nationale et la Police municipale interviennent sur les lieux pour sécuriser et accompagner les opérations [d'évacuation / de secours].`],
+[2,'Forces mobilisées (Gendarmerie et SDIS)',`Les forces de sécurité et de secours (Gendarmerie nationale et SDIS) interviennent sur les lieux.`],
+[2,'Moyens engagés (chiffrés)',`Sont engagés à cette heure : [nombre] sapeurs-pompiers, [nombre] gendarmes / policiers et [moyens spécifiques : hélicoptère, drones, cynophiles…].`],
+[2,'Périmètre de sécurité',`Un périmètre de sécurité a été mis en place à [200] m autour de [lieu].`],
+[2,'Poste médical avancé',`Un poste médical avancé est établi sur zone.`],
+[2,'Cellule d\'urgence médico-psychologique',`Une cellule d'urgence médico-psychologique (CUMP) est opérationnelle à proximité des lieux.`],
+[2,'CUMP pour les proches',`Une seconde cellule d'urgence médico-psychologique accueille les proches des personnes impliquées à [lieu d'accueil], [commune].`],
+[2,'Intervention des forces spécialisées',`Le groupe d'intervention de la Gendarmerie nationale est intervenu au sein de l'établissement. [Nombre] [assaillants / individus] ont été [neutralisés / interpellés] lors de cette intervention.\nLa sécurisation totale de l'établissement est en cours par les forces de l'ordre.`],
+[2,'Négociation en cours',`Une prise d'otage est en cours au sein de l'établissement. Un médiateur de la Gendarmerie nationale est en contact avec [les assaillants].`],
+[2,'Évacuation en cours',`Les [campeurs / habitants / élèves] de [lieu] sont en train d'être évacués vers [lieu d'accueil], en lien avec le CCAS sur place.`],
+[2,'Évacuation terminée',`Les [campeurs / habitants / élèves] de [lieu] ont fini d'être évacués vers [lieu d'accueil].`],
+[2,'Fermeture d\'axes routiers',`Fermeture des axes routiers :\n- [axe 1, sens fermé] ;\n- [axe 2, sens fermé] ;\n- [axe 3, sens fermé].\nDéviation par [itinéraire de déviation].`],
+[2,'Réouverture des axes',`Les axes routiers précédemment fermés sont progressivement rouverts.`],
+
+/* ---- 4. Premiers éléments d'observation ---- */
+[3,'Constat à ce stade',`À ce stade, [situation constatée].`],
+[3,'Bilan humain détaillé',`[Nombre] personnes étaient présentes dans [l'établissement / le secteur]. À l'heure actuelle, plusieurs victimes sont dénombrées : [nombre] personne(s) décédée(s), [nombre] en urgence absolue, [nombre] légèrement blessée(s) et [nombre] impliquée(s) indemnes. Les victimes sont prises en charge par les équipes de secours.`],
+[3,'Aucune victime à déplorer',`À ce stade, aucune victime n'est à déplorer.`],
+[3,'Phénomène observé / dégâts',`[Phénomène observé : chute de blocs de pierre, crue, glissement de terrain…] au niveau de [lieu précis] — [conséquence : aucun impact sur la chaussée / route coupée…].`],
+[3,'Établissements scolaires',`Les élèves de [école / collège / lycée] ont été évacués vers [lieu d'accueil] et sont récupérés par leur famille. Les élèves de [établissement] pourront regagner leur domicile à partir de [heure].`],
+[3,'Personnes confinées',`Les personnes présentes dans [établissement] restent confinées dans les étages.`],
+[3,'Reprise d\'activité',`Les personnes présentes dans [établissement] ont repris une activité normale. Les [curistes / habitants] présents à [lieu] peuvent désormais regagner leur domicile.`],
+[3,'Manifestation déclarée',`À ce stade, [une seule manifestation a été déclarée / plusieurs manifestations ont été déclarées] sur la commune de [commune], [précision : l'organisateur n'est pas en mesure d'assurer un service d'ordre suffisant].`],
+
+/* ---- 5. Consignes de sécurité / sauvegarde ---- */
+[4,'Consignes inondation',`## Conseils de comportement\n- Je m'éloigne des cours d'eau et des points bas, je rejoins un point haut ou je m'abrite à l'étage\n- Je ne m'engage pas sur une route immergée, même partiellement\n- J'évite de me déplacer\n- Je me tiens informé et je surveille la montée des eaux\n- Je ne descends pas dans les sous-sols\n- Je mets mes biens hors d'eau et je localise mon kit d'urgence`],
+[4,'Périmètre de sécurité (habitants)',`Conseils de comportement : la préfète demande aux habitants de ne pas se rendre à proximité du périmètre de sécurité.`],
+[4,'Libérer les voies de secours',`Merci de ne pas encombrer [secteur] et de laisser le champ libre aux services de secours.`],
+[4,'Limiter les déplacements',`La préfète appelle la population à limiter ses déplacements [dans le secteur de …] jusqu'à nouvel ordre.`],
+[4,'Numéros d\'urgence',`Les numéros d'urgence (15, 17, 18 ou 112) doivent être réservés aux situations d'urgence vitale.`],
+
+/* ---- 6. Canaux officiels ---- */
+[5,'Suivre le compte Facebook de la préfecture',`La préfecture des Alpes-de-Haute-Provence vous tiendra informés de l'évolution de la situation. Suivez le compte Facebook de la préfecture https://www.facebook.com/profile.php?id=100064307274721&locale=fr_FR pour être tenus informés de l'évolution de la situation.`],
+[5,'Suivre le compte X de la préfecture',`La préfecture des Alpes-de-Haute-Provence vous tiendra informés de l'évolution de la situation. Suivez le compte X de la préfecture [lien du compte] pour être tenus informés de l'évolution de la situation.`],
+[5,'Site internet de la préfecture',`Retrouvez toutes les informations sur le site internet de la préfecture : https://www.alpes-de-haute-provence.gouv.fr`],
+[5,'Ne pas propager de rumeurs',`Ne propagez pas de rumeurs, suivez uniquement les comptes officiels.`],
+[5,'Numéro d\'information du public',`Une cellule d'information du public est ouverte au [numéro] de [heure] à [heure].`]
+];
+
+const BAN_EXO='EXERCICE * * * EXERCICE * * * EXERCICE';
+const ouverts=t=>String(t||'').match(/\[[^\]\n]*\]/g)||[];
+async function genCP(vide){
+  const titre0=(vide?'':$('cTitre').value.trim())||'[Titre du communiqué]';
+  let corps=(vide||!$('cCorps').value.trim())?TRAME:$('cCorps').value;
+  const pt=vide?'':$('cPoint').value.trim(), exo=!vide&&$('cExo').checked;
+  if(!vide){
+    const n=ouverts(titre0+'\n'+pt+'\n'+corps).length;
+    if(n && !(await askDialog(`Il reste ${n} passage(s) entre crochets [ … ] non complété(s). Créer quand même le communiqué ?`,{okLabel:'Créer quand même'}))){ nextField(0); return; }
+  }
+  let titre=titre0+(pt?'\n'+pt:'');
+  if(exo){ titre=BAN_EXO+'\n'+titre; corps+='\n== '+BAN_EXO; }
   const bytes=buildOdt({ville:$('cVille').value.trim()||S.settings.ville||'',date:$('cDate').value.trim()||longDate(),titre,corps});
-  const d=new Date(), court=titre.split('\n')[0].replace(/[\\\/:*?"<>|\[\]]/g,'').trim().slice(0,60)||'communiqué';
+  const d=new Date(), court=titre0.split('\n')[0].replace(/[\\\/:*?"<>|\[\]]/g,'').trim().slice(0,60)||'communiqué';
   download(new Blob([bytes],{type:'application/vnd.oasis.opendocument.text'}),`CP_${two(d.getDate())}_${two(d.getMonth()+1)}_${d.getFullYear()}_-_${court}.odt`);
   toast('Communiqué créé : ouvrez-le depuis les téléchargements');
-  addLog('Communiqué de presse créé : '+titre.replace(/\n/g,' '));
+  addLog('Communiqué de presse créé : '+(titre0+(pt?' — '+pt:'')).replace(/\n/g,' '));
 }
+
+/* ---------- bibliothèque de blocs ---------- */
+let bibR=0, lastPos=null; const bibUsed=new Set();
+const persos=()=>{ if(!Array.isArray(S.settings.blocsPerso)) S.settings.blocsPerso=[]; return S.settings.blocsPerso; };
+const bibAll=()=>BLOCS.map((b,i)=>({id:'b'+i,r:b[0],t:b[1],x:b[2]})).concat(persos().map(p=>({id:p.id,r:p.r,t:p.t,x:p.x,perso:true})));
+function renderBib(){
+  const q=$('bibQ').value.trim().toLowerCase();
+  $('bibTabs').innerHTML=BLOCS_R.map((n,i)=>`<span class="chip ${(!q&&i===bibR)?'on':''}" data-r="${i}">${bibUsed.has(i)?'✓ ':''}${i+1}. ${esc(n)}</span>`).join('');
+  const list=bibAll().filter(b=>q?(b.t+' '+b.x).toLowerCase().includes(q):b.r===bibR);
+  $('bibList').innerHTML=list.length?list.map(b=>`<div class="bloc"><div class="rub">${q?esc(BLOCS_R[b.r]):''}${b.perso?' · bloc personnel':''}</div><b>${esc(b.t)}</b><p>${esc(b.x.length>260?b.x.slice(0,260)+'…':b.x)}</p><button class="small" data-ins="${esc(b.id)}">➕ Ajouter au texte</button>${b.perso?` <button class="sec small" data-del="${esc(b.id)}">Supprimer</button>`:''}</div>`).join(''):'<p class="hint">Aucun bloc. Sélectionnez un passage dans le texte puis « Enregistrer la sélection comme bloc ».</p>';
+  try{ applyPerms(); }catch(e){}
+}
+function majChamps(){
+  const n=ouverts($('cTitre').value+'\n'+$('cPoint').value+'\n'+$('cCorps').value).length;
+  $('cFields').textContent=n?`${n} passage(s) à compléter`:'Aucun passage à compléter'; $('cFields').style.color=n?'var(--warn)':'var(--ok)';
+}
+function nextField(from){
+  const ta=$('cCorps'), v=ta.value, re=/\[[^\]\n]*\]/g; re.lastIndex=from||0;
+  let m=re.exec(v); if(!m){ re.lastIndex=0; m=re.exec(v); }
+  if(!m){ toast('Aucun passage à compléter dans le texte'); return; }
+  ta.setSelectionRange(m.index,m.index+m[0].length); ta.focus();
+}
+function bibInsert(id){
+  const b=bibAll().find(x=>x.id===id); if(!b) return;
+  const ta=$('cCorps'), v=ta.value;
+  let pos=(lastPos==null||lastPos>v.length)?v.length:lastPos;
+  if(pos>0 && v[pos-1]!=='\n'){ const nl=v.indexOf('\n',pos); pos=nl<0?v.length:nl+1; }   // jamais au milieu d'une phrase
+  let before=v.slice(0,pos); const after=v.slice(pos);
+  if(before && !before.endsWith('\n')) before+='\n';
+  const ins=b.x+(after && !after.startsWith('\n')?'\n':'');
+  ta.value=before+ins+after; lastPos=before.length+ins.length;
+  bibUsed.add(b.r); renderBib(); majChamps();
+  if(ouverts(b.x).length) nextField(before.length); else toast('Bloc ajouté');
+}
+$('bibTabs').onclick=e=>{ const c=e.target.closest('.chip'); if(c){ bibR=+c.dataset.r; $('bibQ').value=''; renderBib(); } };
+$('bibQ').oninput=renderBib;
+$('bibList').onclick=async e=>{
+  const i=e.target.closest('[data-ins]'); if(i){ bibInsert(i.dataset.ins); return; }
+  const d=e.target.closest('[data-del]');
+  if(d && await askDialog('Supprimer ce bloc personnel ?',{okLabel:'Supprimer'})){ const k=persos().findIndex(p=>p.id===d.dataset.del); if(k>=0){ persos().splice(k,1); save(); renderBib(); } }
+};
+$('bibSave').onclick=async()=>{
+  const ta=$('cCorps'), s=ta.value.slice(ta.selectionStart,ta.selectionEnd).trim();
+  if(!s){ toast('Sélectionnez d\'abord un passage dans le texte'); return; }
+  const t=await askDialog('Nom du bloc (5 caractères minimum), rubrique « '+BLOCS_R[bibR]+' » :',{input:true,okLabel:'Enregistrer'});
+  if(!t) return;
+  persos().push({id:'p'+Date.now(),r:bibR,t,x:s}); save(); renderBib(); toast('Bloc enregistré');
+};
+$('cCorps').addEventListener('click',()=>{ lastPos=$('cCorps').selectionEnd; });
+$('cCorps').addEventListener('input',()=>{ if(!$('cCorps').value.trim()){ bibUsed.clear(); lastPos=null; renderBib(); } majChamps(); });
+['cTitre','cPoint'].forEach(id=>$(id).addEventListener('input',majChamps));
+$('cNext').onclick=()=>nextField($('cCorps').selectionEnd);
+renderBib(); majChamps();
+
 $('cGo').onclick=()=>genCP(false);
 $('cVide').onclick=()=>genCP(true);
 
