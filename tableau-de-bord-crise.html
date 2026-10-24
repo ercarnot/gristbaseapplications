@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tableau de bord de crise</title>
+<style>
+:root{
+  --bleu:#000091; --rouge:#E1000F; --fond:#f3f4f8; --carte:#fff; --texte:#161616; --gris:#666;
+  --bord:#d9dbe6; --ok:#18753c; --warn:#d9730d; --alerte:#b3261e;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--fond);color:var(--texte)}
+header{background:#14142b;color:#fff;padding:10px 18px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;position:sticky;top:0;z-index:20;border-bottom:4px solid;border-image:linear-gradient(90deg,var(--bleu) 33%,#fff 33% 66%,var(--rouge) 66%) 1}
+header h1{font-size:1.05rem;margin:0;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+header input,header select{font:inherit;padding:7px 9px;border-radius:6px;border:1px solid #444a7a;background:#1f2147;color:#fff}
+#crNom{min-width:260px;flex:1}
+#chrono{font-variant-numeric:tabular-nums;font-size:1.5rem;font-weight:700;min-width:110px;text-align:center}
+.badge{padding:4px 10px;border-radius:99px;font-weight:700;font-size:.8rem}
+button{font:inherit;cursor:pointer;border:0;border-radius:6px;padding:8px 14px;background:var(--bleu);color:#fff;font-weight:600}
+button:hover{filter:brightness(1.15)}
+button.sec{background:#e8e9f5;color:var(--bleu)}
+button.red{background:var(--rouge)}
+button.ok{background:var(--ok)}
+button.small{padding:4px 9px;font-size:.82rem}
+nav{display:flex;gap:8px;padding:12px 18px 0;flex-wrap:wrap}
+nav button{background:#fff;color:var(--texte);border:2px solid var(--bord);padding:12px 18px;font-size:1rem;border-radius:10px 10px 0 0;border-bottom:0}
+nav button.on{background:var(--bleu);color:#fff;border-color:var(--bleu)}
+nav small{opacity:.6;font-weight:400;margin-left:6px}
+main{padding:0 18px 40px}
+.panel{display:none;background:var(--carte);border:2px solid var(--bleu);border-radius:0 10px 10px 10px;padding:18px}
+.panel.on{display:block}
+.grid{display:grid;gap:18px;grid-template-columns:minmax(300px,420px) 1fr}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+label{display:block;font-size:.82rem;font-weight:600;color:var(--gris);margin:10px 0 3px}
+input[type=text],input[type=email],input[type=search],textarea,select{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--bord);border-radius:6px;background:#fff}
+textarea{min-height:90px;resize:vertical}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row>*{flex:1}
+.row>button{flex:0 0 auto}
+h2{margin:0 0 6px;font-size:1.2rem;color:var(--bleu)}
+.hint{font-size:.85rem;color:var(--gris);margin:4px 0}
+canvas{max-width:100%;max-height:70vh;border:1px solid var(--bord);border-radius:6px;box-shadow:0 2px 10px #0002}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.big{font-size:1.1rem;padding:12px 20px}
+.src{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-top:12px}
+.src button{background:#f2f3fb;color:var(--bleu);border:1px solid var(--bord);text-align:left;padding:12px}
+.src button span{display:block;font-weight:400;font-size:.8rem;color:var(--gris)}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{padding:6px 8px;border-bottom:1px solid var(--bord);text-align:left}
+th{font-size:.78rem;color:var(--gris);text-transform:uppercase}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.chip{padding:4px 12px;border-radius:99px;background:#e8e9f5;color:var(--bleu);cursor:pointer;font-size:.85rem;font-weight:600;border:1px solid transparent}
+.chip.on{background:var(--bleu);color:#fff}
+.log li{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--bord)}
+.log time{font-weight:700;color:var(--bleu);min-width:92px;font-variant-numeric:tabular-nums}
+.log{list-style:none;padding:0;margin:10px 0}
+details{margin:0 18px 18px;background:#fff;border:1px solid var(--bord);border-radius:8px;padding:10px 14px}
+summary{cursor:pointer;font-weight:700;color:var(--bleu)}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#14142b;color:#fff;padding:10px 18px;border-radius:8px;opacity:0;transition:.25s;pointer-events:none;z-index:50}
+.toast.on{opacity:1}
+.md td{vertical-align:top}
+.md tr.late{background:#fdeaea}
+.md select.st{font-weight:700;border-width:2px;padding:3px 6px;width:auto}
+.md .q{white-space:pre-wrap;max-width:420px}
+.md .sub{font-size:.8rem;color:var(--gris)}
+.md .age{font-variant-numeric:tabular-nums;font-size:.8rem;color:var(--gris)}
+.mdform{display:grid;gap:10px;grid-template-columns:110px 1.2fr 1fr 1fr 130px 110px}
+@media(max-width:900px){.mdform{grid-template-columns:1fr 1fr}}
+dialog{border:2px solid var(--bleu);border-radius:10px;padding:18px;width:min(640px,94vw)}
+dialog::backdrop{background:#0006}
+#sas{position:fixed;inset:0;background:#14142bf2;z-index:100;overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:24px}
+.sasbox{background:#fff;border-radius:12px;padding:22px 26px;width:min(1120px,100%);border-top:6px solid;border-image:linear-gradient(90deg,var(--bleu) 33%,#ddd 33% 66%,var(--rouge) 66%) 1}
+.sasgrid{display:grid;gap:22px;grid-template-columns:repeat(3,1fr)}
+@media(max-width:900px){.sasgrid{grid-template-columns:1fr}}
+.sasblk h3{margin:0 0 6px;color:var(--bleu)}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:.98rem;font-weight:600;color:var(--texte);margin:8px 0;cursor:pointer;padding:10px;border:2px solid var(--bord);border-radius:8px}
+.chk input{width:22px;height:22px;flex:0 0 auto;margin:0}
+.chk.on{border-color:var(--ok);background:#eef8f1}
+#sasStatus{margin:16px 0 4px;font-weight:600}
+.miss{color:var(--alerte)}
+#sas.rev #sasB1,#sas.rev #sasB2,#sas.rev #sasDero,#sas.rev #sasStatus{display:none}
+#sas.rev .sasgrid{grid-template-columns:1fr}
+button:disabled,input:disabled,select:disabled,textarea:disabled{opacity:.5;cursor:not-allowed}
+</style>
+</head>
+<body>
+
+<div id="sas">
+ <div class="sasbox">
+  <h1 style="margin:0 0 4px;color:var(--bleu);font-size:1.4rem">🚨 Ouverture de la cellule de crise</h1>
+  <p class="hint" id="sasMode">Chargement…</p>
+  <div class="sasgrid">
+   <div class="sasblk" id="sasB1">
+    <h3>1. Vous</h3>
+    <label>Nom, prénom</label><input id="sNom" type="text" autocomplete="name">
+    <label>Fonction(s) tenue(s) dans cette crise</label>
+    <div id="sFonctions"></div>
+   </div>
+   <div class="sasblk" id="sasB2">
+    <h3>2. Votre poste de travail</h3>
+    <label class="chk"><input type="checkbox" id="ck1"> J'ai ma souris : je suis sur mon poste de travail</label>
+    <label class="chk"><input type="checkbox" id="ck2"> Mon ordinateur est branché au réseau</label>
+    <label class="chk"><input type="checkbox" id="ck3"> Un deuxième ordinateur est branché sur les partenaires</label>
+   </div>
+   <div class="sasblk" id="sasB3">
+    <h3>3. Communes concernées</h3>
+    <p class="hint">Numéro du chargé de communication de chaque commune concernée par la crise.</p>
+    <div id="sCommunes"></div>
+    <div class="row" style="margin-top:8px"><input id="sCCommune" type="text" placeholder="Commune"><input id="sCNom" type="text" placeholder="Nom du chargé de com."></div>
+    <div class="row" style="margin-top:6px"><input id="sCTel" type="text" placeholder="Téléphone"><input id="sCMail" type="email" placeholder="Mail (facultatif)"><button id="sCAdd" class="small">Ajouter</button></div>
+   </div>
+  </div>
+  <div id="sasStatus"></div>
+  <div class="actions">
+   <button id="sasGo" class="red big" disabled>Entrer</button>
+   <button id="sasDero" class="sec">Ouvrir sans checklist complète…</button>
+  </div>
+ </div>
+</div>
+
+<header>
+  <h1>🚨 Cellule de crise</h1>
+  <input id="crNom" type="text" placeholder="Nom de la crise (ex. Incendie de forêt – Digne-les-Bains)">
+  <select id="crNiveau">
+    <option>Veille</option><option>Vigilance</option><option>Alerte</option><option>Crise</option><option>Retour à la normale</option>
+  </select>
+  <span id="niveauBadge" class="badge"></span>
+  <div id="chrono" title="Temps écoulé depuis l'ouverture du COD">H+00:00</div>
+  <span id="codInfo" class="badge" style="background:#4a5a8a"></span>
+  <button id="btnClot" class="red small" style="display:none">Clôturer le COD</button>
+  <button id="btnComm" class="sec small">📞 Communes</button>
+  <span id="whoami" class="badge" style="background:#2b2f66"></span>
+  <span id="modeBadge" class="badge" style="background:#4a5a8a"></span>
+</header>
+<div id="roNote" class="hint" style="padding:6px 18px 0"></div>
+
+<nav id="tabs">
+  <button data-t="vig" class="on">🖼️ Vignettes<small>Alt+1</small></button>
+  <button data-t="cp">📄 Communiqué<small>Alt+2</small></button>
+  <button data-t="veille">🔎 Veille média<small>Alt+3</small></button>
+  <button data-t="mail">✉️ Contacts &amp; mail<small>Alt+4</small></button>
+  <button data-t="log">🎙️ Main courante média<span id="mdBadge"></span><small>Alt+5</small></button>
+</nav>
+
+<main>
+<!-- ============ VIGNETTES ============ -->
+<section class="panel on" id="p-vig">
+  <h2>Vignette réseaux sociaux en 10 secondes</h2>
+  <p class="hint">Tapez le titre, choisissez le type, cliquez sur « Télécharger ». L'aperçu se met à jour en direct.</p>
+  <div class="grid">
+    <div>
+      <label>Type de message</label>
+      <select id="vType"></select>
+      <label>Titre (court, percutant)</label>
+      <textarea id="vTitre" rows="3" placeholder="Feu de forêt : évacuation du quartier de…"></textarea>
+      <label>Consigne / sous-titre</label>
+      <textarea id="vSous" rows="3" placeholder="Restez chez vous. Suivez les consignes des autorités."></textarea>
+      <div class="row">
+        <div><label>Format</label>
+          <select id="vFormat">
+            <option value="1080x1080">Carré 1080×1080 (Facebook, Instagram, X)</option>
+            <option value="1080x1350">Portrait 1080×1350</option>
+            <option value="1200x675">Paysage 1200×675 (X, Facebook, site)</option>
+            <option value="1080x1920">Story 1080×1920</option>
+          </select></div>
+        <div><label>Hashtag</label><input id="vTag" type="text"></div>
+      </div>
+      <label>Mention de mise à jour (vide = date et heure actuelles)</label>
+      <input id="vMention" type="text" placeholder="Point de situation de 10 h 30">
+      <div class="actions">
+        <button class="ok big" id="vDl">⬇ Télécharger le PNG</button>
+        <button class="sec" id="vCopy">Copier l'image</button>
+      </div>
+    </div>
+    <div><canvas id="cv" width="1080" height="1080"></canvas></div>
+  </div>
+</section>
+
+<!-- ============ COMMUNIQUE ============ -->
+<section class="panel" id="p-cp">
+  <h2>Communiqué de presse prêt à rédiger dans LibreOffice</h2>
+  <p class="hint">Remplissez l'essentiel (ou rien du tout) puis cliquez : le fichier se télécharge ; ouvrez-le d'un clic dans LibreOffice Writer avec l'en-tête, le bandeau, la mise en page et le contact presse déjà en place.</p>
+  <div class="grid">
+    <div>
+      <label>Titre du communiqué</label>
+      <input id="cTitre" type="text" placeholder="Titre">
+      <label>Chapeau (1 à 2 phrases : qui, quoi, où, quand)</label>
+      <textarea id="cChapeau" rows="3"></textarea>
+      <label>Date</label>
+      <input id="cDate" type="text">
+      <label>Contact presse</label>
+      <textarea id="cContact" rows="3"></textarea>
+    </div>
+    <div>
+      <label>Corps du texte (facultatif — une ligne = un paragraphe ; « ## » = intertitre ; « - » = puce)</label>
+      <textarea id="cCorps" rows="12" placeholder="## Situation&#10;…&#10;## Consignes à la population&#10;- …"></textarea>
+      <div class="actions">
+        <button class="ok big" id="cGo">📄 Créer et ouvrir dans LibreOffice</button>
+        <button class="sec" id="cVide">Modèle vide</button>
+      </div>
+      <p class="hint">Format .fodt : LibreOffice s'ouvre directement depuis la barre de téléchargement du navigateur. Enregistrez ensuite en .odt, puis exportez en PDF pour l'envoi.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ VEILLE ============ -->
+<section class="panel" id="p-veille">
+  <h2>Veille média : un clic, un nouvel onglet</h2>
+  <label>Mots-clés de veille</label>
+  <input id="wQuery" type="search" placeholder='ex. "Digne-les-Bains" incendie'>
+  <div class="actions">
+    <button class="red big" id="wAll">Ouvrir toute la veille</button>
+    <span class="hint" style="align-self:center">Autorisez les fenêtres pop-up pour ce fichier si le navigateur en bloque.</span>
+  </div>
+  <div class="src" id="wSrc"></div>
+</section>
+
+<!-- ============ MAIL ============ -->
+<section class="panel" id="p-mail">
+  <h2>Contacts &amp; projet de mail</h2>
+  <div class="grid" style="grid-template-columns:minmax(320px,1fr) minmax(320px,1fr)">
+    <div>
+      <div class="chips" id="gChips"></div>
+      <div class="row"><input id="kSearch" type="search" placeholder="Rechercher un contact…"><button class="sec small" id="kAll">Cocher le groupe</button><button class="sec small" id="kNone">Décocher</button></div>
+      <div style="max-height:340px;overflow:auto;margin-top:8px"><table><thead><tr><th></th><th>Nom</th><th>Organisme</th><th>Email</th><th></th></tr></thead><tbody id="kBody"></tbody></table></div>
+      <details style="margin:12px 0 0">
+        <summary>Ajouter / importer des contacts</summary>
+        <div class="row">
+          <input id="kNom" type="text" placeholder="Nom"><input id="kOrg" type="text" placeholder="Organisme">
+        </div>
+        <div class="row" style="margin-top:6px">
+          <input id="kMail" type="email" placeholder="email@exemple.fr"><select id="kGroupe"></select><button id="kAdd" class="small">Ajouter</button>
+        </div>
+        <p class="hint">Import CSV (séparateur « ; », colonnes : nom;organisme;email;groupe)</p>
+        <div class="row"><input type="file" id="kFile" accept=".csv,.txt"><button class="sec small" id="kExport">Exporter en CSV</button></div>
+      </details>
+    </div>
+    <div>
+      <div class="row"><div><label>Modèle</label><select id="mModele"></select></div></div>
+      <label>Objet</label>
+      <input id="mObjet" type="text">
+      <label>Message</label>
+      <textarea id="mCorps" rows="10"></textarea>
+      <label>Pièce jointe (communiqué en .odt ou .pdf)</label>
+      <input type="file" id="mPJ">
+      <label style="display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="mCci" checked> Mettre les destinataires en copie cachée (Cci)</label>
+      <p class="hint"><b id="mCount">0</b> destinataire(s) coché(s).</p>
+      <div class="actions">
+        <button class="ok big" id="mEml">✉️ Ouvrir le brouillon dans Thunderbird</button>
+        <button class="sec" id="mMailto">Via mailto</button>
+        <button class="sec" id="mCopy">Copier les adresses</button>
+      </div>
+      <p class="hint">Le brouillon .eml s'ouvre en fenêtre de rédaction (pièce jointe incluse). « mailto » n'embarque pas de pièce jointe.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MAIN COURANTE MEDIA ============ -->
+<section class="panel" id="p-log">
+  <h2>Main courante média</h2>
+  <p class="hint">Qui a posé quelle question, à quelle heure. Saisie rapide : média + question (+ bouclage). Ctrl+Entrée enregistre.</p>
+  <div id="zMedia">
+  <div class="mdform">
+    <div><label>Heure d'appel</label><input id="mdHeure" type="time"></div>
+    <div><label>Média</label><input id="mdMedia" type="text" list="dlMedia" placeholder="Le Dauphiné, France Bleu…"></div>
+    <div><label>Journaliste</label><input id="mdJourn" type="text"></div>
+    <div><label>Coordonnées</label><input id="mdContact" type="text" placeholder="tél. / mail"></div>
+    <div><label>Canal</label><select id="mdCanal"><option>Téléphone</option><option>Mail</option><option>Réseaux sociaux</option><option>Sur place</option></select></div>
+    <div><label>Bouclage</label><input id="mdBouclage" type="time"></div>
+  </div>
+  <label>Question posée</label>
+  <textarea id="mdQuestion" rows="2" placeholder="La question, telle qu'elle a été posée."></textarea>
+  <div class="actions"><button class="ok big" id="mdAdd">Enregistrer la question</button></div>
+  <datalist id="dlMedia"></datalist>
+
+  <div class="chips" id="mdChips" style="margin-top:18px"></div>
+  <input id="mdSearch" class="keep" type="search" placeholder="Filtrer par média, journaliste ou mot de la question…">
+  <div style="overflow:auto;margin-top:8px"><table class="md"><thead><tr><th>Heure</th><th>Média</th><th>Question</th><th>Bouclage</th><th>Statut</th><th>Réponse</th><th></th></tr></thead><tbody id="mdBody"></tbody></table></div>
+  <div class="actions">
+    <button class="sec keep" id="mdSynth">Copier la synthèse par média</button>
+    <button class="sec keep" id="mdCsv">Exporter en CSV</button>
+  </div>
+  </div>
+
+  <details style="margin:22px 0 0" open>
+    <summary>Journal de la cellule (décisions, actions, événements)</summary>
+    <div class="row" style="margin-top:8px"><input id="lTxt" type="text" placeholder="Décision, information reçue, action engagée…"><button id="lAdd">Ajouter</button></div>
+    <ul class="log" id="lList"></ul>
+    <div class="actions"><button class="sec small" id="lCopy">Copier</button><button class="sec small" id="lTxtDl">Exporter en .txt</button></div>
+  </details>
+
+  <dialog id="dlg">
+    <h2>Traiter la question</h2>
+    <div class="row"><div><label>Média</label><input id="dMedia" type="text"></div><div><label>Journaliste</label><input id="dJourn" type="text"></div></div>
+    <label>Coordonnées</label><input id="dContact" type="text">
+    <label>Question</label><textarea id="dQuestion" rows="3"></textarea>
+    <div class="row"><div><label>Statut</label><select id="dStatut"></select></div><div><label>Bouclage</label><input id="dBouclage" type="time"></div></div>
+    <label>Réponse apportée / élément de langage utilisé</label><textarea id="dReponse" rows="5"></textarea>
+    <div class="actions"><button class="ok" id="dOk">Enregistrer</button><button class="sec" id="dCancel">Annuler</button></div>
+  </dialog>
+</section>
+</main>
+
+<details>
+  <summary>⚙️ Réglages (structure, contact presse, signature, logo, sauvegarde)</summary>
+  <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:10px">
+    <div>
+      <label>Structure émettrice</label><input id="sOrg" type="text">
+      <label>Service</label><input id="sService" type="text">
+      <label>Ville (pour « Fait à … »)</label><input id="sVille" type="text">
+      <label>Hashtag par défaut</label><input id="sTag" type="text">
+      <label>Adresse fonctionnelle (champ « À » des mails, facultatif)</label><input id="sBoite" type="email">
+    </div>
+    <div>
+      <label>Contact presse (repris dans le communiqué)</label><textarea id="sContact" rows="3"></textarea>
+      <label>Signature des mails</label><textarea id="sSign" rows="3"></textarea>
+      <label>Logo pour les vignettes (PNG/JPG, fond transparent de préférence)</label>
+      <div class="row"><input type="file" id="sLogo" accept="image/*"><button class="sec small" id="sLogoDel">Retirer</button></div>
+      <div class="actions"><button class="sec small" id="sBackup">Sauvegarder tout (JSON)</button><input type="file" id="sRestore" accept=".json"></div>
+      <div class="actions"><button class="sec small" id="sDiag">Tester l'environnement (Grist, téléchargement, pop-up)</button></div>
+      <pre id="diagOut" class="hint" style="white-space:pre-wrap"></pre>
+    </div>
+  </div>
+</details>
+
+<dialog id="dlgAsk">
+  <h2 style="font-size:1.05rem">Confirmation</h2>
+  <p id="askMsg" style="white-space:pre-wrap"></p>
+  <textarea id="askInput" rows="3" style="display:none" placeholder="Motif (obligatoire)"></textarea>
+  <div class="actions"><button class="ok" id="askOk">Valider</button><button class="sec" id="askCancel">Annuler</button></div>
+</dialog>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const KEY = 'sdcire-tdb-crise-v1';
+
+/* ---------- état ---------- */
+const DEF = {
+  crise:{nom:'',debut:null,niveau:'Veille'},
+  settings:{
+    org:'Préfecture des Alpes-de-Haute-Provence',
+    service:'Service départemental de la communication interministérielle (SDCIRE)',
+    ville:'Digne-les-Bains',
+    tag:'#AlpesDeHauteProvence',
+    boite:'',
+    contact:'Contact presse : à renseigner (nom – téléphone – courriel)',
+    sign:'Cordialement,\nLe service de la communication interministérielle\nPréfecture des Alpes-de-Haute-Provence'
+  },
+  contacts:[], journal:[], media:[], db:{seq:0}, logo:null
+};
+let S;
+try { S = JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ S = {}; }
+S = Object.assign({}, DEF, S);
+S.crise = Object.assign({}, DEF.crise, S.crise);
+S.settings = Object.assign({}, DEF.settings, S.settings);
+if(!S.db) S.db={seq:0};
+const save = () => { try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast('Sauvegarde locale impossible (logo trop lourd ?)'); } };
+
+function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(toast.h); toast.h=setTimeout(()=>t.classList.remove('on'),2400); }
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const two = n => String(n).padStart(2,'0');
+const stamp = (d=new Date()) => `${two(d.getDate())}/${two(d.getMonth()+1)} à ${two(d.getHours())} h ${two(d.getMinutes())}`;
+const fileStamp = (d=new Date()) => `${d.getFullYear()}${two(d.getMonth()+1)}${two(d.getDate())}-${two(d.getHours())}${two(d.getMinutes())}`;
+const slug = s => (s||'crise').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'crise';
+function download(blob, name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); }
+
+/* ---------- onglets ---------- */
+function showTab(t){
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='p-'+t));
+}
+$('tabs').addEventListener('click',e=>{ const b=e.target.closest('button'); if(b) showTab(b.dataset.t); });
+document.addEventListener('keydown',e=>{
+  if(e.altKey && '12345'.includes(e.key)){ e.preventDefault(); showTab(['vig','cp','veille','mail','log'][e.key-1]); }
+});
+
+/* =====================================================
+   COUCHE DE DONNÉES : Grist (partagé) ou local (secours)
+   ===================================================== */
+const TN={J:'Crise_Journal',C:'Crise_Communes',M:'Crise_Media'};
+const TSPEC={
+  [TN.J]:[['Horodatage','DateTime:Europe/Paris'],['HeurePoste','Numeric'],['Type','Text'],['Auteur','Text'],['Fonction','Text'],['Texte','Text']],
+  [TN.C]:[['Horodatage','DateTime:Europe/Paris'],['HeurePoste','Numeric'],['Commune','Text'],['Nom','Text'],['Telephone','Text'],['Mail','Text'],['Auteur','Text']],
+  [TN.M]:[['Horodatage','DateTime:Europe/Paris'],['HeureAppel','Numeric'],['Media','Text'],['Journaliste','Text'],['Contact','Text'],['Canal','Text'],['Question','Text'],['Bouclage','Numeric'],['Statut','Text'],['Reponse','Text'],['HeureReponse','Numeric'],['Auteur','Text']]
+};
+let sess=null;   // {nom, fonctions[]}
+let ST={nom:'',niveau:'Veille',h0:null,h1:null};
+const hhmm=ts=>{ const d=new Date(ts); return two(d.getHours())+':'+two(d.getMinutes()); };
+const dhm=ts=>{ const d=new Date(ts); return two(d.getDate())+'/'+two(d.getMonth()+1)+' '+hhmm(ts); };
+const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('délai dépassé')),ms))]);
+
+function loadGristApi(){
+  return new Promise(res=>{
+    if(typeof grist!=='undefined'){ res('(déjà chargée)'); return; }
+    if(window.parent===window){ res(''); return; }
+    const c=[]; const q=new URLSearchParams(location.search).get('api'); if(q) c.push(q);
+    try{ c.push(new URL(document.referrer).origin+'/grist-plugin-api.js'); }catch(e){}
+    c.push('https://docs.getgrist.com/grist-plugin-api.js');
+    let i=0;
+    const next=()=>{
+      if(i>=c.length){ res(''); return; }
+      const url=c[i++], s=document.createElement('script'); s.src=url;
+      s.onload=()=>typeof grist!=='undefined'?res(url):next();
+      s.onerror=()=>{ s.remove(); next(); };
+      document.head.appendChild(s);
+    };
+    next();
+  });
+}
+
+const DB={
+  mode:'local', err:'', api:'', raw:{}, sig:'', down:false,
+  async init(){
+    Object.values(TN).forEach(t=>{ if(!S.db[t]) S.db[t]=[]; });
+    const api=await loadGristApi();
+    if(!api){ this.err=(window.parent!==window)?'API Grist introuvable':''; await this.refresh(); return; }
+    try{
+      grist.ready({requiredAccess:'full'});
+      const have=await withTimeout(grist.docApi.listTables(),8000);
+      const neu=Object.values(TN).filter(t=>!have.includes(t));
+      if(neu.length){
+        await grist.docApi.applyUserActions(neu.map(t=>['AddTable',t,TSPEC[t].map(([id,type])=>({id,type}))]));
+        try{ await grist.docApi.applyUserActions(neu.map(t=>['ModifyColumn',t,'Horodatage',{isFormula:false,formula:'NOW()',recalcWhen:0,recalcDeps:null}])); }
+        catch(e){ this.err='Heure serveur non configurée ('+(e&&e.message||e)+') : l\'heure du poste est utilisée'; }
+      }
+      this.mode='grist'; this.api=api;
+    }catch(e){ this.mode='local'; this.err='Grist : '+(e&&e.message||e); }
+    await this.refresh();
+  },
+  async refresh(){
+    const raw={};
+    if(this.mode==='grist'){
+      for(const t of Object.values(TN)){
+        const d=await withTimeout(grist.docApi.fetchTable(t),8000);
+        raw[t]=(d.id||[]).map((id,i)=>{ const r={id}; for(const k in d) if(k!=='id') r[k]=d[k][i]; return r; });
+      }
+    } else { for(const t of Object.values(TN)) raw[t]=S.db[t].slice(); }
+    this.raw=raw; const sig=JSON.stringify(raw); const ch=sig!==this.sig; this.sig=sig; return ch;
+  },
+  async add(t,rec){
+    rec=Object.assign({},rec);
+    rec.Auteur=rec.Auteur||(sess&&sess.nom)||'';
+    if(t===TN.J||t===TN.C) rec.HeurePoste=Date.now()/1000;
+    if(t===TN.J) rec.Fonction=rec.Fonction||(sess?sess.fonctions.join(' + '):'');
+    if(this.mode==='grist') await grist.docApi.applyUserActions([['AddRecord',t,null,rec]]);
+    else { rec.id=++S.db.seq; rec.Horodatage=Date.now()/1000; S.db[t].push(rec); save(); }
+    await this.refresh(); onData();
+  },
+  async upd(t,id,patch){
+    if(this.mode==='grist') await grist.docApi.applyUserActions([['UpdateRecord',t,id,patch]]);
+    else { const r=S.db[t].find(x=>x.id===id); if(r) Object.assign(r,patch); save(); }
+    await this.refresh(); onData();
+  },
+  async del(t,id){
+    if(this.mode==='grist') await grist.docApi.applyUserActions([['BulkRemoveRecord',t,[id]]]);
+    else { S.db[t]=S.db[t].filter(x=>x.id!==id); save(); }
+    await this.refresh(); onData();
+  }
+};
+
+const tsOf=r=>((r.Horodatage>0?r.Horodatage:(r.HeurePoste||0))*1000);
+const JOURNAL=()=>(DB.raw[TN.J]||[]).map(r=>({id:r.id,t:tsOf(r),type:r.Type||'',auteur:r.Auteur||'',fonction:r.Fonction||'',texte:r.Texte||''})).sort((a,b)=>a.t-b.t||a.id-b.id);
+const COMMUNES=()=>(DB.raw[TN.C]||[]).map(r=>({id:r.id,commune:r.Commune||'',nom:r.Nom||'',tel:r.Telephone||'',mail:r.Mail||''}));
+const MED=()=>(DB.raw[TN.M]||[]).map(r=>({id:String(r.id),h:(r.HeureAppel||0)*1000,media:r.Media||'',journaliste:r.Journaliste||'',contact:r.Contact||'',canal:r.Canal||'',question:r.Question||'',bouclage:r.Bouclage>0?r.Bouclage*1000:null,statut:r.Statut||'À traiter',reponse:r.Reponse||'',repH:r.HeureReponse>0?r.HeureReponse*1000:null,auteur:r.Auteur||''}));
+
+function derive(){
+  const st={nom:'',niveau:'Veille',h0:null,h1:null};
+  JOURNAL().forEach(e=>{
+    if(e.type==='NOM') st.nom=e.texte;
+    else if(e.type==='NIVEAU') st.niveau=e.texte;
+    else if(e.type==='COD_OUVERT'&&!st.h0) st.h0=e.t;
+    else if(e.type==='COD_CLOTURE'&&st.h0&&!st.h1) st.h1=e.t;
+  });
+  return st;
+}
+async function addLog(t){ try{ await DB.add(TN.J,{Type:'ACTION',Texte:t}); }catch(e){} }
+
+/* ---------- fonctions et droits (affichage ; la vraie protection = règles d'accès Grist) ---------- */
+const FONCTIONS=['Coordination','Rédaction','Média','Réseaux et visuels','Envois et annuaire','Lecteur'];
+const ZONES={
+  coord:['Coordination'],
+  media:['Coordination','Média'],
+  journal:['Coordination','Rédaction','Média','Réseaux et visuels','Envois et annuaire'],
+  vig:['Coordination','Réseaux et visuels'],
+  cp:['Coordination','Rédaction'],
+  mail:['Coordination','Envois et annuaire']
+};
+const ZNOM={coord:'pilotage de la crise',media:'main courante média',journal:'journal',vig:'vignettes',cp:'communiqués',mail:'contacts et envois'};
+const LOCKS={vig:'#p-vig',cp:'#p-cp',mail:'#p-mail',media:'#zMedia',journal:'#lTxt,#lAdd'};
+const closed=()=>!!ST.h1;
+const can=z=>!closed()&&!!sess&&sess.fonctions.some(f=>ZONES[z].includes(f));
+function applyPerms(){
+  Object.entries(LOCKS).forEach(([z,sel])=>{
+    const ok=can(z);
+    document.querySelectorAll(sel).forEach(root=>{
+      const els=root.matches('input,textarea,select,button')?[root]:root.querySelectorAll('input,textarea,select,button');
+      els.forEach(el=>{
+        if(el.classList.contains('keep')) return;
+        if(!ok){ el.disabled=true; el.dataset.lk='1'; }
+        else if(el.dataset.lk){ el.disabled=false; delete el.dataset.lk; }
+      });
+    });
+  });
+  $('crNom').disabled=!can('coord'); $('crNiveau').disabled=!can('coord');
+  $('btnClot').style.display=(can('coord')&&ST.h0&&!ST.h1)?'':'none';
+  const z=Object.keys(ZONES).filter(k=>can(k));
+  $('roNote').textContent= !sess?'' : closed()?'COD clôturé : consultation en lecture seule.' : (z.length?'Vous pouvez agir sur : '+z.map(k=>ZNOM[k]).join(', ')+'. Le reste est en lecture seule.':'Lecture seule pour votre fonction.');
+}
+
+/* ---------- dialogue maison (confirm/prompt peuvent être bloqués dans Grist) ---------- */
+function askDialog(msg,{input=false,okLabel='Valider'}={}){
+  return new Promise(res=>{
+    const d=$('dlgAsk'), ta=$('askInput'); $('askMsg').textContent=msg; ta.style.display=input?'block':'none'; ta.value=''; $('askOk').textContent=okLabel;
+    let done=false; const fin=v=>{ if(done) return; done=true; try{ d.close(); }catch(e){} res(v); };
+    $('askOk').onclick=()=>{ if(input&&ta.value.trim().length<5){ toast('Motif obligatoire (5 caractères minimum)'); ta.focus(); return; } fin(input?ta.value.trim():true); };
+    $('askCancel').onclick=()=>fin(input?null:false);
+    d.oncancel=()=>fin(input?null:false);
+    d.showModal();
+  });
+}
+
+/* ---------- en-tête : crise, niveau, chrono ---------- */
+const NIV = {'Veille':'#4a5a8a','Vigilance':'#d9730d','Alerte':'#b3261e','Crise':'#7a0010','Retour à la normale':'#18753c'};
+function renderNiveau(){ const b=$('niveauBadge'); b.textContent=S.crise.niveau; b.style.background=NIV[S.crise.niveau]||'#444'; }
+function tick(){
+  const c=$('chrono'), info=$('codInfo');
+  if(!ST.h0){ c.textContent='H+00:00'; info.textContent='COD non ouvert'; info.style.background='#4a5a8a'; return; }
+  const s=Math.max(0,Math.floor(((ST.h1||Date.now())-ST.h0)/1000));
+  c.textContent=`H+${two(Math.floor(s/3600))}:${two(Math.floor(s%3600/60))}`;
+  info.textContent=ST.h1?`COD clôturé à ${hhmm(ST.h1)} (ouvert à ${hhmm(ST.h0)})`:`COD ouvert à ${hhmm(ST.h0)}`;
+  info.style.background=ST.h1?'#18753c':'#b3261e';
+}
+$('crNom').onchange=async e=>{ if(!can('coord')){ e.target.value=ST.nom; return; } const v=e.target.value.trim(); if(v!==ST.nom) await DB.add(TN.J,{Type:'NOM',Texte:v}); };
+$('crNiveau').onchange=async e=>{ if(!can('coord')){ e.target.value=ST.niveau; return; } await DB.add(TN.J,{Type:'NIVEAU',Texte:e.target.value}); };
+$('btnClot').onclick=async()=>{
+  if(!(await askDialog('Clôturer le COD ?\nL\'heure de clôture sera fixée et l\'application passera en lecture seule pour tous les agents. Cette action est définitive.',{okLabel:'Clôturer le COD'}))) return;
+  await DB.add(TN.J,{Type:'COD_CLOTURE',Texte:'Clôture du COD'});
+};
+$('btnComm').onclick=()=>openSas(true);
+
+/* Les champs « titre » reprennent le nom de la crise tant qu'on ne les a pas modifiés à la main */
+const linked = ['vTitre','cTitre'];
+linked.forEach(id=>$(id).addEventListener('input',e=>{ if(e.isTrusted) e.target.dataset.touched='1'; }));
+$('mObjet').addEventListener('input',e=>{ if(e.isTrusted) e.target.dataset.touched='1'; });
+function propagateNom(){
+  const n=S.crise.nom;
+  linked.forEach(id=>{ const el=$(id); if(el.dataset.touched!=='1'){ el.value=n; } });
+  if(!$('wQuery').dataset.touched) $('wQuery').value=n;
+  applyModele(false); drawVignette();
+}
+$('wQuery').addEventListener('input',e=>{ if(e.isTrusted) e.target.dataset.touched='1'; });
+
+function applyState(){
+  const prev=S.crise.nom; ST=derive(); S.crise.nom=ST.nom; S.crise.niveau=ST.niveau;
+  if(document.activeElement!==$('crNom')) $('crNom').value=ST.nom;
+  $('crNiveau').value=ST.niveau; renderNiveau(); tick(); applyPerms();
+  if(prev!==ST.nom) propagateNom();
+  const mb=$('modeBadge');
+  if(DB.mode==='grist'&&!DB.down){ mb.textContent='Grist · partagé'; mb.style.background='#18753c'; }
+  else if(DB.mode==='grist'){ mb.textContent='Grist injoignable'; mb.style.background='#b3261e'; }
+  else { mb.textContent='Local · secours'; mb.style.background='#d9730d'; }
+  mb.title=DB.err||'';
+  $('sasMode').textContent= DB.mode==='grist'
+    ? 'Connecté à Grist : les données de la crise sont partagées entre les agents.'+(DB.err?' ('+DB.err+')':'')
+    : 'Mode secours local : les données restent sur ce poste.'+(DB.err?' ('+DB.err+')':'')+' Pour travailler à plusieurs, ouvrez l\'application depuis Grist.';
+  $('whoami').textContent= sess? sess.nom+' · '+sess.fonctions.join(', ') : '';
+}
+function onData(){ applyState(); renderMedia(); renderLog(); renderSasCommunes(); renderGate(); }
+
+/* ---------- réglages ---------- */
+const SETF={sOrg:'org',sService:'service',sVille:'ville',sTag:'tag',sBoite:'boite',sContact:'contact',sSign:'sign'};
+Object.entries(SETF).forEach(([id,k])=>{ $(id).value=S.settings[k]||''; $(id).oninput=e=>{ S.settings[k]=e.target.value; save(); if(k==='tag') $('vTag').value=e.target.value; if(k==='contact') $('cContact').value=e.target.value; drawVignette(); applyModele(false); }; });
+let logoImg=null;
+function loadLogo(){ if(!S.logo){ logoImg=null; drawVignette(); return; } const i=new Image(); i.onload=()=>{ logoImg=i; drawVignette(); }; i.src=S.logo; }
+$('sLogo').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ S.logo=r.result; save(); loadLogo(); toast('Logo enregistré'); }; r.readAsDataURL(f); };
+$('sLogoDel').onclick=()=>{ S.logo=null; save(); loadLogo(); };
+$('sBackup').onclick=()=>download(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}),`sauvegarde-tdb-crise-${fileStamp()}.json`);
+$('sRestore').onchange=e=>{ const f=e.target.files[0]; if(!f) return; f.text().then(t=>{ try{ S=Object.assign({},DEF,JSON.parse(t)); save(); location.reload(); }catch(err){ toast('Fichier illisible'); } }); };
+
+/* =====================================================
+   1. VIGNETTES
+   ===================================================== */
+const TYPES = {
+  alerte:{label:'ALERTE', color:'#B3261E'},
+  consigne:{label:'CONSIGNES', color:'#C2410C'},
+  vigilance:{label:'VIGILANCE', color:'#D9730D'},
+  info:{label:'INFORMATION', color:'#000091'},
+  point:{label:'POINT DE SITUATION', color:'#1F2A6B'},
+  fin:{label:'RETOUR À LA NORMALE', color:'#18753C'}
+};
+Object.entries(TYPES).forEach(([k,v])=>{ const o=document.createElement('option'); o.value=k; o.textContent=v.label[0]+v.label.slice(1).toLowerCase(); $('vType').appendChild(o); });
+$('vTag').value=S.settings.tag;
+
+function wrap(ctx,text,maxW){
+  const out=[];
+  text.split('\n').forEach(par=>{
+    const words=par.split(/\s+/).filter(Boolean); let line='';
+    if(!words.length){ out.push(''); return; }
+    words.forEach(w=>{ const t=line?line+' '+w:w; if(ctx.measureText(t).width>maxW && line){ out.push(line); line=w; } else line=t; });
+    out.push(line);
+  });
+  return out;
+}
+function fit(ctx,text,maxW,maxH,start,min,weight,lh=1.15){
+  let size=start, lines;
+  for(; size>=min; size-=2){ ctx.font=`${weight} ${size}px "Marianne","Segoe UI",Arial,sans-serif`; lines=wrap(ctx,text,maxW); if(lines.length*size*lh<=maxH) break; }
+  return {size,lines,lh};
+}
+function drawVignette(){
+  const cv=$('cv'), [w,h]=$('vFormat').value.split('x').map(Number);
+  cv.width=w; cv.height=h;
+  const ctx=cv.getContext('2d'), t=TYPES[$('vType').value], s=Math.min(w,h)/1080, m=Math.round(w*0.06);
+  ctx.fillStyle=t.color; ctx.fillRect(0,0,w,h);
+  // décor discret
+  const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'rgba(255,255,255,.10)'); g.addColorStop(1,'rgba(0,0,0,.22)');
+  ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+  // liseré tricolore
+  const bh=Math.round(16*s); ctx.fillStyle='#000091'; ctx.fillRect(0,0,w/3,bh); ctx.fillStyle='#fff'; ctx.fillRect(w/3,0,w/3,bh); ctx.fillStyle='#E1000F'; ctx.fillRect(2*w/3,0,w/3+1,bh);
+  // pastille type
+  let y=Math.round(70*s);
+  ctx.font=`bold ${Math.round(40*s)}px "Marianne","Segoe UI",Arial,sans-serif`;
+  const lw=ctx.measureText(t.label).width, ph=Math.round(70*s), pw=lw+Math.round(60*s);
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.roundRect(m,y,pw,ph,ph/2); ctx.fill();
+  ctx.fillStyle=t.color; ctx.textBaseline='middle'; ctx.textAlign='left'; ctx.fillText(t.label,m+Math.round(30*s),y+ph/2+2*s);
+  // logo
+  if(logoImg){ const lh=Math.round(110*s), lw2=logoImg.width/logoImg.height*lh; ctx.drawImage(logoImg,w-m-lw2,y-10*s,lw2,lh); }
+  // pied
+  const fb=Math.round(170*s), fy=h-fb;
+  // sous-titre
+  const sous=$('vSous').value.trim(), titre=($('vTitre').value.trim()||'Titre de la vignette');
+  const top=y+ph+Math.round(50*s); let bottom=fy-Math.round(40*s);
+  ctx.textBaseline='top';
+  let sb=null;
+  if(sous){
+    sb=fit(ctx,sous,w-2*m,Math.round(h*0.20),Math.round(54*s),Math.round(30*s),'500');
+    const sh=sb.lines.length*sb.size*sb.lh; bottom-= sh+Math.round(30*s);
+  }
+  const tb=fit(ctx,titre,w-2*m,bottom-top,Math.round(150*s),Math.round(44*s),'800',1.1);
+  ctx.fillStyle='#fff'; ctx.font=`800 ${tb.size}px "Marianne","Segoe UI",Arial,sans-serif`;
+  tb.lines.forEach((l,i)=>ctx.fillText(l,m,top+i*tb.size*tb.lh));
+  if(sb){
+    const sy=top+tb.lines.length*tb.size*tb.lh+Math.round(30*s);
+    ctx.fillStyle='rgba(255,255,255,.93)'; ctx.font=`500 ${sb.size}px "Marianne","Segoe UI",Arial,sans-serif`;
+    // filet
+    ctx.fillRect(m,sy-Math.round(18*s),Math.round(120*s),Math.round(6*s));
+    sb.lines.forEach((l,i)=>ctx.fillText(l,m,sy+i*sb.size*sb.lh));
+  }
+  // bandeau bas
+  ctx.fillStyle='#fff'; ctx.fillRect(0,fy,w,fb);
+  ctx.fillStyle=t.color; ctx.textBaseline='alphabetic'; ctx.textAlign='left';
+  ctx.font=`bold ${Math.round(36*s)}px "Marianne","Segoe UI",Arial,sans-serif`;
+  const org=S.settings.org||''; ctx.fillText(org, m, fy+Math.round(70*s), w-2*m);
+  ctx.fillStyle='#555'; ctx.font=`${Math.round(30*s)}px "Marianne","Segoe UI",Arial,sans-serif`;
+  const mention=$('vMention').value.trim()||('Mise à jour : '+stamp());
+  ctx.fillText(mention, m, fy+Math.round(115*s), w*0.62);
+  ctx.textAlign='right'; ctx.fillStyle=t.color; ctx.font=`bold ${Math.round(34*s)}px "Marianne","Segoe UI",Arial,sans-serif`;
+  ctx.fillText($('vTag').value, w-m, fy+Math.round(115*s), w*0.36);
+  ctx.textAlign='left';
+}
+['vType','vTitre','vSous','vFormat','vTag','vMention'].forEach(id=>$(id).addEventListener('input',drawVignette));
+$('vDl').onclick=()=>$('cv').toBlob(b=>{ download(b,`vignette-${$('vType').value}-${fileStamp()}.png`); toast('Vignette téléchargée'); });
+$('vCopy').onclick=()=>$('cv').toBlob(async b=>{ try{ await navigator.clipboard.write([new ClipboardItem({'image/png':b})]); toast('Image copiée'); }catch(e){ toast('Copie impossible ici : utilisez Télécharger'); } });
+
+/* =====================================================
+   2. COMMUNIQUÉ  (flat ODT / .fodt)
+   ===================================================== */
+$('cDate').value=new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+$('cContact').value=S.settings.contact;
+const X = s => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function para(style,txt){ return `<text:p text:style-name="${style}">${X(txt)}</text:p>`; }
+function buildFodt(vide){
+  const titre = vide ? '[Titre du communiqué]' : ($('cTitre').value.trim()||'[Titre du communiqué]');
+  const chapeau = vide ? '[Chapeau : qui, quoi, où, quand — en une ou deux phrases.]' : ($('cChapeau').value.trim()||'[Chapeau : qui, quoi, où, quand — en une ou deux phrases.]');
+  const date = $('cDate').value || '';
+  const contact = $('cContact').value.trim() || S.settings.contact;
+  let corps = vide ? '' : $('cCorps').value;
+  let body='';
+  if(corps.trim()){
+    corps.split('\n').forEach(l=>{
+      l=l.replace(/\s+$/,''); if(!l.trim()) return;
+      if(l.startsWith('## ')) body+=para('Intertitre',l.slice(3));
+      else if(/^[-•]\s+/.test(l)) body+=para('Puce','•  '+l.replace(/^[-•]\s+/,''));
+      else body+=para('Corps',l);
+    });
+  } else {
+    body = para('Intertitre','[Intertitre 1 — la situation]')+para('Corps','[Rédigez ici.]')+
+           para('Intertitre','[Intertitre 2 — l\'action des services de l\'État]')+para('Corps','[Rédigez ici.]')+
+           para('Intertitre','[Intertitre 3 — les consignes à la population]')+para('Puce','•  [Consigne 1]')+para('Puce','•  [Consigne 2]');
+  }
+  const contactParas = contact.split('\n').filter(Boolean).map(l=>para('Contact',l)).join('');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<office:document xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" office:version="1.3" office:mimetype="application/vnd.oasis.opendocument.text">
+<office:font-face-decls><style:font-face style:name="Liberation Sans" svg:font-family="'Liberation Sans'" style:font-family-generic="swiss"/></office:font-face-decls>
+<office:styles>
+<style:default-style style:family="paragraph"><style:paragraph-properties fo:margin-top="0cm" fo:margin-bottom="0.25cm"/><style:text-properties style:font-name="Liberation Sans" fo:font-size="11pt" fo:language="fr" fo:country="FR"/></style:default-style>
+<style:style style:name="Standard" style:family="paragraph" style:class="text"/>
+<style:style style:name="Entete" style:family="paragraph" style:parent-style-name="Standard"><style:paragraph-properties fo:text-align="left" fo:margin-bottom="0.05cm"/><style:text-properties fo:font-weight="bold" fo:font-size="12pt" fo:color="#000091"/></style:style>
+<style:style style:name="Service" style:family="paragraph" style:parent-style-name="Standard"><style:paragraph-properties fo:text-align="left" fo:margin-bottom="0.2cm" fo:border-bottom="1.5pt solid #E1000F" fo:padding-bottom="0.2cm"/><style:text-properties fo:font-size="9.5pt" fo:color="#444444"/></style:style>
+<style:style style:name="Lieu" style:family="paragraph" style:parent-style-name="Standard"><style:paragraph-properties fo:text-align="right" fo:margin-top="0.3cm" fo:margin-bottom="0.5cm"/><style:text-properties fo:font-size="10.5pt"/></style:style>
+<style:style style:name="Bandeau" style:family="paragraph" style:parent-style-name="Standard"><style:paragraph-properties fo:text-align="center" fo:background-color="#000091" fo:padding="0.2cm" fo:margin-bottom="0.5cm"/><style:text-properties fo:font-weight="bold" fo:font-size="14pt" fo:color="#ffffff" fo:letter-spacing="0.06cm"/></style:style>
+<style:style style:name="Titre" style:family="paragraph" style:parent-style-name="Standard"><style:paragraph-properties fo:text-align="left" fo:margin-bottom="0.3cm"/><style:text-properties fo:font-weight="bold" fo:font-size="19pt" fo:color="#000091"/></style:style>
+<style:style style:name="Chapeau" style:family="paragraph" style:parent-style-name="Standard"><style:paragraph-properties fo:text-align="justify" fo:line-height="125%" fo:margin-bottom="0.5cm" fo:border-left="3pt solid #E1000F" fo:padding-left="0.3cm"/><style:text-properties fo:font-weight="bold" fo:font-size="12pt"/></style:style>
+<style:style style:name="Intertitre" style:family="paragraph" style:parent-style-name="Standard"><style:paragraph-properties fo:margin-top="0.35cm" fo:margin-bottom="0.15cm" fo:keep-with-next="always"/><style:text-properties fo:font-weight="bold" fo:font-size="12.5pt" fo:color="#000091"/></style:style>
+<style:style style:name="Corps" style:family="paragraph" style:parent-style-name="Standard"><style:paragraph-properties fo:text-align="justify" fo:line-height="130%" fo:margin-bottom="0.3cm"/></style:style>
+<style:style style:name="Puce" style:family="paragraph" style:parent-style-name="Standard"><style:paragraph-properties fo:text-align="left" fo:line-height="130%" fo:margin-left="0.8cm" fo:text-indent="-0.5cm" fo:margin-bottom="0.15cm"/></style:style>
+<style:style style:name="ContactTitre" style:family="paragraph" style:parent-style-name="Standard"><style:paragraph-properties fo:margin-top="0.8cm" fo:margin-bottom="0.1cm" fo:border-top="0.75pt solid #999999" fo:padding-top="0.2cm"/><style:text-properties fo:font-weight="bold" fo:font-size="10.5pt" fo:color="#000091"/></style:style>
+<style:style style:name="Contact" style:family="paragraph" style:parent-style-name="Standard"><style:paragraph-properties fo:margin-bottom="0.05cm"/><style:text-properties fo:font-size="10pt"/></style:style>
+<style:style style:name="Pied" style:family="paragraph" style:parent-style-name="Standard"><style:paragraph-properties fo:text-align="center"/><style:text-properties fo:font-size="8.5pt" fo:color="#666666"/></style:style>
+</office:styles>
+<office:automatic-styles>
+<style:page-layout style:name="pm1"><style:page-layout-properties fo:page-width="21cm" fo:page-height="29.7cm" fo:margin-top="1.5cm" fo:margin-bottom="1.2cm" fo:margin-left="2cm" fo:margin-right="2cm"/><style:footer-style><style:header-footer-properties fo:min-height="0.5cm" fo:margin-top="0.3cm"/></style:footer-style></style:page-layout>
+</office:automatic-styles>
+<office:master-styles>
+<style:master-page style:name="Standard" style:page-layout-name="pm1"><style:footer><text:p text:style-name="Pied">${X(S.settings.org)} — page <text:page-number text:select-page="current">1</text:page-number></text:p></style:footer></style:master-page>
+</office:master-styles>
+<office:body><office:text>
+${para('Entete',(S.settings.org||'').toUpperCase())}
+${para('Service',S.settings.service||'')}
+${para('Lieu',`${S.settings.ville||''}, le ${date}`)}
+${para('Bandeau','COMMUNIQUÉ DE PRESSE')}
+${para('Titre',titre)}
+${para('Chapeau',chapeau)}
+${body}
+${para('ContactTitre','Contact presse')}
+${contactParas}
+</office:text></office:body>
+</office:document>`;
+}
+function genCP(vide){
+  const blob=new Blob([buildFodt(vide)],{type:'application/vnd.oasis.opendocument.text'});
+  download(blob,`CP_${slug($('cTitre').value||S.crise.nom)}_${fileStamp()}.fodt`);
+  toast('Communiqué créé : ouvrez-le depuis les téléchargements');
+  addLog('Communiqué de presse créé : '+($('cTitre').value||'(sans titre)'));
+}
+$('cGo').onclick=()=>genCP(false);
+$('cVide').onclick=()=>genCP(true);
+
+/* =====================================================
+   3. VEILLE MÉDIA
+   ===================================================== */
+const SOURCES=[
+  {n:'Google Actualités',d:'Résultats récents',u:q=>`https://news.google.com/search?q=${q}&hl=fr&gl=FR&ceid=FR:fr`},
+  {n:'Google – dernière heure',d:'Presse, filtre 1 h',u:q=>`https://www.google.com/search?q=${q}&tbm=nws&tbs=qdr:h`},
+  {n:'X (Twitter) – en direct',d:'Réseau, chronologique',u:q=>`https://x.com/search?q=${q}&f=live`},
+  {n:'Facebook – publications',d:'Recherche publique',u:q=>`https://www.facebook.com/search/posts?q=${q}`},
+  {n:'Bing Actualités',d:'Second moteur',u:q=>`https://www.bing.com/news/search?q=${q}&qft=interval%3d%224%22`},
+  {n:'Google – vidéos',d:'Images et vidéos virales',u:q=>`https://www.google.com/search?q=${q}&tbm=vid&tbs=qdr:d`},
+  {n:'Le Dauphiné Libéré',d:'Presse régionale',u:q=>`https://www.ledauphine.com/recherche?q=${q}`},
+  {n:'La Provence',d:'Presse régionale',u:q=>`https://www.laprovence.com/recherche?q=${q}`},
+  {n:'France Bleu / ici',d:'Radio locale',u:q=>`https://www.francebleu.fr/recherche?q=${q}`},
+  {n:'Alpes 1',d:'Média local 04/05',u:q=>`https://www.alpes1.com/?s=${q}`},
+  {n:'Google Alertes',d:'Créer une alerte durable',u:q=>`https://www.google.com/alerts?q=${q}`},
+  {n:'Météo-France – Vigilance',d:'Contexte météo',u:()=>`https://vigilance.meteofrance.fr/fr`}
+];
+function renderSrc(){
+  $('wSrc').innerHTML=SOURCES.map((s,i)=>`<button data-i="${i}">${esc(s.n)}<span>${esc(s.d)}</span></button>`).join('');
+}
+const openSrc=i=>{ const q=encodeURIComponent($('wQuery').value.trim()||S.crise.nom||''); window.open(SOURCES[i].u(q),'_blank','noopener'); };
+$('wSrc').onclick=e=>{ const b=e.target.closest('button'); if(b) openSrc(+b.dataset.i); };
+$('wAll').onclick=()=>{ [0,1,2,3].forEach((i,k)=>setTimeout(()=>openSrc(i),k*250)); addLog('Veille média lancée : '+($('wQuery').value||S.crise.nom)); };
+renderSrc();
+
+/* =====================================================
+   4. CONTACTS & MAILS
+   ===================================================== */
+const GROUPES=['Presse','Élus','Cabinet / services','Partenaires','Autre'];
+let gSel='Tous', sel=new Set(S.contacts.filter(c=>c.sel).map(c=>c.id));
+GROUPES.forEach(g=>{ const o=document.createElement('option'); o.textContent=g; $('kGroupe').appendChild(o); });
+function renderChips(){
+  $('gChips').innerHTML=['Tous',...GROUPES].map(g=>`<span class="chip ${g===gSel?'on':''}" data-g="${esc(g)}">${esc(g)}</span>`).join('');
+}
+$('gChips').onclick=e=>{ const c=e.target.closest('.chip'); if(c){ gSel=c.dataset.g; renderChips(); renderContacts(); } };
+function visible(){
+  const q=$('kSearch').value.toLowerCase();
+  return S.contacts.filter(c=>(gSel==='Tous'||c.groupe===gSel)&&(!q||(c.nom+c.org+c.email).toLowerCase().includes(q)));
+}
+function renderContacts(){
+  const v=visible();
+  $('kBody').innerHTML=v.length?v.map(c=>`<tr><td><input type="checkbox" data-id="${c.id}" ${sel.has(c.id)?'checked':''}></td><td>${esc(c.nom)}</td><td>${esc(c.org)}</td><td>${esc(c.email)}</td><td><button class="sec small" data-del="${c.id}">✕</button></td></tr>`).join(''):'<tr><td colspan="5" class="hint">Aucun contact. Ajoutez-en ou importez un CSV ci-dessous.</td></tr>';
+  $('mCount').textContent=S.contacts.filter(c=>sel.has(c.id)).length;
+}
+$('kBody').onchange=e=>{ const id=e.target.dataset.id; if(!id) return; e.target.checked?sel.add(id):sel.delete(id); persistSel(); $('mCount').textContent=S.contacts.filter(c=>sel.has(c.id)).length; };
+$('kBody').onclick=async e=>{ const id=e.target.dataset.del; if(id&&await askDialog('Supprimer ce contact ?')){ S.contacts=S.contacts.filter(c=>c.id!==id); sel.delete(id); save(); renderContacts(); } };
+function persistSel(){ S.contacts.forEach(c=>c.sel=sel.has(c.id)); save(); }
+$('kSearch').oninput=renderContacts;
+$('kAll').onclick=()=>{ visible().forEach(c=>sel.add(c.id)); persistSel(); renderContacts(); };
+$('kNone').onclick=()=>{ sel.clear(); persistSel(); renderContacts(); };
+$('kAdd').onclick=()=>{
+  const email=$('kMail').value.trim(); if(!/^\S+@\S+\.\S+$/.test(email)){ toast('Adresse mail invalide'); return; }
+  S.contacts.push({id:'c'+Date.now()+Math.random().toString(36).slice(2,5),nom:$('kNom').value.trim()||email,org:$('kOrg').value.trim(),email,groupe:$('kGroupe').value});
+  ['kNom','kOrg','kMail'].forEach(i=>$(i).value=''); save(); renderContacts(); toast('Contact ajouté');
+};
+$('kFile').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  f.text().then(t=>{
+    let n=0;
+    t.split(/\r?\n/).forEach(l=>{
+      const p=l.split(/[;\t]/).map(x=>x.trim().replace(/^"|"$/g,'')); if(p.length<3||!/@/.test(p[2])) return;
+      if(S.contacts.some(c=>c.email.toLowerCase()===p[2].toLowerCase())) return;
+      S.contacts.push({id:'c'+Date.now()+Math.random().toString(36).slice(2,6)+n,nom:p[0],org:p[1],email:p[2],groupe:GROUPES.includes(p[3])?p[3]:'Autre'}); n++;
+    });
+    save(); renderContacts(); toast(n+' contact(s) importé(s)');
+  });
+};
+$('kExport').onclick=()=>download(new Blob(['\ufeff'+S.contacts.map(c=>[c.nom,c.org,c.email,c.groupe].join(';')).join('\n')],{type:'text/csv'}),'contacts-crise.csv');
+
+const MODELES={
+  cp:{n:'Envoi du communiqué de presse',o:t=>`Communiqué de presse – ${t}`,b:t=>`Mesdames, Messieurs,\n\nVeuillez trouver ci-joint le communiqué de presse de la ${S.settings.org} relatif à : ${t}.\n\nNous restons à votre disposition pour tout complément d'information.\n\n${S.settings.sign}`},
+  point:{n:'Point de situation',o:t=>`Point de situation – ${t} – ${stamp()}`,b:t=>`Mesdames, Messieurs,\n\nPoint de situation de ${stamp()} concernant : ${t}.\n\n• Situation : \n• Actions engagées : \n• Consignes à la population : \n• Prochain point : \n\n${S.settings.sign}`},
+  elus:{n:'Information aux maires et élus',o:t=>`Information aux élus – ${t}`,b:t=>`Madame le Maire, Monsieur le Maire, Mesdames et Messieurs les élus,\n\nJe vous informe de la situation suivante : ${t}.\n\n[Précisez la situation, les mesures prises et ce qui est attendu des communes.]\n\nLes consignes à relayer auprès de vos administrés figurent dans le communiqué joint.\n\n${S.settings.sign}`},
+  fin:{n:'Fin de l\'événement',o:t=>`Fin de l'événement – ${t}`,b:t=>`Mesdames, Messieurs,\n\nJe vous informe du retour à la normale concernant : ${t}.\n\n[Précisez les derniers éléments utiles.]\n\n${S.settings.sign}`}
+};
+Object.entries(MODELES).forEach(([k,v])=>{ const o=document.createElement('option'); o.value=k; o.textContent=v.n; $('mModele').appendChild(o); });
+function applyModele(force){
+  const m=MODELES[$('mModele').value], t=S.crise.nom||'[objet de la crise]';
+  if(force||$('mObjet').dataset.touched!=='1') $('mObjet').value=m.o(t);
+  if(force||$('mCorps').dataset.touched!=='1') $('mCorps').value=m.b(t);
+}
+$('mCorps').addEventListener('input',e=>{ if(e.isTrusted) e.target.dataset.touched='1'; });
+$('mModele').onchange=()=>applyModele(true);
+
+function rcpts(){ return S.contacts.filter(c=>sel.has(c.id)).map(c=>c.email); }
+const u8b64=str=>{ const b=new TextEncoder().encode(str); let s=''; b.forEach(x=>s+=String.fromCharCode(x)); return btoa(s); };
+const wrap76=s=>s.replace(/.{1,76}/g,'$&\r\n');
+const hdr=s=>/^[\x20-\x7e]*$/.test(s)?s:`=?UTF-8?B?${u8b64(s)}?=`;
+async function fileB64(f){ const buf=new Uint8Array(await f.arrayBuffer()); let s=''; for(let i=0;i<buf.length;i+=0x8000) s+=String.fromCharCode.apply(null,buf.subarray(i,i+0x8000)); return btoa(s); }
+async function buildEml(){
+  const r=rcpts(); if(!r.length&&!S.settings.boite){ toast('Cochez au moins un destinataire'); return null; }
+  const bd='----=_Part_'+Date.now().toString(36), cci=$('mCci').checked;
+  let to=S.settings.boite||'', bcc='';
+  if(cci) bcc=r.join(', '); else to=[to,...r].filter(Boolean).join(', ');
+  let h=`X-Unsent: 1\r\n`; if(to) h+=`To: ${to}\r\n`; if(bcc) h+=`Bcc: ${bcc}\r\n`;
+  h+=`Subject: ${hdr($('mObjet').value)}\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary="${bd}"\r\n\r\n`;
+  h+=`--${bd}\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n${wrap76(u8b64($('mCorps').value.replace(/\n/g,'\r\n')))}`;
+  const f=$('mPJ').files[0];
+  if(f){ h+=`--${bd}\r\nContent-Type: ${f.type||'application/octet-stream'}; name="${hdr(f.name)}"\r\nContent-Transfer-Encoding: base64\r\nContent-Disposition: attachment; filename="${hdr(f.name)}"\r\n\r\n${wrap76(await fileB64(f))}`; }
+  return h+`--${bd}--\r\n`;
+}
+$('mEml').onclick=async()=>{ const e=await buildEml(); if(!e) return; download(new Blob([e],{type:'message/rfc822'}),`brouillon-${slug($('mObjet').value)}.eml`); toast('Brouillon créé : ouvrez-le dans Thunderbird'); addLog('Brouillon de mail préparé : '+$('mObjet').value+' ('+rcpts().length+' destinataires)'); };
+$('mMailto').onclick=()=>{
+  const r=rcpts(); if(!r.length){ toast('Cochez au moins un destinataire'); return; }
+  const cci=$('mCci').checked, to=cci?(S.settings.boite||''):r.join(',');
+  location.href=`mailto:${to}?${cci?'bcc='+encodeURIComponent(r.join(','))+'&':''}subject=${encodeURIComponent($('mObjet').value)}&body=${encodeURIComponent($('mCorps').value)}`;
+};
+$('mCopy').onclick=()=>navigator.clipboard.writeText(rcpts().join('; ')).then(()=>toast('Adresses copiées'),()=>toast('Copie impossible'));
+
+/* =====================================================
+   5. MAIN COURANTE MÉDIA + JOURNAL
+   ===================================================== */
+const STAT=['À traiter','En cours','Répondu','Sans suite'];
+const STCOL={'À traiter':'#b3261e','En cours':'#d9730d','Répondu':'#18753c','Sans suite':'#666'};
+let mFilt='Tous', editId=null;
+STAT.forEach(s=>{ const o=document.createElement('option'); o.textContent=s; $('dStatut').appendChild(o); });
+const hhmmToTs=(v,ref,mode)=>{ if(!v) return null; const [a,b]=v.split(':').map(Number); const d=new Date(ref); d.setHours(a,b,0,0);
+  if(mode==='past' && d.getTime()>Date.now()+5*60000) d.setDate(d.getDate()-1);
+  if(mode==='after' && d.getTime()<ref) d.setDate(d.getDate()+1);
+  return d.getTime(); };
+const ago=ms=>{ const m=Math.max(0,Math.round(ms/60000)); return m<60? m+' min' : Math.floor(m/60)+' h '+two(m%60); };
+const isOpen=m=>m.statut==='À traiter'||m.statut==='En cours';
+const isLate=m=>isOpen(m)&&m.bouclage&&m.bouclage<Date.now();
+function resetMdForm(){ $('mdHeure').value=hhmm(Date.now()); ['mdMedia','mdJourn','mdContact','mdBouclage','mdQuestion'].forEach(i=>$(i).value=''); }
+function renderMedia(){
+  const M=MED(), q=$('mdSearch').value.toLowerCase(), dis=can('media')?'':'disabled';
+  const all=M.slice().sort((a,b)=>b.h-a.h);
+  const cnt=s=>s==='Tous'?all.length:all.filter(m=>m.statut===s).length;
+  $('mdChips').innerHTML=['Tous',...STAT].map(s=>`<span class="chip ${s===mFilt?'on':''}" data-s="${esc(s)}">${esc(s)} (${cnt(s)})</span>`).join('');
+  const list=all.filter(m=>(mFilt==='Tous'||m.statut===mFilt)&&(!q||(m.media+' '+m.journaliste+' '+m.question).toLowerCase().includes(q)));
+  $('mdBody').innerHTML=list.length?list.map(m=>`<tr class="${isLate(m)?'late':''}" data-id="${m.id}">
+    <td><b>${hhmm(m.h)}</b><div class="age">${isOpen(m)?'il y a '+ago(Date.now()-m.h):(m.repH?'répondu en '+ago(m.repH-m.h):'')}</div></td>
+    <td><b>${esc(m.media)}</b><div class="sub">${esc(m.journaliste)}${m.contact?' · '+esc(m.contact):''}<br>${esc(m.canal)}${m.auteur?' · saisi par '+esc(m.auteur):''}</div></td>
+    <td class="q">${esc(m.question)}</td>
+    <td>${m.bouclage?hhmm(m.bouclage):'—'}${isLate(m)?'<div class="sub" style="color:#b3261e;font-weight:700">dépassé</div>':''}</td>
+    <td><select class="st" ${dis} data-st="${m.id}" style="color:${STCOL[m.statut]};border-color:${STCOL[m.statut]}">${STAT.map(s=>`<option ${s===m.statut?'selected':''}>${s}</option>`).join('')}</select></td>
+    <td class="q">${esc(m.reponse||'')}</td>
+    <td style="white-space:nowrap"><button class="small" ${dis} data-edit="${m.id}">Traiter</button> <button class="sec small" ${dis} data-del="${m.id}">✕</button></td></tr>`).join('')
+    :'<tr><td colspan="7" class="hint">Aucune question enregistrée.</td></tr>';
+  const open=M.filter(isOpen).length, late=M.filter(isLate).length;
+  const b=$('mdBadge'); b.textContent=open?` ${open}`:''; b.className='badge'; b.style.cssText=open?`margin-left:6px;background:${late?'#b3261e':'#d9730d'};color:#fff`:'';
+  const names=new Set(M.map(m=>m.media).filter(Boolean)); S.contacts.filter(c=>c.groupe==='Presse'&&c.org).forEach(c=>names.add(c.org));
+  $('dlMedia').innerHTML=[...names].sort().map(n=>`<option value="${esc(n)}">`).join('');
+}
+$('mdAdd').onclick=async()=>{
+  if(!can('media')) return;
+  const q=$('mdQuestion').value.trim(), med=$('mdMedia').value.trim();
+  if(!q||!med){ toast('Média et question obligatoires'); return; }
+  const h=hhmmToTs($('mdHeure').value,Date.now(),'past')||Date.now(), b=hhmmToTs($('mdBouclage').value,h,'after');
+  await DB.add(TN.M,{HeureAppel:h/1000,Media:med,Journaliste:$('mdJourn').value.trim(),Contact:$('mdContact').value.trim(),Canal:$('mdCanal').value,Question:q,Bouclage:b?b/1000:0,Statut:'À traiter',Reponse:'',HeureReponse:0});
+  resetMdForm(); $('mdMedia').focus(); toast('Question enregistrée');
+};
+$('mdQuestion').addEventListener('keydown',e=>{ if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)) $('mdAdd').click(); });
+$('mdChips').onclick=e=>{ const c=e.target.closest('.chip'); if(c){ mFilt=c.dataset.s; renderMedia(); } };
+$('mdSearch').oninput=renderMedia;
+$('mdBody').onchange=async e=>{
+  const id=e.target.dataset.st; if(!id||!can('media')) return;
+  const m=MED().find(x=>x.id===id); if(!m) return; const statut=e.target.value, p={Statut:statut};
+  if(statut==='Répondu'){ if(!m.repH) p.HeureReponse=Date.now()/1000; } else p.HeureReponse=0;
+  await DB.upd(TN.M,Number(id),p);
+};
+$('mdBody').onclick=async e=>{
+  const ed=e.target.dataset.edit, del=e.target.dataset.del; if(!can('media')) return;
+  if(del&&await askDialog('Supprimer cette question ?')) await DB.del(TN.M,Number(del));
+  if(ed){ const m=MED().find(x=>x.id===ed); if(!m) return; editId=ed;
+    $('dMedia').value=m.media; $('dJourn').value=m.journaliste; $('dContact').value=m.contact; $('dQuestion').value=m.question;
+    $('dStatut').value=m.statut; $('dBouclage').value=m.bouclage?hhmm(m.bouclage):''; $('dReponse').value=m.reponse||''; $('dlg').showModal(); }
+};
+$('dCancel').onclick=()=>$('dlg').close();
+$('dOk').onclick=async()=>{
+  const m=MED().find(x=>x.id===editId); if(!m||!can('media')) return;
+  const statut=$('dStatut').value, b=hhmmToTs($('dBouclage').value,m.h,'after');
+  const p={Media:$('dMedia').value.trim(),Journaliste:$('dJourn').value.trim(),Contact:$('dContact').value.trim(),Question:$('dQuestion').value.trim(),Statut:statut,Reponse:$('dReponse').value.trim(),Bouclage:b?b/1000:0};
+  p.HeureReponse= statut==='Répondu' ? (m.repH?m.repH/1000:Date.now()/1000) : 0;
+  $('dlg').close(); await DB.upd(TN.M,Number(editId),p);
+};
+$('mdSynth').onclick=()=>{
+  const M=MED(), by={}; M.slice().sort((a,b)=>a.h-b.h).forEach(m=>(by[m.media]=by[m.media]||[]).push(m));
+  const t=`SYNTHÈSE MÉDIAS – ${S.crise.nom||'crise'} – ${stamp()}\n${M.length} question(s), ${M.filter(isOpen).length} en attente de réponse\n\n`+
+    Object.entries(by).map(([k,v])=>`${k} (${v.length})\n`+v.map(m=>`  ${hhmm(m.h)} ${m.journaliste?'['+m.journaliste+'] ':''}${m.question.replace(/\s*\n\s*/g,' ')} → ${m.statut}`).join('\n')).join('\n\n');
+  navigator.clipboard.writeText(t).then(()=>toast('Synthèse copiée'),()=>toast('Copie impossible'));
+};
+$('mdCsv').onclick=()=>{
+  const c=v=>'"'+String(v??'').replace(/"/g,'""')+'"', f=ts=>ts?new Date(ts).toISOString():'';
+  const rows=[['heure','media','journaliste','contact','canal','question','bouclage','statut','reponse','heure_reponse','saisi_par'],...MED().sort((a,b)=>a.h-b.h).map(m=>[f(m.h),m.media,m.journaliste,m.contact,m.canal,m.question,f(m.bouclage),m.statut,m.reponse,f(m.repH),m.auteur])];
+  download(new Blob(['﻿'+rows.map(r=>r.map(c).join(';')).join('\n')],{type:'text/csv;charset=utf-8'}),`main-courante-media-${fileStamp()}.csv`);
+};
+setInterval(renderMedia,60000);
+
+/* ---------- journal de la cellule ---------- */
+const EVL={NOTE:'📝',ACTION:'⚙️',POSTE_OK:'🖥️',COD_OUVERT:'🚨',COD_CLOTURE:'🏁',NIVEAU:'📶',NOM:'🏷️',DEROGATION:'⚠️'};
+function evText(e){
+  switch(e.type){
+    case 'POSTE_OK': return `Poste prêt — ${e.auteur} (${e.fonction}) — ${e.texte}`;
+    case 'NIVEAU': return 'Niveau : '+e.texte;
+    case 'NOM': return 'Crise : '+e.texte;
+    case 'COD_OUVERT': case 'COD_CLOTURE': return e.texte+' — '+e.auteur;
+    case 'DEROGATION': return `Dérogation — ${e.auteur} : ${e.texte}`;
+    default: return (e.auteur?`[${e.auteur}] `:'')+e.texte;
+  }
+}
+function renderLog(){
+  $('lList').innerHTML=JOURNAL().reverse().map(e=>`<li><time>${dhm(e.t)}</time><span>${EVL[e.type]||''} ${esc(evText(e))}</span></li>`).join('')||'<li class="hint">Aucune entrée.</li>';
+}
+$('lAdd').onclick=async()=>{ const v=$('lTxt').value.trim(); if(v&&can('journal')){ await DB.add(TN.J,{Type:'NOTE',Texte:v}); $('lTxt').value=''; } };
+$('lTxt').onkeydown=e=>{ if(e.key==='Enter') $('lAdd').click(); };
+const logTxt=()=>JOURNAL().map(e=>dhm(e.t)+'  '+evText(e)).join('\n');
+$('lCopy').onclick=()=>navigator.clipboard.writeText(logTxt()).then(()=>toast('Copié'),()=>toast('Copie impossible'));
+$('lTxtDl').onclick=()=>download(new Blob([`JOURNAL DE LA CELLULE – ${S.crise.nom}\n\n`+logTxt()],{type:'text/plain;charset=utf-8'}),`journal-${fileStamp()}.txt`);
+
+/* =====================================================
+   0. SAS D'OUVERTURE
+   ===================================================== */
+const AGENT_KEY='tdb-agent', SESS_KEY='tdb-session';
+const stor=n=>{ try{ return window[n]; }catch(e){ return null; } };
+const rd=(n,k)=>{ try{ return JSON.parse(stor(n).getItem(k)); }catch(e){ return null; } };
+const wr=(n,k,v)=>{ try{ stor(n).setItem(k,JSON.stringify(v)); }catch(e){} };
+let revisit=false;
+function buildFonctions(sel){
+  $('sFonctions').innerHTML=FONCTIONS.map(f=>`<label class="chk"><input type="checkbox" class="fn" value="${esc(f)}" ${sel.includes(f)?'checked':''}> ${esc(f)}</label>`).join('');
+}
+const getFonctions=()=>[...document.querySelectorAll('#sFonctions .fn:checked')].map(x=>x.value);
+$('sFonctions').onchange=e=>{
+  const all=[...document.querySelectorAll('#sFonctions .fn')];
+  if(e.target.checked){ if(e.target.value==='Lecteur') all.forEach(x=>{ if(x.value!=='Lecteur') x.checked=false; }); else all.forEach(x=>{ if(x.value==='Lecteur') x.checked=false; }); }
+  renderGate();
+};
+function renderSasCommunes(){
+  const L=COMMUNES();
+  $('sCommunes').innerHTML=L.length?L.map(c=>`<div class="sub">📞 <b>${esc(c.commune)}</b> — ${esc(c.nom)} <b>${esc(c.tel)}</b> ${esc(c.mail)} <button class="sec small" data-cdel="${c.id}">✕</button></div>`).join(''):'<div class="miss">Aucun contact enregistré.</div>';
+}
+$('sCommunes').onclick=async e=>{ const id=e.target.dataset.cdel; if(id&&!closed()&&await askDialog('Supprimer ce contact de commune ?')) await DB.del(TN.C,Number(id)); };
+$('sCAdd').onclick=async()=>{
+  const commune=$('sCCommune').value.trim(), tel=$('sCTel').value.trim(), auteur=(sess&&sess.nom)||$('sNom').value.trim();
+  if(closed()) return;
+  if(!commune||!tel){ toast('Commune et téléphone obligatoires'); return; }
+  if(!auteur){ toast('Indiquez d\'abord votre nom'); return; }
+  await DB.add(TN.C,{Commune:commune,Nom:$('sCNom').value.trim(),Telephone:tel,Mail:$('sCMail').value.trim(),Auteur:auteur});
+  ['sCCommune','sCNom','sCTel','sCMail'].forEach(i=>$(i).value='');
+};
+function gateItems(){
+  const n=COMMUNES().filter(c=>c.tel).length;
+  return [
+    {ok:!!$('sNom').value.trim(),l:'votre nom',hard:true},
+    {ok:getFonctions().length>0,l:'votre fonction',hard:true},
+    {ok:$('ck1').checked,l:'poste de travail (souris)'},
+    {ok:$('ck2').checked,l:'ordinateur branché au réseau'},
+    {ok:$('ck3').checked,l:'deuxième ordinateur sur les partenaires'},
+    {ok:n>0,l:'numéro du chargé de communication de la commune'}
+  ];
+}
+function renderGate(){
+  document.querySelectorAll('#sas .chk').forEach(l=>l.classList.toggle('on',l.querySelector('input').checked));
+  const go=$('sasGo'), st=$('sasStatus'), dero=$('sasDero');
+  if(revisit){ go.textContent='Fermer'; go.disabled=false; go.className='ok big'; return; }
+  if(closed()){ st.innerHTML=`<span class="miss">COD clôturé à ${dhm(ST.h1)} : consultation en lecture seule.</span>`; go.textContent='Consulter (lecture seule)'; go.disabled=false; go.className='ok big'; dero.style.display='none'; return; }
+  dero.style.display='';
+  const miss=gateItems().filter(x=>!x.ok), coord=getFonctions().includes('Coordination');
+  st.innerHTML=(miss.length?`<span class="miss">Il manque : ${miss.map(x=>esc(x.l)).join(' · ')}</span>`:'<span style="color:var(--ok)">✔ Tout est prêt.</span>')+(ST.h0?` — COD ouvert à ${dhm(ST.h0)}`:' — COD pas encore ouvert');
+  go.disabled=miss.length>0;
+  go.textContent= coord&&!ST.h0 ? '🚨 Ouvrir le COD et entrer' : (ST.h0?'Entrer':'Entrer (COD pas encore ouvert)');
+  go.className= coord&&!ST.h0 ? 'red big':'ok big';
+}
+['sNom'].forEach(i=>$(i).addEventListener('input',renderGate));
+['ck1','ck2','ck3'].forEach(i=>$(i).addEventListener('change',renderGate));
+function openSas(rev){ revisit=!!rev; $('sas').classList.toggle('rev',revisit); $('sas').style.display='flex'; renderGate(); }
+function closeSas(){ $('sas').style.display='none'; revisit=false; $('sas').classList.remove('rev'); applyState(); renderMedia(); }
+function setSess(){
+  sess={nom:$('sNom').value.trim(),fonctions:getFonctions()};
+  wr('localStorage',AGENT_KEY,sess); wr('sessionStorage',SESS_KEY,sess);
+}
+async function enter(dero){
+  setSess(); await DB.refresh(); ST=derive();
+  const o=x=>x?'oui':'non';
+  await DB.add(TN.J,{Type:'POSTE_OK',Texte:`souris : ${o($('ck1').checked)} ; réseau : ${o($('ck2').checked)} ; 2e ordinateur partenaires : ${o($('ck3').checked)} ; contacts communes : ${COMMUNES().length}`+(dero?' (dérogation)':'')});
+  await DB.refresh(); ST=derive();
+  if(sess.fonctions.includes('Coordination')&&!ST.h0) await DB.add(TN.J,{Type:'COD_OUVERT',Texte:'Ouverture du COD'+(dero?' (avec dérogation à la checklist)':'')});
+  closeSas();
+}
+$('sasGo').onclick=async()=>{
+  if(revisit){ closeSas(); return; }
+  if(closed()){ sess={nom:$('sNom').value.trim()||'Consultation',fonctions:['Lecteur']}; closeSas(); return; }
+  if(gateItems().some(x=>!x.ok)) return;
+  await enter(false);
+};
+$('sasDero').onclick=async()=>{
+  const it=gateItems();
+  if(it.some(x=>x.hard&&!x.ok)){ toast('Indiquez au moins votre nom et votre fonction'); return; }
+  const miss=it.filter(x=>!x.ok).map(x=>x.l);
+  if(!miss.length){ await enter(false); return; }
+  const motif=await askDialog('Éléments non validés : '+miss.join(', ')+'.\nPrécisez le motif de cette dérogation (consigné dans le journal).',{input:true,okLabel:'Entrer avec dérogation'});
+  if(!motif) return;
+  setSess(); await DB.add(TN.J,{Type:'DEROGATION',Texte:'Manque : '+miss.join(', ')+' — Motif : '+motif});
+  await enter(true);
+};
+
+/* ---------- diagnostic (à lancer une fois dans Grist) ---------- */
+$('sDiag').onclick=()=>{
+  const out=[], ok=(b,l,d)=>out.push((b?'✅ ':'❌ ')+l+(d?' — '+d:''));
+  // tests synchrones d'abord (le geste utilisateur expire vite)
+  let w=null; try{ w=window.open('','_blank'); if(w) w.close(); }catch(e){}
+  ok(!!w,'Ouverture d\'un nouvel onglet (veille média)', w?'':'bloquée : autorisez les pop-up pour cette page');
+  try{ download(new Blob(['test du tableau de bord de crise'],{type:'text/plain'}),'test-tableau-de-bord.txt'); out.push('⏳ Téléchargement : un fichier test-tableau-de-bord.txt doit apparaître — sinon le téléchargement est bloqué'); }catch(e){ ok(false,'Téléchargement',e.message); }
+  let ls=false; try{ localStorage.setItem('tdb-t','1'); localStorage.removeItem('tdb-t'); ls=true; }catch(e){}
+  ok(ls,'Stockage local du navigateur (annuaire, réglages)');
+  (async()=>{
+    try{ await navigator.clipboard.writeText('test'); ok(true,'Presse-papiers'); }catch(e){ ok(false,'Presse-papiers','copie bloquée'); }
+    ok(DB.mode==='grist','Connexion à Grist',DB.mode==='grist'?'API : '+DB.api:(DB.err||'mode local'));
+    if(DB.mode==='grist'){
+      try{
+        const t=await grist.docApi.listTables();
+        ok(Object.values(TN).every(x=>t.includes(x)),'Tables de crise présentes');
+        const J=DB.raw[TN.J]||[]; const last=J[J.length-1];
+        ok(!!(last&&last.Horodatage>0),'Heure posée par Grist (NOW()) sur les enregistrements', last?(last.Horodatage>0?'':'colonne Horodatage vide : l\'heure du poste est utilisée'):'aucun enregistrement encore');
+      }catch(e){ ok(false,'Lecture des tables',e.message); }
+    }
+    $('diagOut').textContent=out.join('\n');
+  })();
+  $('diagOut').textContent=out.join('\n');
+};
+
+/* ---------- init ---------- */
+(async function boot(){
+  $('vTag').value=S.settings.tag;
+  resetMdForm(); renderChips(); renderContacts(); loadLogo(); applyModele(true); drawVignette();
+  const ag=rd('localStorage',AGENT_KEY)||{};
+  $('sNom').value=ag.nom||''; buildFonctions(ag.fonctions||[]);
+  await DB.init();
+  ST=derive();
+  const saved=rd('sessionStorage',SESS_KEY);
+  if(saved&&saved.nom&&saved.fonctions&&saved.fonctions.length){ sess=saved; $('sas').style.display='none'; }
+  onData(); propagateNom();
+  setInterval(tick,15000);
+  setInterval(async()=>{ try{ DB.down=false; if(await DB.refresh()) onData(); else applyState(); }catch(e){ DB.down=true; applyState(); } },8000);
+})();
+</script>
+</body>
+</html>
