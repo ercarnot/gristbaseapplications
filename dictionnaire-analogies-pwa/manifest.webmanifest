@@ -1,0 +1,17 @@
+{
+  "name": "Dictionnaire des analogies",
+  "short_name": "Analogies",
+  "description": "Le mot juste, en cours de phrase : collocations, registre soutenu, fiches par nom.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F1EFE8",
+  "theme_color": "#4B2A82",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
