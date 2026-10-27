@@ -241,6 +241,7 @@ const GristAPI = {
           widgetOptions: JSON.stringify({choices:["Actif","Clos"]})}},
         {id:"Marquant", fields:{label:"Marquant", type:"Bool"}},
         {id:"Bilan", fields:{label:"Bilan", type:"Text"}},
+        {id:"DateCreation", fields:{label:"DateCreation", type:"Date"}},
         {id:"Media", fields:{label:"Media", type:"Text"}},
         {id:"DemandePresse", fields:{label:"DemandePresse", type:"Text"}},
         {id:"SignatureDemandeur", fields:{label:"SignatureDemandeur", type:"Text"}},
@@ -387,6 +388,21 @@ const GristAPI = {
 /* =========================================================
    HELPERS DATES  (Grist stocke les Date en secondes epoch UTC)
 ========================================================= */
+// Pastille « Nouveau » : élément créé depuis moins de NOUVEAU_JOURS jours.
+const NOUVEAU_JOURS = 7;
+function isNouveau(isoCreation){
+  if(!isoCreation) return false;
+  const jours = Math.floor((new Date(todayISO()+"T00:00:00Z") - new Date(isoCreation+"T00:00:00Z")) / 86400000);
+  return jours >= 0 && jours < NOUVEAU_JOURS;
+}
+const BADGE_NOUVEAU_STYLE = "background:#d9382c;color:#fff;border-radius:9px;padding:1px 7px;font-size:10px;font-weight:bold;white-space:nowrap;";
+const badgeNouveau = () => `<span style="${BADGE_NOUVEAU_STYLE}">NOUVEAU</span>`;
+// Création d'un projet horodatée ; si la colonne DateCreation n'est pas encore provisionnée, on crée sans.
+async function addProjet(fields){
+  try{ return await GristAPI.addRecord("Projets", {...fields, DateCreation: toGristDate(todayISO())}); }
+  catch(e){ return await GristAPI.addRecord("Projets", fields); }
+}
+
 function toGristDate(isoStr){
   if(!isoStr) return null;
   const d = new Date(isoStr + "T00:00:00Z");
@@ -1443,7 +1459,7 @@ function renderProjets(){
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;">
             <div>
-              <strong>${p.fields.Nom}</strong>
+              <strong>${p.fields.Nom}</strong> ${isNouveau(fromGristDate(p.fields.DateCreation)) ? badgeNouveau() : ''}
               <div class="muted" style="font-size:.82rem;margin-top:2px;">
                 ${fmtDateHuman(fromGristDate(p.fields.DateReference))} · ${p.fields.Agent||""}
                 ${p.fields.Modele ? ' · modèle : '+modeleNom(p.fields.Modele) : ''} · <span class="chip" style="background:var(--bleu-nuit-2)">${p.fields.Categorie||""}</span>
@@ -1627,7 +1643,7 @@ function renderMailProjet(){
     } : {};
 
     try{
-      const projetId = await GristAPI.addRecord("Projets", {
+      const projetId = await addProjet({
         Nom: nom, Modele: modeleId, Categorie: categorie,
         DateReference: toGristDate(dateRef), Agent: agent, Statut: "Actif", Bilan: bilan, ...pressFields
       });
@@ -1848,11 +1864,20 @@ function openEditProjetModal(id){
       ReponsePresse: document.getElementById('peReponse').value
     };
     try{
-      await GristAPI.updateRecord("Projets", id, fields);
+      let avertissement = "";
+      try{
+        await GristAPI.updateRecord("Projets", id, fields);
+      }catch(e1){
+        // Si l'échec vient des champs « demande presse » (colonnes non provisionnées, par ex.), on enregistre le reste.
+        const sans = Object.assign({}, fields);
+        ["Media","DemandePresse","SignatureDemandeur","ReponsePresse"].forEach(k=>delete sans[k]);
+        await GristAPI.updateRecord("Projets", id, sans);
+        avertissement = ` Les champs « demande presse » n'ont PAS été enregistrés (${e1.message}).`;
+      }
       await refreshAll();
       bg.remove();
       renderProjets();
-      toast("Projet mis à jour.");
+      toast("Projet mis à jour." + avertissement, !!avertissement);
     }catch(e){ toast(e.message, true); }
   };
 
@@ -1897,7 +1922,7 @@ async function importProjetsJson(file){
       if(item.demandeur) bilan = `Demandeur : ${item.demandeur}\n${bilan}`.trim();
       if(item.extraitMail) bilan = `${bilan}\n\n— Extrait du mail d'origine —\n${item.extraitMail}`.trim();
 
-      const projetId = await GristAPI.addRecord("Projets", {
+      const projetId = await addProjet({
         Nom: item.nom || "Projet importé",
         Modele: modele ? modele.id : null,
         Categorie: item.categorie || (modele && modele.fields.CategorieDefaut) || DOSSIER_CATEGORIES[0],
@@ -2009,7 +2034,7 @@ function openNewProjetModal(){
     if(bp.length===0){ toast("Ce modèle n'a aucune tâche-type. Ajoutez-en depuis l'onglet Modèles.", true); return; }
 
     try{
-      const projetId = await GristAPI.addRecord("Projets", {
+      const projetId = await addProjet({
         Nom: nom, Modele: modeleId, Categorie: categorie,
         Axe: document.getElementById('pAxe').value ? Number(document.getElementById('pAxe').value) : null,
         DateReference: toGristDate(dateRef), Agent: agent, Statut: "Actif"
@@ -2804,6 +2829,7 @@ function buildExportSections(){
       rows.push({
         date: dref || earliestDate(tasksInWindow) || earliestDate(ouvertes) || earliestDate(toutesTachesProjet),
         categorie: p.fields.Categorie || "Non classé",
+        nouveau: isNouveau(fromGristDate(p.fields.DateCreation)),
         nom: p.fields.Nom,
         referent: agentInitiales(p.fields.Agent),
         actions: toutesTachesProjet.map(actionLabel),
@@ -2823,6 +2849,7 @@ function buildExportSections(){
       rows.push({
         date: earliestDate(tasks),
         categorie: cat,
+        nouveau: tasks.some(t=>isNouveau(fromGristDate(t.fields.DateCreation))),
         nom: d.fields.Nom,
         referent: referentsOf(tasks),
         actions: tasks.map(actionLabel),
@@ -2836,6 +2863,7 @@ function buildExportSections(){
     rows.push({
       date: fromGristDate(t.fields.DateEcheance),
       categorie: "Autres tâches",
+      nouveau: isNouveau(fromGristDate(t.fields.DateCreation)),
       nom: actionLabel(t),
       referent: agentInitiales(t.fields.Agent),
       actions: [],
@@ -2891,7 +2919,7 @@ const EXPORT_COL_W = { date:60, evenement:210, referent:60, actions:298, observa
 function exportSectionsHtml(sections){
   const cell = (r)=>`<tr>
           <td valign="top" style="${EXPORT_TD_STYLE}">${r.date ? fmtDateDDMM(r.date) : ''}</td>
-          <td valign="top" style="${EXPORT_TD_STYLE}">${r.nom}</td>
+          <td valign="top" style="${EXPORT_TD_STYLE}">${r.nom}${r.nouveau ? ' '+badgeNouveau() : ''}</td>
           <td valign="top" style="${EXPORT_TD_STYLE}">${r.referent}</td>
           <td valign="top" style="${EXPORT_TD_STYLE}">${r.actions.length ? '<ul style="margin:0;padding-left:16px;">'+r.actions.map(a=>`<li>${a}</li>`).join("")+'</ul>' : ''}</td>
           <td valign="top" style="${EXPORT_TD_STYLE}">${(r.observations&&r.observations.length) ? '<ul style="margin:0;padding-left:16px;">'+r.observations.map(o=>`<li>${o}</li>`).join("")+'</ul>' : ''}</td>
@@ -2919,7 +2947,7 @@ function renderExport3(){
 
   view.innerHTML = `
     <h1 class="no-print">Export — Planning 3 semaines</h1>
-    <p class="sub no-print">Du ${fmtDateHuman(todayISOv)} au ${fmtDateHuman(limiteISO)} — classé par catégorie, puis par échéance. « Communication digitale » et « Grands dossiers » sont affichés au-delà des 3 semaines.</p>
+    <p class="sub no-print">Du ${fmtDateHuman(todayISOv)} au ${fmtDateHuman(limiteISO)} — classé par catégorie, puis par échéance ; la pastille NOUVEAU signale ce qui a été créé depuis moins de 7 jours. « Communication digitale » et « Grands dossiers » sont affichés au-delà des 3 semaines.</p>
     <div class="no-print" style="margin-bottom:16px;display:flex;gap:10px;">
       <button class="btn" onclick="downloadExportEml()">✉️ Télécharger l'email (.eml)</button>
       <button class="btn secondary" onclick="window.print()">🖨 Imprimer / Enregistrer en PDF</button>
