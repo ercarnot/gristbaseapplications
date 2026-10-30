@@ -133,6 +133,10 @@ header { flex:0 0 auto; }
   .tiroir { flex:0 0 auto; max-height:none; border-right:none; border-bottom:1px solid var(--bordure); }
   .workspace { overflow-y:visible; }
 }
+
+/* --- mode embarqué dans le tableau de bord de crise --- */
+body.embarque header, body.embarque footer { display:none; }
+body.embarque { min-height:0; }
 </style>
 </head>
 <body>
@@ -358,13 +362,6 @@ header { flex:0 0 auto; }
         <button class="btn or" onclick="exporterImage()">⬇ Télécharger l'image (PNG)</button>
         <button class="btn danger" onclick="toutReinitialiser()">✕ Tout réinitialiser</button>
       </div>
-      <div class="btn-row">
-        <button class="btn solid" onclick="enregistrerVisuel()">💾 Enregistrer le visuel (.visucrise)</button>
-        <button class="btn" onclick="document.getElementById('fichier-visucrise').click()">📂 Ouvrir un visuel</button>
-        <input type="file" id="fichier-visucrise" accept=".visucrise,application/json" style="display:none">
-      </div>
-      <label class="check-line" style="margin-top:10px;"><input type="checkbox" id="maj-date-ouverture" checked> À l'ouverture d'un visuel, remplacer la date par celle du jour</label>
-      <div class="panel-sub" id="statut-visucrise" style="margin:6px 0 0;">Vous pouvez aussi glisser un fichier .visucrise directement sur la page.</div>
     </div>
 
     <div class="panel">
@@ -470,18 +467,9 @@ var DEFAUTS_PAR_FORMAT = {
       bg:false, bgColor:'#1a2e4a', bgOpacity:0.75 }
   ]
 };
-function dateDuJourFR() {
-  var mois = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
-  var d = new Date();
-  return (d.getDate() === 1 ? '1er' : d.getDate()) + ' ' + mois[d.getMonth()] + ' ' + d.getFullYear();
-}
 function defautsBlocs(formatId) {
   var src = DEFAUTS_PAR_FORMAT[formatId] || DEFAUTS_PAR_FORMAT.communique;
-  return src.map(function(b){
-    var c = Object.assign({}, b);
-    if (c.id === 'date') c.text = dateDuJourFR(); // date du jour par défaut
-    return c;
-  });
+  return src.map(function(b){ return Object.assign({}, b); });
 }
 var blocs = defautsBlocs(formatActuel.id);
 var imageFond = null; // objet Image() chargé — synchronisé depuis le lot (image active)
@@ -744,7 +732,6 @@ document.getElementById('fichier-logo').addEventListener('change', function(e){
     var img = new Image();
     img.onload = function(){
       logoImg = img;
-      logoPersoSrc = ev.target.result;
       document.getElementById('upload-logo-txt').textContent = file.name + ' — cliquez pour changer';
       renderStage();
     };
@@ -754,7 +741,6 @@ document.getElementById('fichier-logo').addEventListener('change', function(e){
 });
 document.getElementById('logo-prefete').addEventListener('change', function(){
   logoChoix = 'prefete';
-  logoPersoSrc = null;
   logoImg = new Image();
   logoImg.onload = renderStage;
   logoImg.src = "data:image/png;base64," + LOGO_PREFETE_B64;
@@ -762,7 +748,6 @@ document.getElementById('logo-prefete').addEventListener('change', function(){
 });
 document.getElementById('logo-prefet').addEventListener('change', function(){
   logoChoix = 'prefet';
-  logoPersoSrc = null;
   logoImg = new Image();
   logoImg.onload = renderStage;
   logoImg.src = "data:image/png;base64," + LOGO_PREFET_B64;
@@ -940,8 +925,16 @@ function syncSlidersCadrage() {
    ============================================================ */
 var imageFondManuel = false; // true si l'image vient de l'import manuel (toujours exportable sans souci CORS)
 
+var rechercheId = 0; // une recherche plus récente annule l'affichage des précédentes
+function normaliserDossier(d) {
+  // lien d'un dossier GitHub (page web) -> adresse directe des fichiers (compatible export PNG)
+  var m = d.match(/^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)\/(?:tree|blob)\/([^\/]+)\/(.+)$/i);
+  if (m) return 'https://raw.githubusercontent.com/' + m[1] + '/' + m[2] + '/' + m[3] + '/' + m[4];
+  return d;
+}
 function rechercherGabarits() {
-  var dossier = document.getElementById('dossier-gabarits').value.trim().replace(/\/$/, '');
+  var mon = ++rechercheId;
+  var dossier = normaliserDossier(document.getElementById('dossier-gabarits').value.trim()).replace(/\/$/, '');
   var noms = document.getElementById('noms-gabarits').value.split('\n')
     .map(function(s){ return s.trim(); }).filter(function(s){ return s.length>0; });
 
@@ -957,26 +950,34 @@ function rechercherGabarits() {
 
   noms.forEach(function(nom){
     var chemin = dossier ? (dossier + '/' + nom) : nom;
-    var img = new Image();
-    img.onload = function(){
-      trouves.push({nom:nom, chemin:chemin, img:img});
-      fini();
-    };
-    img.onerror = function(){ fini(); };
-    img.src = encodeURI(chemin);
+    var distant = /^https?:/i.test(chemin);
+    function essayer(avecCors) {
+      var img = new Image();
+      if (avecCors) img.crossOrigin = 'anonymous';
+      img.onload = function(){
+        trouves.push({nom:nom, chemin:chemin, img:img});
+        fini();
+      };
+      img.onerror = function(){
+        if (avecCors) essayer(false);   // serveur sans CORS : l'aperçu reste possible
+        else fini();
+      };
+      img.src = encodeURI(chemin);
+    }
+    essayer(distant);
   });
 
   function fini() {
     restants--;
-    if (restants === 0) afficherGalerie(trouves);
+    if (restants === 0 && mon === rechercheId) afficherGalerie(trouves, dossier);
   }
 }
 
-function afficherGalerie(trouves) {
+function afficherGalerie(trouves, dossier) {
   var galerie = document.getElementById('galerie-gabarits');
   galerie.innerHTML = '';
   if (trouves.length === 0) {
-    galerie.innerHTML = '<div class="galerie-vide">Aucun gabarit trouvé dans le dossier pour ce format — importez-en un manuellement, ou corrigez les noms de fichiers ci-dessous.</div>';
+    galerie.innerHTML = '<div class="galerie-vide">Aucun gabarit trouvé pour ce format dans « ' + (dossier || '(dossier de la page)').replace(/</g,'&lt;') + ' » — vérifiez l\u2019adresse du dossier et les noms de fichiers (ci-dessous), ou importez un gabarit manuellement.</div>';
     return;
   }
   trouves.forEach(function(t){
@@ -1615,7 +1616,6 @@ function toutReinitialiser() {
   document.getElementById('bandeau-infos-taille').value = 18;
   document.getElementById('bandeau-infos-taille-val').textContent = '18';
   choisirPresetSurtitre('bleu-rouge');
-  logoPersoSrc = null;
   logoImg = new Image();
   logoImg.onload = renderStage;
   logoImg.src = "data:image/png;base64," + LOGO_PREFET_B64;
@@ -2033,209 +2033,6 @@ function alerteTemporaire(msg) {
   setTimeout(function(){ btn.textContent = ancien; }, 1800);
 }
 
-
-/* ============================================================
-   ENREGISTREMENT / OUVERTURE D'UN VISUEL (.visucrise)
-   ============================================================ */
-var logoPersoSrc = null; // data URL du logo importé manuellement, le cas échéant
-
-function imageEnDataURL(img) {
-  if (img.src.indexOf('data:') === 0) return img.src;
-  try {
-    var c = document.createElement('canvas');
-    c.width = img.naturalWidth || img.width; c.height = img.naturalHeight || img.height;
-    c.getContext('2d').drawImage(img, 0, 0);
-    return c.toDataURL('image/png');
-  } catch (e) { return null; } // gabarit du dossier non lisible (sécurité du navigateur)
-}
-function slugVisuel(s) {
-  var r = String(s || 'visuel').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase().slice(0, 50);
-  return r || 'visuel';
-}
-function construireEtatVisuel() {
-  sauvegarderCadrageLotActif();
-  var principal = blocs.find(function(b){ return b.id === 'principal'; });
-  var imageEtat = null;
-  if (modeGabarit === 'image' && imageFond && indexImageActif >= 0 && imagesLot[indexImageActif]) {
-    var it = imagesLot[indexImageActif];
-    var dossier = document.getElementById('dossier-gabarits').value.trim().replace(/\/$/, '');
-    imageEtat = {
-      nom: it.nom, manuel: !!it.manuel,
-      src: imageEnDataURL(it.img),
-      chemin: it.manuel ? null : (dossier ? dossier + '/' + it.nom : it.nom),
-      zoom: fondZoom, panX: fondPanX, panY: fondPanY
-    };
-  }
-  return {
-    format: 'VISUCRISE', version: 1,
-    nom: principal ? principal.text : '',
-    enregistreLe: new Date().toISOString(),
-    formatId: formatActuel.id,
-    modeGabarit: modeGabarit,
-    logo: { choix: logoChoix, perso: logoPersoSrc },
-    image: imageEtat,
-    lisere: { applique: appliquerLisereImage, couleur: couleurBadge04 },
-    surtitre: {
-      applique: appliquerSurtitre, texte1: surtitreTexte1, texte2: surtitreTexte2, preset: surtitrePreset,
-      c1: surtitreCouleur1, t1: surtitreTexteCouleur1, c2: surtitreCouleur2, t2: surtitreTexteCouleur2, taille: surtitreFontSize,
-      centreTexte: bandeauCentreTexte, centreY: bandeauCentreY, centreAlign: bandeauCentreAlign, centreTaille: bandeauCentreFontSize,
-      infos1: bandeauInfosLigne1, infos2: bandeauInfosLigne2, infosY: bandeauInfosY, infosTaille: bandeauInfosFontSize
-    },
-    afficherTextes: afficherTextes,
-    blocs: blocs,
-    textePost: document.getElementById('texte-post').value
-  };
-}
-function enregistrerVisuel() {
-  var etat = construireEtatVisuel();
-  var nomFichier = slugVisuel(etat.nom) + '.visucrise';
-  var blob = new Blob([JSON.stringify(etat)], { type: 'application/octet-stream' });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url; a.download = nomFichier;
-  document.body.appendChild(a); a.click();
-  setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
-  var msg = '✓ Visuel enregistré : ' + nomFichier;
-  if (etat.image && !etat.image.src) msg += ' — attention : le gabarit du dossier n’a pas pu être intégré au fichier ; il sera relu depuis le dossier GABARIT VIGNETTES RS à l’ouverture.';
-  document.getElementById('statut-visucrise').textContent = msg;
-}
-
-function chargerImagePromesse(src) {
-  return new Promise(function(resolve){
-    if (!src) { resolve(null); return; }
-    var im = new Image();
-    im.onload = function(){ resolve(im); };
-    im.onerror = function(){ resolve(null); };
-    im.src = src;
-  });
-}
-function setVal(id, v) { var el = document.getElementById(id); if (el) el.value = v; }
-function setTxt(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; }
-
-function appliquerEtatVisuel(etat) {
-  var f = FORMATS.find(function(x){ return x.id === etat.formatId; }) || FORMATS[0];
-  formatActuel = f;
-  renderFormats();
-  document.getElementById('noms-gabarits').value = f.fichiers.join('\n');
-
-  // Blocs de texte (+ date du jour si demandé)
-  blocs = (etat.blocs && etat.blocs.length) ? etat.blocs.map(function(b){ return Object.assign({}, b); }) : defautsBlocs(f.id);
-  var bDate = blocs.find(function(b){ return b.id === 'date'; });
-  var ancienneDate = bDate ? bDate.text : '';
-  var nouvelleDate = dateDuJourFR();
-  var majDate = document.getElementById('maj-date-ouverture').checked;
-  var textePost = etat.textePost || '';
-  if (majDate && bDate) {
-    bDate.text = nouvelleDate;
-    if (ancienneDate && textePost) textePost = textePost.split(ancienneDate).join(nouvelleDate);
-  }
-  document.getElementById('texte-post').value = textePost;
-
-  afficherTextes = etat.afficherTextes !== false;
-  document.getElementById('textes-oui').classList.toggle('actif', afficherTextes);
-  document.getElementById('textes-non').classList.toggle('actif', !afficherTextes);
-
-  // Mode de fond
-  modeGabarit = (etat.modeGabarit === 'image') ? 'image' : 'genere';
-  document.getElementById('mode-image').checked = (modeGabarit === 'image');
-  document.getElementById('mode-genere').checked = (modeGabarit === 'genere');
-  document.getElementById('bloc-mode-image').style.display = (modeGabarit === 'image') ? '' : 'none';
-  document.getElementById('bloc-mode-genere').style.display = (modeGabarit === 'image') ? 'none' : '';
-
-  // Liseré
-  var l = etat.lisere || {};
-  appliquerLisereImage = !!l.applique;
-  document.getElementById('appliquer-liseré').checked = appliquerLisereImage;
-  choisirCouleurBadge(l.couleur === 'bleu' ? 'bleu' : 'blanc');
-
-  // Surtitre et bandeaux
-  var s = etat.surtitre || {};
-  appliquerSurtitre = !!s.applique;
-  document.getElementById('appliquer-surtitre').checked = appliquerSurtitre;
-  document.getElementById('bloc-surtitre-reglages').style.display = appliquerSurtitre ? '' : 'none';
-  if (s.texte1 !== undefined) {
-    surtitreTexte1 = s.texte1; surtitreTexte2 = s.texte2; surtitrePreset = s.preset || null;
-    surtitreCouleur1 = s.c1; surtitreTexteCouleur1 = s.t1; surtitreCouleur2 = s.c2; surtitreTexteCouleur2 = s.t2;
-    surtitreFontSize = s.taille;
-    bandeauCentreTexte = s.centreTexte; bandeauCentreY = s.centreY; bandeauCentreAlign = s.centreAlign; bandeauCentreFontSize = s.centreTaille;
-    bandeauInfosLigne1 = s.infos1; bandeauInfosLigne2 = s.infos2; bandeauInfosY = s.infosY; bandeauInfosFontSize = s.infosTaille;
-  }
-  setVal('surtitre-texte1', surtitreTexte1); setVal('surtitre-texte2', surtitreTexte2);
-  setVal('surtitre-couleur1', surtitreCouleur1); setVal('surtitre-couleur2', surtitreCouleur2);
-  ['bleu-rouge','jaune-noir','orange-rouge'].forEach(function(k){
-    document.getElementById('preset-' + k).classList.toggle('actif', k === surtitrePreset);
-  });
-  setVal('surtitre-taille', surtitreFontSize); setTxt('surtitre-taille-val', surtitreFontSize);
-  setVal('bandeau-centre-texte', bandeauCentreTexte); setVal('bandeau-centre-y', bandeauCentreY);
-  setVal('bandeau-centre-taille', bandeauCentreFontSize); setTxt('bandeau-centre-taille-val', bandeauCentreFontSize);
-  ['gauche','centre','droite'].forEach(function(k){
-    document.getElementById('bandeau-centre-align-' + k).classList.toggle('actif', k === bandeauCentreAlign);
-  });
-  setVal('bandeau-infos-1', bandeauInfosLigne1); setVal('bandeau-infos-2', bandeauInfosLigne2); setVal('bandeau-infos-y', bandeauInfosY);
-  setVal('bandeau-infos-taille', bandeauInfosFontSize); setTxt('bandeau-infos-taille-val', bandeauInfosFontSize);
-
-  // Logo
-  var lg = etat.logo || {};
-  logoChoix = (lg.choix === 'prefet') ? 'prefet' : 'prefete';
-  logoPersoSrc = lg.perso || null;
-  document.getElementById('logo-prefete').checked = (logoChoix === 'prefete');
-  document.getElementById('logo-prefet').checked = (logoChoix === 'prefet');
-  setTxt('upload-logo-txt', logoPersoSrc ? 'Logo personnalisé (enregistré dans le visuel) — cliquez pour le remplacer'
-    : (logoChoix === 'prefet' ? 'Logo Préfet des Alpes-de-Haute-Provence (intégré) — cliquez pour le remplacer'
-                              : 'Logo Préfète des Alpes-de-Haute-Provence (intégré) — cliquez pour le remplacer'));
-  var srcLogo = logoPersoSrc || ("data:image/png;base64," + (logoChoix === 'prefet' ? LOGO_PREFET_B64 : LOGO_PREFETE_B64));
-
-  // Image de fond
-  var im = etat.image || null;
-  var srcImage = im ? (im.src || (im.chemin ? encodeURI(im.chemin) : null)) : null;
-
-  Promise.all([chargerImagePromesse(srcLogo), chargerImagePromesse(srcImage)]).then(function(r){
-    if (r[0]) logoImg = r[0];
-    imagesLot = []; indexImageActif = -1; imageFond = null;
-    document.getElementById('galerie-lot').innerHTML = '';
-    document.getElementById('bloc-lot-images').style.display = 'none';
-    document.getElementById('upload-txt').textContent = 'Cliquez pour importer une ou plusieurs photos';
-    var avertissement = '';
-    if (im && r[1]) {
-      var idx = ajouterImageALot(r[1], im.nom || 'image', !!im.manuel);
-      imagesLot[idx].zoom = im.zoom || 1; imagesLot[idx].panX = im.panX || 0; imagesLot[idx].panY = im.panY || 0;
-      activerImageLot(idx);
-    } else {
-      if (im) avertissement = ' — attention : l’image de fond n’a pas pu être rechargée, réimportez-la (onglet Fond).';
-      majEtatOutilsImage(); renderGalerieLot();
-    }
-    renderReglages();
-    renderStage();
-    ouvrirTiroir('textes');
-    var ta = document.getElementById('texte-date');
-    if (ta) { ta.focus(); ta.select(); }
-    document.getElementById('statut-visucrise').textContent = '✓ Visuel « ' + (etat.nom || 'sans titre') + ' » ouvert'
-      + (majDate ? ' — date mise à jour : ' + nouvelleDate : '') + avertissement;
-  });
-}
-
-function ouvrirVisuelFichier(file) {
-  if (!file) return;
-  var reader = new FileReader();
-  reader.onload = function(ev){
-    var etat;
-    try { etat = JSON.parse(ev.target.result); } catch (e) { alert('Ce fichier n’est pas un visuel .visucrise valide.'); return; }
-    if (!etat || etat.format !== 'VISUCRISE') { alert('Ce fichier n’est pas un visuel .visucrise valide.'); return; }
-    appliquerEtatVisuel(etat);
-  };
-  reader.readAsText(file);
-}
-document.getElementById('fichier-visucrise').addEventListener('change', function(e){
-  ouvrirVisuelFichier(e.target.files[0]);
-  e.target.value = '';
-});
-window.addEventListener('dragover', function(e){ e.preventDefault(); });
-window.addEventListener('drop', function(e){
-  var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-  if (f && /\.visucrise$/i.test(f.name)) { e.preventDefault(); ouvrirVisuelFichier(f); }
-});
-
 /* ============================================================
    INITIALISATION
    ============================================================ */
@@ -2255,6 +2052,55 @@ window.onload = function() {
   });
   if (enAttente === 0) renderStage();
 };
+
+/* ============================================================
+   PONT AVEC LE TABLEAU DE BORD DE CRISE (ajout)
+   - ?embed=1        : masque l'en-tête et le pied de page
+   - ?gabarits=URL   : dossier des vignettes prêtes à l'emploi
+   - reçoit {type:'tdb-ctx', crise, date} et pré-remplit date + titre
+   - notifie {type:'vignette-exportee'} après chaque PNG téléchargé
+   ============================================================ */
+(function(){
+  var q = new URLSearchParams(location.search);
+  if (q.get('embed') === '1') document.body.classList.add('embarque');
+  if (q.get('gabarits')) {
+    var champ = document.getElementById('dossier-gabarits');
+    if (champ) { champ.value = q.get('gabarits'); try { rechercherGabarits(); } catch (err) {} }
+  }
+  function bloc(id){ return blocs.find(function(b){ return b.id === id; }); }
+  var prec = { crise:'', date:'' };
+  window.addEventListener('message', function(e){
+    var d = e.data || {};
+    if (d.type === 'tdb-gabarits') {
+      var ch = document.getElementById('dossier-gabarits');
+      if (ch && typeof d.dossier === 'string') { ch.value = d.dossier || 'GABARIT VIGNETTES RS'; rechercherGabarits(); }
+      return;
+    }
+    if (d.type !== 'tdb-ctx') return;
+    var bd = bloc('date'), bp = bloc('principal');
+    if (bd && d.date && (bd.text === prec.date || bd.text === '28 décembre 2025')) bd.text = d.date;
+    if (bp && d.crise && (bp.text === prec.crise || bp.text === 'Titre de la communication')) bp.text = d.crise;
+    prec = { crise:d.crise || '', date:d.date || '' };
+    renderReglages(); renderStage(); regenererTextePost();
+  });
+  var dl = window.declencherTelechargementCanvas;
+  window.declencherTelechargementCanvas = function(canvas, nom, cb){
+    dl(canvas, nom, function(ok){
+      if (ok) {
+        try {
+          parent.postMessage({ type:'vignette-exportee', fichier:nom, format:formatActuel.id,
+            largeur:formatActuel.w, hauteur:formatActuel.h,
+            titre:(bloc('principal') || {text:''}).text.replace(/\n/g,' '),
+            texte:document.getElementById('texte-post').value }, '*');
+        } catch (err) {}
+      }
+      if (cb) cb(ok);
+    });
+  };
+  window.addEventListener('load', function(){
+    try { parent.postMessage({ type:'vignette-prete' }, '*'); } catch (err) {}
+  });
+})();
 </script>
 </body>
 </html>

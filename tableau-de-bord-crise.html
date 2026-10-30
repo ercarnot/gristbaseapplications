@@ -173,6 +173,10 @@ dialog::backdrop{background:#0007}
 .toast.on{opacity:1}
 .notice{border-left:4px solid var(--warn);background:var(--warn-clair);padding:10px 14px;border-radius:0 4px 4px 0;margin:10px 0}
 .notice.err{border-color:var(--alerte);background:var(--alerte-clair)}
+.pub{background:#fff;color:#555;border:1px solid #bbb;padding:2px 9px;font-size:.8rem;margin:0 4px 4px 0;border-radius:99px;font-weight:600}
+.pub:hover{background:var(--bleu-clair);color:var(--bleu);border-color:var(--bleu)}
+.pub.on{background:var(--ok-clair);color:var(--ok);border-color:var(--ok)}
+.tag.t-COD_REOUVERT{background:var(--warn-clair);color:var(--warn)}
 .star{cursor:pointer;color:#bbb;font-size:1.1rem;background:none;border:0;padding:0 4px}
 .star.on{color:#e3a500}
 .star:hover{background:none;color:#e3a500}
@@ -248,6 +252,7 @@ dialog::backdrop{background:#0007}
   <div id="chrono" title="Temps écoulé depuis l'ouverture du COD">H+00:00</div>
   <span id="codInfo" class="badge"></span>
   <button id="btnClot" class="red small" style="display:none">Clôturer le COD</button>
+  <button id="btnRouv" class="sec small" style="display:none" title="Annuler la clôture (par exemple en cas d'erreur)">Rouvrir le COD</button>
   <span class="hspace"></span>
   <button id="btnComm" class="sec small">Communes</button>
   <span id="whoami" class="badge" style="background:#2b2f66"></span>
@@ -282,10 +287,11 @@ dialog::backdrop{background:#0007}
     </aside>
     <div class="cpcol">
       <h3>Rédaction</h3>
+      <div id="cpState" class="notice" style="margin:0 0 8px"></div>
       <div class="row"><div><label>Ville</label><input id="cVille" type="text"></div><div><label>Date</label><input id="cDate" type="text"></div></div>
       <label>Titre (une ligne = un retour à la ligne dans le titre)</label>
       <textarea id="cTitre" rows="2" placeholder="ÉVACUATION DU CAMPING DES EAUX CHAUDES"></textarea>
-      <div class="row"><div><label>Point de situation (facultatif)</label><input id="cPoint" type="text" placeholder="Point de situation n° 2 à 15h15"></div></div>
+      <div class="row"><div><label>Point de situation (facultatif)</label><input id="cPoint" type="text" placeholder="Point de situation à 15h15"></div><button class="sec small" id="cPointNow" title="Insère « Point de situation à » suivi de l'heure actuelle">Point de situation à l'heure actuelle</button></div>
       <label class="cpopt"><input type="checkbox" id="cExo"> Exercice : bandeau « EXERCICE * * * EXERCICE » en haut et en bas</label>
       <label>Texte (une ligne = un paragraphe ; « - » = puce ; « ## » = intertitre)</label>
       <textarea id="cCorps" rows="16" style="min-height:300px"></textarea>
@@ -293,7 +299,9 @@ dialog::backdrop{background:#0007}
       <div class="actions">
         <button class="ok big" id="cGo">Créer le communiqué (.odt)</button>
         <button class="sec" id="cSave">Enregistrer le brouillon</button>
-        <button class="sec" id="cNew">Nouveau</button>
+        <button class="sec" id="cSaveNew" style="display:none">Enregistrer comme nouveau communiqué</button>
+        <button class="sec" id="cLast">Partir du dernier communiqué</button>
+        <button class="sec" id="cNew">Page blanche</button>
         <button class="link" id="cTrame">Trame type</button>
       </div>
       <p class="hint">Le fichier se nomme CP_jj_mm_aaaa_-_titre.odt. Après relecture, exportez-le en PDF depuis LibreOffice pour l'envoi.</p>
@@ -326,7 +334,8 @@ dialog::backdrop{background:#0007}
   <p class="hint"><a id="vigOpen" href="vignettes.html" target="_blank" rel="noopener">Ouvrir le module dans un onglet</a> si l'espace est trop petit.</p>
   <div class="card">
     <h3>Visuels créés pour cette crise</h3>
-    <div style="overflow:auto"><table><thead><tr><th>Heure</th><th>Titre</th><th>Format</th><th>Fichier</th><th>Auteur</th></tr></thead><tbody id="visList"></tbody></table></div>
+    <p class="hint">Cliquez sur un réseau pour indiquer que le visuel y a été publié : l'heure est enregistrée automatiquement. Un nouveau clic annule.</p>
+    <div style="overflow:auto"><table><thead><tr><th>Heure</th><th>Titre</th><th>Format</th><th>Fichier</th><th>Publication</th><th>Auteur</th></tr></thead><tbody id="visList"></tbody></table></div>
   </div>
 </section>
 
@@ -399,7 +408,7 @@ dialog::backdrop{background:#0007}
   <p class="hint">Qui a posé quelle question, à quelle heure. Saisie rapide : média + question (+ bouclage). Ctrl+Entrée enregistre.</p></div>
   <div id="zMedia">
   <div class="mdform">
-    <div><label>Heure d'appel</label><input id="mdHeure" type="time"></div>
+    <div><label id="mdHeureLbl" title="Heure enregistrée automatiquement">Heure d'appel (auto)</label><input id="mdHeure" type="time"></div>
     <div><label>Média</label><input id="mdMedia" type="text" list="dlMedia" placeholder="Le Dauphiné, France Bleu…"></div>
     <div><label>Journaliste</label><input id="mdJourn" type="text"></div>
     <div><label>Coordonnées</label><input id="mdContact" type="text" placeholder="tél. / mail"></div>
@@ -410,6 +419,8 @@ dialog::backdrop{background:#0007}
   <textarea id="mdQuestion" rows="2" placeholder="La question, telle qu'elle a été posée."></textarea>
   <div class="actions"><button class="ok big" id="mdAdd">Enregistrer la question</button></div>
   <datalist id="dlMedia"></datalist>
+
+  <div class="chips" id="mdQuick" title="Médias fréquents"></div>
 
   <div class="chips" id="mdChips" style="margin-top:18px"></div>
   <input id="mdSearch" class="keep" type="search" placeholder="Filtrer par média, journaliste ou mot de la question…">
@@ -466,6 +477,10 @@ dialog::backdrop{background:#0007}
       <h3>Crises de ce document</h3>
       <div style="overflow:auto"><table><thead><tr><th>Crise</th><th>État</th><th>Ouverture</th><th>Clôture</th><th></th></tr></thead><tbody id="setCrises"></tbody></table></div>
       <div class="actions"><button class="sec" id="setNew">Nouvelle crise…</button></div>
+      <h3 style="margin-top:22px">Liste des médias (main courante)</h3>
+      <p class="hint">Liste pré-remplie proposée dans la main courante média. ★ = affiché en accès rapide.</p>
+      <div style="max-height:260px;overflow:auto"><table><thead><tr><th>Média</th><th>Type</th><th>★</th><th></th></tr></thead><tbody id="setMedias"></tbody></table></div>
+      <div class="row" style="margin-top:8px"><input id="smNom" type="text" placeholder="Nom du média"><select id="smType"><option>Presse écrite</option><option>Radio</option><option>Télévision</option><option>Web</option><option>Agence</option><option>Autre</option></select><button class="small" id="smAdd">Ajouter</button></div>
       <h3 style="margin-top:22px">Sauvegarde et diagnostic</h3>
       <div class="actions"><button class="sec small" id="sBackup">Sauvegarder les réglages (JSON)</button><input type="file" id="sRestore" accept=".json"></div>
       <div class="actions"><button class="sec small" id="sDiag">Tester l'environnement (Grist, téléchargement, pop-up)</button></div>
@@ -525,7 +540,7 @@ function showTab(t){
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='p-'+t));
   if(t==='rap') renderRapport();
-  if(t==='set') renderSetCrises();
+  if(t==='set'){ renderSetCrises(); renderSetMedias(); }
   if(t==='vig') checkVig();
   try{ sessionStorage.setItem('tdb-tab',t); }catch(e){}
 }
@@ -537,7 +552,7 @@ document.addEventListener('keydown',e=>{
 /* =====================================================
    COUCHE DE DONNÉES : Grist (partagé) ou local (secours)
    ===================================================== */
-const TN={K:'Crise_Crises',J:'Crise_Journal',C:'Crise_Communes',M:'Crise_Media',X:'Crise_Contacts',P:'Crise_Mails',L:'Crise_Communiques',V:'Crise_Visuels'};
+const TN={K:'Crise_Crises',J:'Crise_Journal',C:'Crise_Communes',M:'Crise_Media',X:'Crise_Contacts',P:'Crise_Mails',L:'Crise_Communiques',V:'Crise_Visuels',D:'Crise_Medias'};
 const HORO=['Horodatage','DateTime:Europe/Paris'];
 const TSPEC={
   [TN.K]:[HORO,['Ref','Text'],['Nom','Text'],['Auteur','Text']],
@@ -547,8 +562,13 @@ const TSPEC={
   [TN.X]:[HORO,['Nom','Text'],['Organisme','Text'],['Mail','Text'],['Telephone','Text'],['Groupe','Text'],['Prioritaire','Bool'],['Auteur','Text']],
   [TN.P]:[HORO,['Crise','Text'],['Titre','Text'],['Objet','Text'],['Corps','Text'],['Destinataires','Text'],['PJ','Text'],['Statut','Text'],['Important','Bool'],['Auteur','Text']],
   [TN.L]:[HORO,['Crise','Text'],['Titre','Text'],['Point','Text'],['Ville','Text'],['DateTexte','Text'],['Corps','Text'],['Exercice','Bool'],['Statut','Text'],['Auteur','Text']],
-  [TN.V]:[HORO,['Crise','Text'],['Titre','Text'],['Format','Text'],['Fichier','Text'],['Texte','Text'],['Auteur','Text']]
+  [TN.V]:[HORO,['Crise','Text'],['Titre','Text'],['Format','Text'],['Fichier','Text'],['Texte','Text'],['Publications','Text'],['Auteur','Text']],
+  [TN.D]:[HORO,['Nom','Text'],['Type','Text'],['Prioritaire','Bool'],['Auteur','Text']]
 };
+const DEFAULT_MEDIAS=[
+  ['Le Dauphiné Libéré','Presse écrite',1],['La Provence','Presse écrite',1],['ici Provence (France Bleu)','Radio',1],['France 3 Provence-Alpes','Télévision',1],['Alpes 1','Télévision',1],['Haute-Provence Info','Web',1],['AFP','Agence',1],
+  ['France Info','Radio',0],['BFM Marseille Provence','Télévision',0],['BFM TV','Télévision',0],['TF1 / LCI','Télévision',0],['RMC','Radio',0],['Actu.fr','Web',0],['Le Monde','Presse écrite',0],['Le Figaro','Presse écrite',0]
+];
 const CRISE_T=new Set([TN.J,TN.C,TN.M,TN.P,TN.L,TN.V]);   // tables rattachées à une crise
 let sess=null;   // {nom, fonctions[]}
 let cur=null;    // référence de la crise affichée ('' = crise d'avant la gestion multi-crises ; null = aucune)
@@ -576,6 +596,7 @@ const DB={
   mode:'local', err:'', api:'', raw:{}, sig:'', down:false, migr:'',
   async init(){
     Object.values(TN).forEach(t=>{ if(!S.db[t]) S.db[t]=[]; });
+    if(!S.db.seedD&&!S.db[TN.D].length){ DEFAULT_MEDIAS.forEach(m=>S.db[TN.D].push({id:++S.db.seq,Horodatage:Date.now()/1000,Nom:m[0],Type:m[1],Prioritaire:!!m[2],Auteur:'(liste initiale)'})); S.db.seedD=1; save(); }
     const api=await loadGristApi();
     if(!api){ this.err=(window.parent!==window)?'API Grist introuvable':''; await this.refresh(); return; }
     try{
@@ -587,6 +608,7 @@ const DB={
         await grist.docApi.applyUserActions(neu.map(t=>['AddTable',t,TSPEC[t].map(([id,type])=>({id,type}))]));
         try{ await grist.docApi.applyUserActions(neu.map(t=>['ModifyColumn',t,'Horodatage',{isFormula:false,formula:'NOW()',recalcWhen:0,recalcDeps:null}])); }
         catch(e){ this.err='Heure serveur non configurée ('+(e&&e.message||e)+') : l\'heure du poste est utilisée'; }
+        if(neu.includes(TN.D)) await grist.docApi.applyUserActions(DEFAULT_MEDIAS.map(m=>['AddRecord',TN.D,null,{Nom:m[0],Type:m[1],Prioritaire:!!m[2],Auteur:'(liste initiale)'}]));
       }
       // tables existantes : ajout des colonnes manquantes (ex. « Crise » sur un document créé avant la gestion multi-crises)
       const added=[];
@@ -649,7 +671,9 @@ const JOURNAL=(ref=cur)=>rowsOf(TN.J,ref).map(r=>({id:r.id,t:tsOf(r),type:r.Type
 const COMMUNES=(ref=cur)=>rowsOf(TN.C,ref).map(r=>({id:r.id,commune:r.Commune||'',nom:r.Nom||'',tel:r.Telephone||'',mail:r.Mail||''}));
 const MED=(ref=cur)=>rowsOf(TN.M,ref).map(r=>({id:String(r.id),h:(r.HeureAppel||0)*1000,media:r.Media||'',journaliste:r.Journaliste||'',contact:r.Contact||'',canal:r.Canal||'',question:r.Question||'',bouclage:r.Bouclage>0?r.Bouclage*1000:null,statut:r.Statut||'À traiter',reponse:r.Reponse||'',repH:r.HeureReponse>0?r.HeureReponse*1000:null,auteur:r.Auteur||''}));
 const COMMUNIQUES=(ref=cur)=>rowsOf(TN.L,ref).map(r=>({id:r.id,t:tsOf(r),titre:r.Titre||'',point:r.Point||'',ville:r.Ville||'',date:r.DateTexte||'',corps:r.Corps||'',exo:!!r.Exercice,statut:r.Statut||'Brouillon',auteur:r.Auteur||''})).sort((a,b)=>a.t-b.t);
-const VISUELS=(ref=cur)=>rowsOf(TN.V,ref).map(r=>({id:r.id,t:tsOf(r),titre:r.Titre||'',format:r.Format||'',fichier:r.Fichier||'',texte:r.Texte||'',auteur:r.Auteur||''})).sort((a,b)=>a.t-b.t);
+const parsePubs=s=>{ try{ const a=JSON.parse(s||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } };
+const VISUELS=(ref=cur)=>rowsOf(TN.V,ref).map(r=>({id:r.id,t:tsOf(r),titre:r.Titre||'',format:r.Format||'',fichier:r.Fichier||'',texte:r.Texte||'',pubs:parsePubs(r.Publications),auteur:r.Auteur||''})).sort((a,b)=>a.t-b.t);
+const MEDIAS=()=>(DB.raw[TN.D]||[]).map(r=>({id:r.id,nom:r.Nom||'',type:r.Type||'Autre',prio:!!r.Prioritaire})).sort((a,b)=>(b.prio-a.prio)||a.nom.localeCompare(b.nom,'fr'));
 const MAILS=()=>(DB.raw[TN.P]||[]).map(r=>({id:r.id,t:tsOf(r),crise:r.Crise||'',titre:r.Titre||'',objet:r.Objet||'',corps:r.Corps||'',dest:r.Destinataires||'',pj:r.PJ||'',statut:r.Statut||'',important:!!r.Important,auteur:r.Auteur||''}));
 const CONTACTS=()=>(DB.raw[TN.X]||[]).map(r=>({id:r.id,nom:r.Nom||'',org:r.Organisme||'',email:r.Mail||'',tel:r.Telephone||'',groupe:r.Groupe||'Autre',prio:!!r.Prioritaire})).sort((a,b)=>(b.prio-a.prio)||a.nom.localeCompare(b.nom,'fr'));
 
@@ -661,6 +685,7 @@ function deriveFrom(J,nomRef){
     else if(e.type==='NIVEAU') st.niveau=e.texte;
     else if(e.type==='COD_OUVERT'&&!st.h0) st.h0=e.t;
     else if(e.type==='COD_CLOTURE'&&st.h0&&!st.h1) st.h1=e.t;
+    else if(e.type==='COD_REOUVERT'&&st.h1) st.h1=null;
   });
   return st;
 }
@@ -762,6 +787,7 @@ function applyPerms(){
   $('crNom').disabled=!can('coord'); $('crNiveau').disabled=!can('coord');
   const vf=$('vigFrame'); vf.style.pointerEvents=can('vig')?'':'none'; vf.style.opacity=can('vig')?'':'.55';
   $('btnClot').style.display=(can('coord')&&ST.h0&&!ST.h1)?'':'none';
+  $('btnRouv').style.display=(cur!==null&&ST.h1&&sess&&sess.fonctions.includes('Coordination'))?'':'none';
   const z=Object.keys(ZONES).filter(k=>can(k));
   $('roNote').textContent= !sess?'' : cur===null?'Aucune crise sélectionnée.' : closed()?'Crise clôturée : consultation en lecture seule. Pour une nouvelle crise, utilisez le sélecteur « Crise » en haut de l\'écran.' : (z.length?'Vous pouvez agir sur : '+z.map(k=>ZNOM[k]).join(', ')+'. Le reste est en lecture seule.':'Lecture seule pour votre fonction.');
 }
@@ -796,6 +822,12 @@ $('btnClot').onclick=async()=>{
   if(!(await askDialog('Clôturer le COD de cette crise ?\nL\'heure de clôture sera fixée et cette crise passera en lecture seule pour tous les agents. Vous pourrez ensuite créer une nouvelle crise depuis le sélecteur « Crise ». Cette action est définitive.',{okLabel:'Clôturer le COD'}))) return;
   await DB.add(TN.J,{Type:'COD_CLOTURE',Texte:'Clôture du COD'});
 };
+$('btnRouv').onclick=async()=>{
+  const m=await askDialog('Rouvrir le COD de cette crise ?\nL\'heure de clôture est annulée et la crise redevient active pour tous les agents. Indiquez le motif (par exemple : clôture par erreur).',{input:true,okLabel:'Rouvrir le COD',minLen:5,err:'Motif obligatoire (5 caractères minimum)',ph:'Motif de la réouverture'});
+  if(!m) return;
+  await DB.add(TN.J,{Type:'COD_REOUVERT',Texte:'COD rouvert — motif : '+m});
+  toast('COD rouvert');
+};
 $('btnComm').onclick=()=>openSas(true);
 
 function propagateNom(){
@@ -823,7 +855,7 @@ function applyState(){
     : 'Mode secours local : les données restent sur ce poste.'+(DB.err?' ('+DB.err+')':'')+' Pour travailler à plusieurs, ouvrez l\'application depuis Grist.';
   $('whoami').textContent= sess? sess.nom+' · '+sess.fonctions.join(', ') : '';
 }
-function onData(){ applyState(); renderMedia(); renderLog(); renderSasCommunes(); renderGate(); renderCpList(); renderVis(); renderContacts(); renderMails(); if($('p-rap').classList.contains('on')) renderRapport(); if($('p-set').classList.contains('on')) renderSetCrises(); }
+function onData(){ applyState(); renderMedia(); renderLog(); renderSasCommunes(); renderGate(); renderCpList(); renderVis(); renderContacts(); renderMails(); renderMedList(); if($('p-rap').classList.contains('on')) renderRapport(); if($('p-set').classList.contains('on')){ renderSetCrises(); renderSetMedias(); } }
 
 /* ---------- réglages ---------- */
 const SETF={sOrg:'org',sVille:'ville',sBoite:'boite',sSign:'sign',sGabarits:'gabarits'};
@@ -868,10 +900,21 @@ window.addEventListener('message',async e=>{
     }catch(err){}
   }
 });
+const RESEAUX=['Facebook','X','Instagram','LinkedIn','Threads','Autre'];
 function renderVis(){
-  const L=VISUELS();
-  $('visList').innerHTML=L.length?L.map(v=>`<tr><td>${dhm(v.t)}</td><td>${esc(v.titre)}</td><td>${esc(v.format)}</td><td>${esc(v.fichier)}</td><td>${esc(v.auteur)}</td></tr>`).join(''):'<tr><td colspan="5" class="empty">Aucun visuel enregistré pour cette crise.</td></tr>';
+  const L=VISUELS(), dis=can('vig')?'':'disabled';
+  $('visList').innerHTML=L.length?L.map(v=>`<tr><td>${dhm(v.t)}</td><td>${esc(v.titre)}</td><td>${esc(v.format)}</td><td>${esc(v.fichier)}</td><td>${RESEAUX.map(r=>{ const p=v.pubs.find(x=>x.r===r); return `<button class="pub ${p?'on':''}" data-v="${v.id}" data-r="${r}" ${dis} title="${p?'Publié à '+hhmm(p.t)+(p.a?' par '+esc(p.a):'')+' — cliquer pour annuler':'Marquer comme publié sur '+r}">${p?'✓ ':''}${r}${p?' '+hhmm(p.t):''}</button>`; }).join('')}</td><td>${esc(v.auteur)}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">Aucun visuel enregistré pour cette crise.</td></tr>';
 }
+$('visList').onclick=async e=>{
+  const b=e.target.closest('[data-v]'); if(!b||!can('vig')) return;
+  const v=VISUELS().find(x=>String(x.id)===b.dataset.v); if(!v) return;
+  const r=b.dataset.r, has=v.pubs.find(x=>x.r===r);
+  let pubs;
+  if(has){ if(!(await askDialog(`Annuler la publication sur ${r} (enregistrée à ${hhmm(has.t)}) ?`,{okLabel:'Annuler la publication'}))) return; pubs=v.pubs.filter(x=>x.r!==r); }
+  else { pubs=v.pubs.concat([{r,t:Date.now(),a:(sess&&sess.nom)||''}]); }
+  await DB.upd(TN.V,v.id,{Publications:JSON.stringify(pubs)});
+  await addLog(has?`Publication annulée : « ${v.titre||v.fichier} » sur ${r}`:`Visuel publié sur ${r} : « ${v.titre||v.fichier} »`);
+};
 
 /* =====================================================
    COMMUNIQUÉ — modèle ODT de la préfecture (PREF04)
@@ -923,13 +966,13 @@ function odtCorps(txt){
   });
   return xml.join('');
 }
-function buildOdt({ville,date,titre,corps}){
+function buildOdt({ville,date,titre,corps,metaTitre}){
   const enc=new TextEncoder();
   const titreXml=String(titre||'').split('\n').map(l=>xe(l.trim())).filter(Boolean).join('<text:line-break/>');
   const PXS='<style:style style:name="PX" style:family="paragraph" style:parent-style-name="Standard"><style:paragraph-properties fo:text-align="center" style:justify-single-word="false"/><style:text-properties style:font-name="Marianne Medium" fo:font-size="10pt" fo:font-weight="bold" style:font-size-asian="10pt" style:font-weight-asian="bold" style:font-name-complex="Marianne Medium"/></style:style>';
   const content=TPL.content.replace('</office:automatic-styles>',()=>PXS+'</office:automatic-styles>').replace('@@VILLE@@',()=>xe(ville)).replace('@@DATE@@',()=>xe(date)).replace('@@TITRE@@',()=>titreXml).replace('@@CORPS@@',()=>odtCorps(corps));
   const now=new Date().toISOString().replace(/\.\d+Z$/,'');
-  const meta=`<?xml version="1.0" encoding="UTF-8"?>\n<office:document-meta xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:meta="urn:oasis:names:tc:opendocument:xmlns:meta:1.0" office:version="1.3"><office:meta><meta:generator>Tableau de bord de crise</meta:generator><dc:title>${xe(String(titre||'').replace(/\n/g,' '))}</dc:title><meta:creation-date>${now}</meta:creation-date></office:meta></office:document-meta>`;
+  const meta=`<?xml version="1.0" encoding="UTF-8"?>\n<office:document-meta xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:meta="urn:oasis:names:tc:opendocument:xmlns:meta:1.0" office:version="1.3"><office:meta><meta:generator>Tableau de bord de crise</meta:generator><dc:title>${xe(String(metaTitre||titre||'').replace(/\n/g,' '))}</dc:title><meta:creation-date>${now}</meta:creation-date></office:meta></office:document-meta>`;
   const manifest=`<?xml version="1.0" encoding="UTF-8"?>
 <manifest:manifest xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0" manifest:version="1.4" xmlns:loext="urn:org:documentfoundation:names:experimental:office:xmlns:loext:1.0">
  <manifest:file-entry manifest:full-path="/" manifest:version="1.4" manifest:media-type="application/vnd.oasis.opendocument.text"/>
@@ -1067,6 +1110,12 @@ function majChamps(){
 }
 ['cVille','cDate','cTitre','cPoint','cCorps'].forEach(id=>$(id).addEventListener('input',()=>{ renderPrev(); majChamps(); }));
 $('cExo').addEventListener('change',renderPrev);
+const hmm=(d=new Date())=>two(d.getHours())+'h'+two(d.getMinutes());
+$('cPointNow').onclick=()=>{
+  const num=($('cPoint').value.match(/n°\s*\d+/)||[''])[0];
+  $('cPoint').value='Point de situation'+(num?' '+num:'')+' à '+hmm();
+  renderPrev(); majChamps();
+};
 $('cCorps').addEventListener('input',()=>{ if(!$('cCorps').value.trim()){ bibUsed.clear(); lastPos=null; renderBib(); } });
 
 /* ---- bibliothèque de blocs en accordéons ---- */
@@ -1137,21 +1186,39 @@ async function saveCP(statut){
   else cpId=await DB.add(TN.L,rec);
   return true;
 }
+function renderCpState(){
+  const el=$('cpState'), c=cpId&&COMMUNIQUES().find(x=>x.id===cpId);
+  if(c){ el.className='notice'; el.innerHTML=`Vous <b>modifiez</b> le communiqué enregistré « ${esc(c.titre||'(sans titre)')}${c.point?' — '+esc(c.point):''} ». « Enregistrer » le met à jour ; pour en créer un nouveau, utilisez « Enregistrer comme nouveau communiqué ».`; }
+  else { el.className='notice'; el.style.borderColor='var(--ok)'; el.style.background='var(--ok-clair)'; el.innerHTML='<b>Nouveau communiqué</b> : il sera ajouté à la liste lors de l\'enregistrement. Les communiqués déjà enregistrés ne sont pas modifiés.'; return; }
+  el.style.borderColor=''; el.style.background='';
+  $('cSaveNew').style.display='';
+}
 function renderCpList(){
   const L=COMMUNIQUES();
+  $('cSaveNew').style.display=cpId?'':'none'; renderCpState();
+  $('cLast').style.display=L.length?'':'none';
   $('cpList').innerHTML=L.length?L.map(c=>`<tr class="${c.id===cpId?'sel':''}"><td>${dhm(c.t)}</td><td><b>${esc(c.titre||'(sans titre)')}</b>${c.point?'<div class="sub">'+esc(c.point)+'</div>':''}</td>
     <td><select data-cst="${c.id}" ${can('cp')?'':'disabled'} class="keep">${CPSTAT.map(s=>`<option ${s===c.statut?'selected':''}>${s}</option>`).join('')}</select></td><td>${esc(c.auteur)}</td>
-    <td style="white-space:nowrap"><button class="sec small keep" data-load="${c.id}">Charger dans l'éditeur</button></td></tr>`).join(''):'<tr><td colspan="5" class="empty">Aucun communiqué enregistré pour cette crise.</td></tr>';
+    <td style="white-space:nowrap"><button class="small keep" data-base="${c.id}" title="Copie ce communiqué dans l'éditeur pour rédiger le suivant, sans modifier celui-ci">Reprendre comme base d'un nouveau communiqué</button> <button class="sec small keep" data-load="${c.id}" title="Ouvre ce communiqué pour le corriger : l'enregistrement le remplace">Modifier celui-ci</button></td></tr>`).join(''):'<tr><td colspan="5" class="empty">Aucun communiqué enregistré pour cette crise.</td></tr>';
 }
 $('cpList').onchange=async e=>{ const id=e.target.dataset.cst; if(id&&can('cp')) await DB.upd(TN.L,Number(id),{Statut:e.target.value}); };
+function loadCP(c,asBase){
+  cpId=asBase?null:c.id;
+  $('cTitre').value=c.titre; $('cTitre').dataset.touched='1'; $('cVille').value=c.ville; $('cCorps').value=c.corps; $('cExo').checked=c.exo;
+  if(asBase){ $('cPoint').value=''; $('cDate').value=longDate(); }
+  else { $('cPoint').value=c.point; $('cDate').value=c.date; }
+  bibUsed.clear(); lastPos=null; renderBib(); renderPrev(); majChamps(); renderCpList();
+  toast(asBase?'Communiqué repris comme base : indiquez le nouveau point de situation, mettez à jour le texte puis enregistrez. L\'ancien reste intact.':'Communiqué ouvert pour modification'+(can('cp')?'':' (lecture seule)'));
+}
 $('cpList').onclick=e=>{
-  const b=e.target.closest('[data-load]'); if(!b) return;
-  const c=COMMUNIQUES().find(x=>String(x.id)===b.dataset.load); if(!c) return;
-  cpId=c.id; $('cTitre').value=c.titre; $('cTitre').dataset.touched='1'; $('cPoint').value=c.point; $('cVille').value=c.ville; $('cDate').value=c.date; $('cCorps').value=c.corps; $('cExo').checked=c.exo;
-  renderPrev(); majChamps(); renderCpList(); toast('Communiqué chargé'+(can('cp')?'':' (lecture seule)'));
+  const b=e.target.closest('[data-load],[data-base]'); if(!b) return;
+  const c=COMMUNIQUES().find(x=>String(x.id)===(b.dataset.load||b.dataset.base)); if(!c) return;
+  loadCP(c,!!b.dataset.base);
 };
-$('cSave').onclick=async()=>{ if(await saveCP()) toast('Brouillon enregistré dans la base'); };
-$('cNew').onclick=()=>{ cpId=null; $('cCorps').value=''; $('cPoint').value=''; $('cExo').checked=false; delete $('cTitre').dataset.touched; $('cTitre').value=ST.nom||''; $('cDate').value=longDate(); bibUsed.clear(); lastPos=null; renderBib(); renderPrev(); majChamps(); renderCpList(); };
+$('cLast').onclick=()=>{ const L=COMMUNIQUES(); if(L.length) loadCP(L[L.length-1],true); };
+$('cSave').onclick=async()=>{ if(await saveCP()) toast(cpId&&COMMUNIQUES().some(x=>x.id===cpId)?'Communiqué enregistré dans la base':'Communiqué enregistré'); };
+$('cSaveNew').onclick=async()=>{ if(!can('cp')) return; cpId=null; if(await saveCP()) toast('Nouveau communiqué ajouté : l\'ancien reste intact'); };
+$('cNew').onclick=()=>{ cpId=null; $('cNew').blur(); $('cCorps').value=''; $('cPoint').value=''; $('cExo').checked=false; delete $('cTitre').dataset.touched; $('cTitre').value=ST.nom||''; $('cDate').value=longDate(); bibUsed.clear(); lastPos=null; renderBib(); renderPrev(); majChamps(); renderCpList(); };
 async function genCP(vide){
   const titre0=(vide?'':$('cTitre').value.trim())||'[Titre du communiqué]';
   let corps=(vide||!$('cCorps').value.trim())?TRAME:$('cCorps').value;
@@ -1162,9 +1229,10 @@ async function genCP(vide){
   }
   let titre=titre0+(pt?'\n'+pt:'');
   if(exo){ titre=BAN_EXO+'\n'+titre; corps+='\n== '+BAN_EXO; }
-  const bytes=buildOdt({ville:$('cVille').value.trim()||S.settings.ville||'',date:$('cDate').value.trim()||longDate(),titre,corps});
-  const d=new Date(), court=titre0.split('\n')[0].replace(/[\\\/:*?"<>|\[\]]/g,'').trim().slice(0,60)||'communiqué';
-  download(new Blob([bytes],{type:'application/vnd.oasis.opendocument.text'}),`CP_${two(d.getDate())}_${two(d.getMonth()+1)}_${d.getFullYear()}_-_${court}.odt`);
+  const clean=s=>s.replace(/[\\\/:*?"<>|\[\]]/g,'').replace(/\s+/g,' ').trim();
+  const d=new Date(), court=clean(titre0.split('\n')[0]).slice(0,60)||'communiqué', ptc=clean(pt).slice(0,50);
+  const bytes=buildOdt({ville:$('cVille').value.trim()||S.settings.ville||'',date:$('cDate').value.trim()||longDate(),titre,corps,metaTitre:titre0.replace(/\n/g,' ')+(pt?' — '+pt:'')});
+  download(new Blob([bytes],{type:'application/vnd.oasis.opendocument.text'}),`CP_${two(d.getDate())}_${two(d.getMonth()+1)}_${d.getFullYear()}_-_${court}${ptc?'_-_'+ptc:''}.odt`);
   toast('Communiqué créé : ouvrez-le depuis les téléchargements');
   if(!vide) await saveCP();
   await addLog('Communiqué de presse créé : '+(titre0+(pt?' — '+pt:'')).replace(/\n/g,' '));
@@ -1346,7 +1414,33 @@ const hhmmToTs=(v,ref,mode)=>{ if(!v) return null; const [a,b]=v.split(':').map(
 const ago=ms=>{ const m=Math.max(0,Math.round(ms/60000)); return m<60? m+' min' : Math.floor(m/60)+' h '+two(m%60); };
 const isOpen=m=>m.statut==='À traiter'||m.statut==='En cours';
 const isLate=m=>isOpen(m)&&m.bouclage&&m.bouclage<Date.now();
-function resetMdForm(){ $('mdHeure').value=hhmm(Date.now()); ['mdMedia','mdJourn','mdContact','mdBouclage','mdQuestion'].forEach(i=>$(i).value=''); }
+let mdManual=false;
+function mdLbl(){ const l=$('mdHeureLbl'); l.textContent=mdManual?'Heure d\'appel (corrigée) · revenir à l\'auto':'Heure d\'appel (auto)'; l.style.cursor=mdManual?'pointer':''; l.style.color=mdManual?'var(--bleu)':''; }
+function resetMdForm(){ mdManual=false; $('mdHeure').value=hhmm(Date.now()); mdLbl(); ['mdMedia','mdJourn','mdContact','mdBouclage','mdQuestion'].forEach(i=>$(i).value=''); }
+$('mdHeure').addEventListener('input',e=>{ if(e.isTrusted){ mdManual=true; mdLbl(); } });
+$('mdHeureLbl').onclick=()=>{ if(mdManual){ mdManual=false; $('mdHeure').value=hhmm(Date.now()); mdLbl(); } };
+setInterval(()=>{ if(!mdManual&&document.activeElement!==$('mdHeure')) $('mdHeure').value=hhmm(Date.now()); },15000);
+/* médias : liste pré-remplie (table Crise_Medias) */
+function renderMedList(){
+  const M=MEDIAS();
+  $('mdQuick').innerHTML=M.filter(x=>x.prio).slice(0,10).map(x=>`<span class="chip keep" data-med="${esc(x.nom)}">${esc(x.nom)}</span>`).join('');
+  const names=new Set(M.map(x=>x.nom)); MED().forEach(m=>m.media&&names.add(m.media)); CONTACTS().filter(c=>c.groupe==='Presse'&&c.org).forEach(c=>names.add(c.org));
+  $('dlMedia').innerHTML=[...names].sort((a,b)=>a.localeCompare(b,'fr')).map(n=>`<option value="${esc(n)}">`).join('');
+}
+$('mdQuick').onclick=e=>{ const c=e.target.closest('[data-med]'); if(c&&can('media')){ $('mdMedia').value=c.dataset.med; $('mdJourn').focus(); } };
+$('mdMedia').addEventListener('focus',()=>{ if(!$('mdMedia').value){ try{ $('mdMedia').showPicker&&$('mdMedia').showPicker(); }catch(e){} } });
+function renderSetMedias(){
+  const M=MEDIAS(), dis=can('media')?'':'disabled';
+  $('setMedias').innerHTML=M.length?M.map(x=>`<tr><td>${esc(x.nom)}</td><td>${esc(x.type)}</td><td><button class="star ${x.prio?'on':''}" data-mstar="${x.id}" ${dis}>★</button></td><td><button class="sec small" data-mdel="${x.id}" ${dis}>✕</button></td></tr>`).join(''):'<tr><td colspan="4" class="empty">Aucun média.</td></tr>';
+  $('smAdd').disabled=!can('media');
+}
+$('setMedias').onclick=async e=>{
+  if(!can('media')) return;
+  const s=e.target.closest('[data-mstar]'), d=e.target.closest('[data-mdel]');
+  if(s){ const x=MEDIAS().find(y=>y.id===Number(s.dataset.mstar)); if(x) await DB.upd(TN.D,x.id,{Prioritaire:!x.prio}); }
+  if(d&&await askDialog('Retirer ce média de la liste ?',{okLabel:'Retirer'})) await DB.del(TN.D,Number(d.dataset.mdel));
+};
+$('smAdd').onclick=async()=>{ const n=$('smNom').value.trim(); if(!n||!can('media')) return; if(MEDIAS().some(x=>x.nom.toLowerCase()===n.toLowerCase())){ toast('Ce média est déjà dans la liste'); return; } await DB.add(TN.D,{Nom:n,Type:$('smType').value,Prioritaire:false}); $('smNom').value=''; };
 function renderMedia(){
   const M=MED(), q=$('mdSearch').value.toLowerCase(), dis=can('media')?'':'disabled';
   const all=M.slice().sort((a,b)=>b.h-a.h);
@@ -1364,14 +1458,13 @@ function renderMedia(){
     :'<tr><td colspan="7" class="empty">Aucune question enregistrée.</td></tr>';
   const open=M.filter(isOpen).length, late=M.filter(isLate).length;
   const b=$('mdBadge'); b.textContent=open?String(open):''; b.className='badge nbadge'; b.style.background=open?(late?'#ce0500':'#b34000'):''; b.style.display=open?'':'none';
-  const names=new Set(M.map(m=>m.media).filter(Boolean)); CONTACTS().filter(c=>c.groupe==='Presse'&&c.org).forEach(c=>names.add(c.org));
-  $('dlMedia').innerHTML=[...names].sort().map(n=>`<option value="${esc(n)}">`).join('');
+  renderMedList();
 }
 $('mdAdd').onclick=async()=>{
   if(!can('media')) return;
   const q=$('mdQuestion').value.trim(), med=$('mdMedia').value.trim();
   if(!q||!med){ toast('Média et question obligatoires'); return; }
-  const h=hhmmToTs($('mdHeure').value,Date.now(),'past')||Date.now(), b=hhmmToTs($('mdBouclage').value,h,'after');
+  const h=(mdManual?hhmmToTs($('mdHeure').value,Date.now(),'past'):null)||Date.now(), b=hhmmToTs($('mdBouclage').value,h,'after');
   await DB.add(TN.M,{HeureAppel:h/1000,Media:med,Journaliste:$('mdJourn').value.trim(),Contact:$('mdContact').value.trim(),Canal:$('mdCanal').value,Question:q,Bouclage:b?b/1000:0,Statut:'À traiter',Reponse:'',HeureReponse:0});
   resetMdForm(); $('mdMedia').focus(); toast('Question enregistrée');
 };
@@ -1413,14 +1506,14 @@ $('mdCsv').onclick=()=>{
 setInterval(renderMedia,60000);
 
 /* ---------- journal de la cellule ---------- */
-const EVN={NOTE:'Note',ACTION:'Action',POSTE_OK:'Poste',COD_OUVERT:'COD',COD_CLOTURE:'COD',NIVEAU:'Niveau',NOM:'Intitulé',DEROGATION:'Dérogation',CRISE:'Crise'};
+const EVN={NOTE:'Note',ACTION:'Action',POSTE_OK:'Poste',COD_OUVERT:'COD',COD_CLOTURE:'COD',NIVEAU:'Niveau',NOM:'Intitulé',DEROGATION:'Dérogation',CRISE:'Crise',COD_REOUVERT:'COD'};
 function evText(e){
   switch(e.type){
     case 'POSTE_OK': return `Poste prêt — ${e.auteur} (${e.fonction}) — ${e.texte}`;
     case 'NIVEAU': return 'Niveau : '+e.texte;
     case 'NOM': return 'Intitulé de la crise : '+e.texte;
     case 'CRISE': return e.texte+(e.auteur?' — '+e.auteur:'');
-    case 'COD_OUVERT': case 'COD_CLOTURE': return e.texte+' — '+e.auteur;
+    case 'COD_OUVERT': case 'COD_CLOTURE': case 'COD_REOUVERT': return e.texte+' — '+e.auteur;
     case 'DEROGATION': return `Dérogation — ${e.auteur} : ${e.texte}`;
     default: return (e.auteur?`[${e.auteur}] `:'')+e.texte;
   }
@@ -1439,11 +1532,16 @@ $('lTxtDl').onclick=()=>download(new Blob([`JOURNAL DE LA CELLULE – ${ST.nom}\
    ===================================================== */
 const fmtFull=ts=>{ const d=new Date(ts); return `${two(d.getDate())}/${two(d.getMonth()+1)}/${d.getFullYear()} à ${two(d.getHours())} h ${two(d.getMinutes())}`; };
 const dur=ms=>{ const m=Math.max(0,Math.round(ms/60000)); return Math.floor(m/60)+' h '+two(m%60); };
+let repDate='', repIso='';
 function buildReport(){
   const c=CRISES().find(x=>x.ref===cur); if(!c) return null;
   const st=ST, J=JOURNAL(), M=MED().sort((a,b)=>a.h-b.h), CP=COMMUNIQUES(), V=VISUELS(), mails=MAILS().filter(m=>m.crise===cur&&(m.statut==='Préparé'||m.statut==='Envoyé')).sort((a,b)=>a.t-b.t), CM=COMMUNES();
   const N=[];
-  N.push({k:'title',t:'RAPPORT DE CRISE'},{k:'sub',t:critNom(c)});
+  const ld=ts=>new Date(ts).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+  const d0=st.h0||c.t||Date.now(), d1=st.h1||Date.now();
+  repDate=ld(d0)===ld(d1)?'du '+ld(d0):'du '+ld(d0)+' au '+ld(d1);
+  repIso=new Date(d0).toISOString().slice(0,10);
+  N.push({k:'title',t:'RAPPORT DE CRISE '+repDate.toUpperCase()},{k:'sub',t:critNom(c)});
   N.push({k:'h',t:'1. Synthèse'});
   const agents=[]; J.filter(e=>e.type==='POSTE_OK').forEach(e=>{ const s=`${e.auteur} (${e.fonction})`; if(!agents.includes(s)) agents.push(s); });
   N.push({k:'ul',items:[
@@ -1462,7 +1560,7 @@ function buildReport(){
   if(CP.length) CP.forEach(x=>N.push({k:'cp',titre:x.titre||'(sans titre)',point:x.point,meta:`${fmtFull(x.t)} — ${x.statut}${x.auteur?' — '+x.auteur:''}${x.exo?' — exercice':''}`,corps:x.corps,exo:x.exo}));
   else N.push({k:'p',t:'Aucun communiqué enregistré.'});
   N.push({k:'h',t:'4. Visuels pour les réseaux sociaux'});
-  N.push(V.length?{k:'ul',items:V.map(v=>`${fmtFull(v.t)} — ${v.titre||'(sans titre)'} — ${v.format} — ${v.fichier}${v.auteur?' — '+v.auteur:''}`)}:{k:'p',t:'Aucun visuel enregistré.'});
+  N.push(V.length?{k:'ul',items:V.map(v=>`${fmtFull(v.t)} — ${v.titre||'(sans titre)'} — ${v.format} — ${v.fichier}${v.pubs.length?' — publié sur '+v.pubs.map(p=>p.r+' ('+fmtFull(p.t)+(p.a?', '+p.a:'')+')').join(', '):' — publication non renseignée'}${v.auteur?' — créé par '+v.auteur:''}`)}:{k:'p',t:'Aucun visuel enregistré.'});
   N.push({k:'h',t:'5. Main courante média'});
   N.push(M.length?{k:'ul',items:M.map(m=>`${fmtFull(m.h)} — ${m.media}${m.journaliste?' ('+m.journaliste+')':''}, ${m.canal} : « ${m.question.replace(/\s*\n\s*/g,' ')} » → ${m.statut}${m.repH?' en '+dur(m.repH-m.h):''}${m.reponse?' — Réponse : '+m.reponse.replace(/\s*\n\s*/g,' '):''}`)}:{k:'p',t:'Aucune question enregistrée.'});
   N.push({k:'h',t:'6. Mails'});
@@ -1505,7 +1603,7 @@ function renderRapport(){
   $('rapPage').innerHTML=N?reportHtml(N):'<p class="empty">Aucune crise sélectionnée.</p>';
 }
 $('rapRef').onclick=renderRapport;
-$('rapTxt').onclick=()=>{ const N=buildReport(); if(!N){ toast('Aucune crise sélectionnée'); return; } download(new Blob([reportText(N)],{type:'text/plain;charset=utf-8'}),`rapport-${slug(ST.nom)}-${fileStamp()}.txt`); };
+$('rapTxt').onclick=()=>{ const N=buildReport(); if(!N){ toast('Aucune crise sélectionnée'); return; } download(new Blob([reportText(N)],{type:'text/plain;charset=utf-8'}),`Rapport_de_crise_${repIso}_-_${slug(ST.nom)}.txt`); };
 function odtList(items){ return `<text:list text:style-name="L1">${items.map(t=>`<text:list-item><text:p text:style-name="P12">${xe(t)}</text:p></text:list-item>`).join('')}</text:list>`; }
 function buildReportOdt(N){
   const enc=new TextEncoder();
@@ -1532,7 +1630,7 @@ function buildReportOdt(N){
   }).join('');
   const content=c.slice(0,j)+body+'</office:text></office:body></office:document-content>';
   const now=new Date().toISOString().replace(/\.\d+Z$/,'');
-  const meta=`<?xml version="1.0" encoding="UTF-8"?>\n<office:document-meta xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:meta="urn:oasis:names:tc:opendocument:xmlns:meta:1.0" office:version="1.3"><office:meta><meta:generator>Tableau de bord de crise</meta:generator><dc:title>${xe('Rapport de crise – '+(ST.nom||''))}</dc:title><meta:creation-date>${now}</meta:creation-date></office:meta></office:document-meta>`;
+  const meta=`<?xml version="1.0" encoding="UTF-8"?>\n<office:document-meta xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:meta="urn:oasis:names:tc:opendocument:xmlns:meta:1.0" office:version="1.3"><office:meta><meta:generator>Tableau de bord de crise</meta:generator><dc:title>${xe('Rapport de crise '+repDate+' – '+(ST.nom||''))}</dc:title><meta:creation-date>${now}</meta:creation-date></office:meta></office:document-meta>`;
   const manifest=`<?xml version="1.0" encoding="UTF-8"?>
 <manifest:manifest xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0" manifest:version="1.4" xmlns:loext="urn:org:documentfoundation:names:experimental:office:xmlns:loext:1.0">
  <manifest:file-entry manifest:full-path="/" manifest:version="1.4" manifest:media-type="application/vnd.oasis.opendocument.text"/>
@@ -1552,7 +1650,7 @@ function buildReportOdt(N){
 }
 $('rapOdt').onclick=()=>{
   const N=buildReport(); if(!N){ toast('Aucune crise sélectionnée'); return; }
-  download(new Blob([buildReportOdt(N)],{type:'application/vnd.oasis.opendocument.text'}),`Rapport_de_crise_-_${slug(ST.nom)}_-_${fileStamp()}.odt`);
+  download(new Blob([buildReportOdt(N)],{type:'application/vnd.oasis.opendocument.text'}),`Rapport_de_crise_${repIso}_-_${slug(ST.nom)}.odt`);
   toast('Rapport créé : ouvrez-le depuis les téléchargements');
 };
 
