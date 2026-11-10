@@ -90,6 +90,8 @@
   .chip.st-attente{background:var(--attente);}
   .chip.st-termine{background:var(--ok);}
   .chip.st-annule{background:var(--annule);}
+  select.chip.statut-rapide{border:none;cursor:pointer;font-family:inherit;padding:3px 6px;appearance:auto;}
+  select.chip.statut-rapide option{background:#fff;color:#12162a;}
   .chip.pr-urgente{background:var(--urgent);}
   .chip.pr-haute{background:#d97b2a;}
   .chip.pr-normale{background:#8a90a3;}
@@ -782,7 +784,7 @@ function renderTaches(){
             <td>${t.fields.Agent||""}</td>
             <td><span class="chip ${PRIORITE_CLASS[t.fields.Priorite]||''}">${t.fields.Priorite||"Normale"}</span></td>
             <td>${fmtDateHuman(ech)}</td>
-            <td><span class="chip ${STATUT_CLASS[t.fields.Statut]||''}">${t.fields.Statut||""}</span></td>
+            <td><select class="chip statut-rapide ${STATUT_CLASS[t.fields.Statut]||''}" title="Changer le statut" onchange="changeStatutRapide(${t.id}, this.value)">${STATUTS.map(st=>`<option value="${st}" ${t.fields.Statut===st?'selected':''}>${st}</option>`).join("")}</select></td>
             <td style="white-space:nowrap;">
               <button class="btn small ghost" onclick="openTacheModal(${t.id})">Ouvrir</button>
               <button class="btn small ghost" style="color:var(--urgent);border-color:var(--urgent);" onclick="deleteTacheQuick(${t.id})">✕</button>
@@ -824,6 +826,22 @@ async function moveTacheOrdre(id, direction){
     await refreshAll();
     renderTaches();
   }catch(e){ toast(e.message, true); }
+}
+
+// Changement de statut directement depuis la liste (sans ouvrir la boîte de dialogue).
+async function changeStatutRapide(id, statut){
+  const t = STATE.taches.find(x=>x.id===id);
+  if(!t || t.fields.Statut===statut) return;
+  const fields = { Statut: statut };
+  if(statut==="Terminé" && t.fields.Statut!=="Terminé") fields.DateCloture = toGristDate(todayISO());
+  const y = window.scrollY;
+  try{
+    await GristAPI.updateRecord("Taches", id, fields);
+    await refreshAll();
+    renderTaches();
+    window.scrollTo(0, y);
+    toast(`Statut : ${statut}`);
+  }catch(e){ toast(e.message, true); renderTaches(); }
 }
 
 async function deleteTacheQuick(id){
