@@ -248,7 +248,7 @@ function eligible(type){
   const delai=+p.delaiRelance||0,lim=new Date();lim.setDate(lim.getDate()-delai);
   return S.inv.filter(i=>emails(i.Email).length&&i.DateInvitation&&!answered(i)&&(!delai||new Date((i.DateRelance||i.DateInvitation)+'T00:00:00')<=lim));
 }
-function normPres(v){v=s_(v);if(/^je serai|^pr[ée]sent/i.test(v))return 'Présent';if(/^je ne|^excus/i.test(v))return 'Excusé';return '';}
+function normPres(v){v=norm(v);if(!v)return '';if(/nepourrai|pas|non|excus|regret|absent|indisponible/.test(v))return 'Excusé';if(/present|oui|serai|participe|viendrai|confirme|ok/.test(v))return 'Présent';return '';}
 function respDate(r){return r.RecuLe?new Date(r.RecuLe*1000).toISOString().slice(0,10):todayIso();}
 function respFields(r){
   const p=normPres(r.Presence);
@@ -256,7 +256,7 @@ function respFields(r){
 }
 function findInviteByEmail(e){e=s_(e).trim().toLowerCase();if(!e)return null;return S.inv.find(i=>emails(i.Email).includes(e))||null;}
 async function syncReponses(){
-  const todo=S.rep.filter(r=>!r.Traitee&&normPres(r.Presence)).sort((a,b)=>a.id-b.id);
+  const todo=S.rep.filter(r=>repState(r).k==='rap').sort((a,b)=>a.id-b.id);
   const acts=[];let n=0;
   todo.forEach(r=>{
     const inv=findInviteByEmail(r.Email);if(!inv)return;
@@ -266,7 +266,14 @@ async function syncReponses(){
   if(acts.length)await act(acts);
   return n;
 }
-const unmatched=()=>S.rep.filter(r=>!r.Traitee);
+function repState(r){
+  const inv=r.Invite>0?S.inv.find(i=>i.id===r.Invite):null;
+  if(inv)return {k:'ok',t:'Intégrée → '+dispName(inv)};
+  if(r.Invite===-1)return {k:'ign',t:'Ignorée'};
+  if(!normPres(r.Presence))return {k:'bad',t:'Texte de réponse non reconnu'};
+  return {k:'rap',t:'Adresse inconnue : à rapprocher'};
+}
+const unmatched=()=>S.rep.filter(r=>{const k=repState(r).k;return k==='rap'||k==='bad';});
 async function refresh(silent){
   if(busy)return;busy=true;
   try{
@@ -525,13 +532,13 @@ async function confirmSent(){
 }
 
 /* ----------------------------- Rendu ----------------------------- */
-const TABS=[['dash','Tableau de bord'],['inv','Invités'],['send','Envois'],['exp','Exports'],['day','Jour J'],['cfg','Réglages']];
+const TABS=[['dash','Tableau de bord'],['inv','Invités'],['rep','Réponses reçues'],['send','Envois'],['exp','Exports'],['day','Jour J'],['cfg','Réglages']];
 function renderTabs(){
   const n=unmatched().length;
   $('#tabs').innerHTML=TABS.map(([k,l])=>'<button class="'+(UI.tab===k?'on':'')+'" data-tab="'+k+'">'+l+(k==='inv'&&n?' <span class="badge b-relance">'+n+' à rapprocher</span>':'')+'</button>').join('');
   $('#ttl').textContent=P().titre;
 }
-function render(){renderTabs();const m=$('#main');({dash:rDash,inv:rInv,send:rSend,exp:rExp,day:rDay,cfg:rCfg})[UI.tab](m);}
+function render(){renderTabs();const m=$('#main');({dash:rDash,inv:rInv,rep:rRep,send:rSend,exp:rExp,day:rDay,cfg:rCfg})[UI.tab](m);}
 
 function badge(i){const k=status(i);return '<span class="badge b-'+k+'">'+STAT_LABEL[k]+'</span>';}
 function rDash(m){
@@ -589,6 +596,15 @@ function invRows(){
 function pendingBox(type){
   const pd=UI.pending;if(!pd||pd.type!==type)return '';
   return '<div class="ok"><b>Étape 2 – après l’envoi dans Thunderbird</b><br>'+pd.files+' fichier(s) .eml téléchargé(s) pour '+pd.n+' adresse(s). Ouvrez-le, vérifiez, envoyez, puis cliquez :<br><button class="b" data-act="confirm-sent" style="margin-top:6px">J’ai envoyé le mail → enregistrer l’envoi</button> <button class="b sec" data-act="cancel-sent" style="margin-top:6px">Annuler</button></div>';
+}
+function rRep(m){
+  const L=S.rep.slice().sort((a,b)=>b.id-a.id),um=unmatched().length;
+  const lab={ok:'b-present',ign:'b-excuse',bad:'b-relance',rap:'b-sansmail'};
+  m.innerHTML=(um?'<div class="warn"><b>'+um+' réponse(s)</b> à traiter. <button class="b sm" data-act="rap">Rapprocher</button></div>':'')+
+  '<p class="muted small">Toutes les lignes de la table « Reponses » (formulaire), de la plus récente à la plus ancienne. '+L.length+' réponse(s) reçue(s).</p>'+
+  '<table class="t"><thead><tr><th>Reçue le</th><th>Adresse saisie</th><th>Réponse</th><th class="num">Acc.</th><th>État</th><th></th></tr></thead><tbody>'+
+  (L.length?L.map(r=>{const st=repState(r);return '<tr><td class="nowrap small">'+(r.RecuLe?new Date(r.RecuLe*1000).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'—')+'</td><td>'+esc(r.Email)+'</td><td class="small">'+esc(r.Presence)+'</td><td class="num">'+(r.NbAccompagnants||'')+'</td><td><span class="badge '+lab[st.k]+'">'+esc(st.t)+'</span></td><td class="nowrap">'+
+    (st.k==='ok'||st.k==='ign'?'<button class="b sec sm" data-redo="'+r.id+'">Retraiter</button>':'<button class="b sm" data-act="rap">Rapprocher</button>')+'</td></tr>';}).join(''):'<tr><td colspan="6" class="muted">Aucune réponse reçue pour l’instant.</td></tr>')+'</tbody></table>';
 }
 function rSend(m){
   const p=P(),inv=eligible('invitation'),rel=eligible('relance');
@@ -663,8 +679,8 @@ async function saveInvite(id){
 function openRap(){
   const L=unmatched();
   modal('<h2>Réponses à rapprocher</h2><p class="muted small">Ces réponses viennent d’une adresse e-mail absente de la base. Choisissez l’invité concerné : l’adresse y sera ajoutée et ses prochaines réponses seront rapprochées automatiquement.</p>'+
-   (L.length?L.map(r=>'<div class="panel" data-rap="'+r.id+'"><b>'+esc(r.Email||'(sans adresse)')+'</b> — '+esc(r.Presence)+(r.NbAccompagnants?' (+'+r.NbAccompagnants+')':'')+(r.Accompagnants?' : '+esc(r.Accompagnants):'')+(r.RepresentePar?' — représenté par '+esc(r.RepresentePar):'')+(r.Remarques?'<br><span class="muted small">'+esc(r.Remarques)+'</span>':'')+
-   '<div class="row"><input data-rapq="'+r.id+'" placeholder="Rechercher l’invité (nom, prénom…)"><button class="b sec sm" data-rapnew="'+r.id+'">Créer un nouvel invité</button><button class="b sec sm" data-rapign="'+r.id+'">Ignorer</button></div><div data-rapres="'+r.id+'"></div></div>').join(''):'<p class="ok">Tout est rapproché.</p>')+
+   (L.length?L.map(r=>'<div class="panel" data-rap="'+r.id+'"><b>'+esc(r.Email||'(sans adresse)')+'</b> — '+esc(r.Presence||'(réponse vide)')+(r.NbAccompagnants?' (+'+r.NbAccompagnants+')':'')+(r.Accompagnants?' : '+esc(r.Accompagnants):'')+(r.RepresentePar?' — représenté par '+esc(r.RepresentePar):'')+(r.Remarques?'<br><span class="muted small">'+esc(r.Remarques)+'</span>':'')+
+   (repState(r).k==='bad'?'<div class="warn small">Texte de réponse non reconnu : « '+esc(r.Presence)+' ». <button class="b sm" data-fix="'+r.id+'|Présent">Compter comme présent</button> <button class="b sm" data-fix="'+r.id+'|Excusé">Compter comme excusé</button></div>':'')+'<div class="row"><input data-rapq="'+r.id+'" placeholder="Rechercher l’invité (nom, prénom…)"><button class="b sec sm" data-rapnew="'+r.id+'">Créer un nouvel invité</button><button class="b sec sm" data-rapign="'+r.id+'">Ignorer</button></div><div data-rapres="'+r.id+'"></div></div>').join(''):'<p class="ok">Tout est rapproché.</p>')+
    '<div class="row"><button class="b" data-act="close">Fermer</button></div>');
 }
 async function assignResp(rid,iid){
@@ -677,7 +693,7 @@ async function assignResp(rid,iid){
 
 /* ----------------------------- Événements ----------------------------- */
 document.addEventListener('click',async ev=>{
-  const t=ev.target.closest('[data-tab],[data-act],[data-edit],[data-gen],[data-gen-test],[data-prev],[data-doc],[data-catup],[data-catdn],[data-delimg],[data-rapnew],[data-rapign],[data-pick]');if(!t)return;
+  const t=ev.target.closest('[data-tab],[data-act],[data-edit],[data-gen],[data-gen-test],[data-prev],[data-doc],[data-catup],[data-catdn],[data-delimg],[data-rapnew],[data-rapign],[data-pick],[data-fix],[data-redo]');if(!t)return;
   try{
     if(t.dataset.tab){UI.tab=t.dataset.tab;render();return;}
     if(t.dataset.edit){openInvite(+t.dataset.edit);return;}
@@ -691,8 +707,10 @@ document.addEventListener('click',async ev=>{
       const a=S.cat[k],b=S.cat[k2];const oa=a.Ordre,ob=b.Ordre;
       await act([['UpdateRecord','Categories',a.id,{Ordre:ob===oa?ob+(t.dataset.catup?-1:1):ob}],['UpdateRecord','Categories',b.id,{Ordre:oa}]]);
       S.cat=(await fetchRows('Categories')).sort((x,y)=>(x.Ordre||0)-(y.Ordre||0)||x.id-y.id);render();return;}
-    if(t.dataset.rapnew){const r=S.rep.find(x=>x.id===+t.dataset.rapnew);const f=Object.assign({Email:s_(r.Email).trim(),Categorie:'',Nom:s_(r.Email).trim()},respFields(r));await act([['AddRecord','Invites',null,f]]);await loadAll();const inv=findInviteByEmail(r.Email);if(inv)await act([['UpdateRecord','Reponses',r.id,{Traitee:true,Invite:inv.id}]]);r.Traitee=true;toast('Invité créé : complétez sa fiche');openRap();render();return;}
-    if(t.dataset.rapign){const r=S.rep.find(x=>x.id===+t.dataset.rapign);await act([['UpdateRecord','Reponses',r.id,{Traitee:true}]]);r.Traitee=true;openRap();render();return;}
+    if(t.dataset.rapnew){const r=S.rep.find(x=>x.id===+t.dataset.rapnew);const f=Object.assign({Email:s_(r.Email).trim(),Categorie:'',Nom:s_(r.Email).trim()},respFields(r));await act([['AddRecord','Invites',null,f]]);await loadAll();const inv=findInviteByEmail(r.Email);if(inv){await act([['UpdateRecord','Reponses',r.id,{Traitee:true,Invite:inv.id}]]);r.Traitee=true;r.Invite=inv.id;}toast('Invité créé : complétez sa fiche');openRap();render();return;}
+    if(t.dataset.rapign){const r=S.rep.find(x=>x.id===+t.dataset.rapign);await act([['UpdateRecord','Reponses',r.id,{Traitee:true,Invite:-1}]]);r.Traitee=true;r.Invite=-1;openRap();render();return;}
+    if(t.dataset.fix){const [id,v]=t.dataset.fix.split('|');const r=S.rep.find(x=>x.id===+id);const lbl=v==='Présent'?PRES_OUI:PRES_NON;await act([['UpdateRecord','Reponses',r.id,{Presence:lbl}]]);r.Presence=lbl;await syncReponses();openRap();render();return;}
+    if(t.dataset.redo){const r=S.rep.find(x=>x.id===+t.dataset.redo);await act([['UpdateRecord','Reponses',r.id,{Traitee:false,Invite:0}]]);r.Traitee=false;r.Invite=0;await syncReponses();render();toast('Réponse retraitée');return;}
     if(t.dataset.pick){await assignResp(+t.dataset.rid,+t.dataset.pick);return;}
     switch(t.dataset.act){
       case 'refresh':await refresh();break;
