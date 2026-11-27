@@ -6,100 +6,127 @@
 <title>Vœux – Invitations</title>
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <style>
-:root{--bleu:#000091;--bleu2:#e3e3fd;--rouge:#e1000f;--gris:#f6f6f6;--bord:#dddddd;--txt:#161616;--mute:#666;--vert:#18753c;--vert2:#b8fec9;--orange:#b34000;--orange2:#ffe9e6;--jaune2:#feebd0}
+:root{--bleu:#000091;--bleu2:#e3e3fd;--bleu3:#f5f5fe;--rouge:#e1000f;--gris:#f6f6f6;--bord:#dddddd;--txt:#161616;--mute:#555;--vert:#18753c;--vert2:#b8fec9;--orange:#b34000;--orange2:#ffe9e6;--jaune2:#feebd0}
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;font:14px/1.45 Arial,Helvetica,sans-serif;color:var(--txt);background:#fff}
-header.top{display:flex;align-items:center;gap:14px;padding:8px 14px;border-bottom:3px solid var(--bleu);background:#fff;position:sticky;top:0;z-index:5;flex-wrap:wrap}
-header.top h1{font-size:16px;margin:0;color:var(--bleu)}
-header.top .flag{display:inline-block;width:26px;height:18px;background:linear-gradient(90deg,var(--bleu) 0 33%,#fff 33% 66%,var(--rouge) 66%);border:1px solid var(--bord)}
-nav.tabs{display:flex;gap:2px;flex-wrap:wrap;flex:1}
-nav.tabs button{border:0;background:transparent;padding:8px 12px;font:inherit;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-11px;color:var(--txt)}
-nav.tabs button.on{color:var(--bleu);border-bottom-color:var(--bleu);font-weight:bold}
-nav.tabs button:hover{background:var(--gris)}
-.right{display:flex;gap:8px;align-items:center;color:var(--mute);font-size:12px}
-main{padding:14px;max-width:1300px;margin:0 auto}
-button.b,label.b{display:inline-block;border:1px solid var(--bleu);background:var(--bleu);color:#fff;padding:6px 12px;font:inherit;cursor:pointer;border-radius:3px}
+html,body{margin:0;padding:0;font:16px/1.5 "Segoe UI",Arial,Helvetica,sans-serif;color:var(--txt);background:#fff}
+.app{display:grid;grid-template-columns:285px 1fr;min-height:100vh}
+.side{background:var(--bleu3);border-right:1px solid #dcdcf5;padding:16px 12px;position:sticky;top:0;align-self:start;height:100vh;overflow:auto}
+.brand{display:flex;gap:10px;align-items:center;margin:0 4px 16px}
+.flag{width:32px;height:22px;background:linear-gradient(90deg,var(--bleu) 0 33%,#fff 33% 66%,var(--rouge) 66%);border:1px solid #ccc;flex:none}
+.brand b{color:var(--bleu);font-size:18px;line-height:1.15}.brand span{display:block;font-weight:normal;font-size:13px;color:#444}
+.step{display:flex;gap:11px;align-items:flex-start;padding:10px 9px;border-radius:8px;margin-bottom:3px;cursor:pointer;border:0;background:transparent;width:100%;text-align:left;font:inherit;color:inherit}
+.step:hover{background:#ebebfc}
+.step .n{flex:none;width:32px;height:32px;border-radius:50%;background:#fff;border:2px solid #9a9aef;color:var(--bleu);font-weight:bold;display:flex;align-items:center;justify-content:center}
+.step.done .n{background:var(--vert);border-color:var(--vert);color:#fff}
+.step.now{background:#fff;box-shadow:0 1px 6px rgba(0,0,145,.18);border-left:5px solid var(--bleu)}
+.step.now .n{background:var(--bleu);border-color:var(--bleu);color:#fff}
+.step b{font-size:16px;display:block;line-height:1.25}.step small{display:block;color:var(--mute);font-size:13px;margin-top:1px}
+.step .alert{display:inline-block;background:var(--rouge);color:#fff;border-radius:10px;padding:0 8px;font-size:12px;margin-left:4px}
+.side .sep{border-top:1px solid #dcdcf5;margin:12px 4px}
+.side .small-link{display:block;width:100%;text-align:left;background:none;border:0;padding:7px 9px;font:inherit;font-size:14px;color:var(--bleu);cursor:pointer;border-radius:6px}
+.side .small-link:hover{background:#ebebfc}.side .small-link.on{font-weight:bold;background:#fff}
+.helpbox{margin:12px 4px 0;border:2px dashed var(--bleu);border-radius:10px;padding:10px 12px;color:var(--bleu);font-size:14px;background:#fff}
+.syncinfo{margin:10px 6px 0;font-size:12px;color:#666}
+main{padding:26px 38px 40px;max-width:1150px}
+h1{font-size:28px;margin:0 0 4px;color:var(--bleu);line-height:1.2}
+.lead{font-size:18px;margin:0 0 18px;color:#333}
+h2{font-size:19px;margin:0 0 8px;color:var(--bleu)}
+h3{font-size:16px;margin:14px 0 4px}
+.muted{color:var(--mute)}.small{font-size:13px}.nowrap{white-space:nowrap}
+.big{display:flex;align-items:center;gap:26px;background:var(--gris);border-radius:12px;padding:18px 22px;margin-bottom:18px;flex-wrap:wrap}
+.ring{width:118px;height:118px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none}
+.ring i{width:86px;height:86px;border-radius:50%;background:var(--gris);display:flex;align-items:center;justify-content:center;font-style:normal;font-size:24px;font-weight:bold;color:var(--vert)}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;flex:1;min-width:260px}
+.fig{background:#fff;border-radius:10px;padding:10px 13px;border:1px solid #e1e1e1}
+.fig b{display:block;font-size:30px;line-height:1.1}.fig span{font-size:14px;color:#444}
+.actions{display:grid;gap:12px;margin:14px 0}
+.act{display:flex;align-items:center;gap:16px;text-align:left;border:2px solid var(--bleu);background:#fff;color:var(--bleu);border-radius:12px;padding:14px 20px;font:inherit;font-size:18px;font-weight:bold;cursor:pointer;width:100%}
+.act:hover{background:var(--bleu2)}
+.act.main{background:var(--bleu);color:#fff;font-size:20px;padding:17px 22px}.act.main:hover{background:#1212ff}
+.act.orange{border-color:var(--orange);color:var(--orange)}.act.orange:hover{background:var(--orange2)}
+.act:disabled{opacity:.45;cursor:not-allowed}
+.act .ic{font-size:28px;flex:none;width:42px;text-align:center}
+.act small{display:block;font-weight:normal;font-size:14px;opacity:.92;margin-top:1px}
+label.act{display:flex}
+.foot{margin-top:26px;display:flex;justify-content:space-between;align-items:center;color:#555;font-size:14px;gap:10px}
+button.b,label.b{display:inline-block;border:1px solid var(--bleu);background:var(--bleu);color:#fff;padding:7px 14px;font:inherit;cursor:pointer;border-radius:4px}
 button.b:hover,label.b:hover{background:#1212ff}
-button.b.sec,label.b.sec{background:#fff;color:var(--bleu)}
-button.b.sec:hover,label.b.sec:hover{background:var(--bleu2)}
+button.b.sec,label.b.sec{background:#fff;color:var(--bleu)}button.b.sec:hover,label.b.sec:hover{background:var(--bleu2)}
 button.b.red{background:var(--rouge);border-color:var(--rouge)}
+button.b.vert{background:var(--vert);border-color:var(--vert)}
 button.b:disabled{opacity:.45;cursor:not-allowed}
-button.b.sm{padding:2px 8px;font-size:12px}
-input,select,textarea{font:inherit;border:1px solid #929292;border-radius:3px;padding:5px 7px;background:#fff;max-width:100%}
+button.b.sm{padding:3px 10px;font-size:13px}
+button.nav{border:2px solid #999;background:#fff;border-radius:10px;padding:9px 18px;font:inherit;font-size:16px;cursor:pointer}
+button.nav:hover{background:var(--gris)}
+input,select,textarea{font:inherit;border:1px solid #929292;border-radius:4px;padding:6px 8px;background:#fff;max-width:100%}
 textarea{width:100%;min-height:70px}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:10px 0}
-.kpi{border:1px solid var(--bord);border-top:4px solid var(--bleu);padding:10px 12px;background:#fff;cursor:default}
-.kpi .n{font-size:28px;font-weight:bold;color:var(--bleu);line-height:1.1}
-.kpi .l{font-size:12px;color:var(--mute)}
-.kpi.vert{border-top-color:var(--vert)}.kpi.vert .n{color:var(--vert)}
-.kpi.orange{border-top-color:var(--orange)}.kpi.orange .n{color:var(--orange)}
-.kpi.click{cursor:pointer}.kpi.click:hover{background:var(--gris)}
-.panel{border:1px solid var(--bord);padding:12px 14px;margin:12px 0;background:#fff}
-.panel h2{font-size:15px;margin:0 0 8px;color:var(--bleu)}
-.panel h3{font-size:14px;margin:12px 0 4px}
+.panel{border:1px solid var(--bord);padding:12px 16px;margin:12px 0;background:#fff;border-radius:6px}
+.panel.alert{border-left:6px solid var(--orange);background:#fffaf5}
+.warn{background:var(--jaune2);border-left:5px solid var(--orange);padding:9px 12px;margin:10px 0;border-radius:4px}
+.okbox{background:#e6f6ea;border-left:5px solid var(--vert);padding:9px 12px;margin:10px 0;border-radius:4px}
+.pills{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px}
+.pill{border:2px solid var(--bleu);background:#fff;color:var(--bleu);border-radius:30px;padding:5px 16px;font:inherit;cursor:pointer}
+.pill.on{background:var(--bleu);color:#fff}
 table.t{border-collapse:collapse;width:100%}
-table.t th,table.t td{border-bottom:1px solid var(--bord);padding:5px 7px;text-align:left;vertical-align:top}
-table.t th{background:var(--gris);font-size:12px;position:sticky;top:44px;z-index:2}
+table.t th,table.t td{border-bottom:1px solid var(--bord);padding:6px 8px;text-align:left;vertical-align:top}
+table.t th{background:var(--gris);font-size:13px}
 table.t td.num,table.t th.num{text-align:right;font-variant-numeric:tabular-nums}
 table.t tr:hover td{background:#fafafa}
 table.t tr.tot td{font-weight:bold;border-top:2px solid var(--bleu);background:var(--gris)}
-.badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;white-space:nowrap}
-.b-present{background:var(--vert2);color:#0a5a28}
-.b-excuse{background:#e5e5e5;color:#3a3a3a}
-.b-represente{background:#dfe7fd;color:#000091}
-.b-invite{background:var(--jaune2);color:#6e4a00}
-.b-relance{background:var(--orange2);color:var(--orange)}
-.b-ainviter{background:#f0f0f0;color:#555;border:1px dashed #999}
-.b-sansmail{background:#f4d7f4;color:#6b006b}
-.b-attente{background:#fff3b0;color:#6a5a00}
-.bar{height:8px;background:#e9e9e9;border-radius:4px;overflow:hidden;min-width:70px}
-.bar i{display:block;height:100%;background:var(--vert)}
+table.cmp th{width:26%;font-weight:normal;color:#555;background:#fafafa}
+table.cmp td.diff{background:var(--jaune2);font-weight:bold}
+.badge{display:inline-block;padding:1px 9px;border-radius:10px;font-size:13px;white-space:nowrap}
+.b-present{background:var(--vert2);color:#0a5a28}.b-excuse{background:#e5e5e5;color:#3a3a3a}.b-represente{background:#dfe7fd;color:var(--bleu)}
+.b-invite{background:var(--jaune2);color:#6e4a00}.b-relance{background:var(--orange2);color:var(--orange)}
+.b-ainviter{background:#f0f0f0;color:#555;border:1px dashed #999}.b-sansmail{background:#f4d7f4;color:#6b006b}.b-attente{background:#fff3b0;color:#6a5a00}
+.b-modif{background:#dfe7fd;color:var(--bleu);border:1px solid #9a9aef}
+.bar{height:8px;background:#e9e9e9;border-radius:4px;overflow:hidden;min-width:70px}.bar i{display:block;height:100%;background:var(--vert)}
 .bar.jauge{height:16px}.bar.jauge i{background:var(--bleu)}.bar.jauge.full i{background:var(--rouge)}
-.muted{color:var(--mute)}.small{font-size:12px}
-.warn{background:var(--jaune2);border-left:4px solid #b34000;padding:8px 10px;margin:8px 0}
-.ok{background:#e6f6ea;border-left:4px solid var(--vert);padding:8px 10px;margin:8px 0}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
 .field{display:flex;flex-direction:column;gap:2px;margin:6px 0;flex:1 1 200px}
-.field label{font-size:12px;color:var(--mute)}
+.field label{font-size:13px;color:var(--mute)}
 .fields{display:flex;gap:10px;flex-wrap:wrap}
-#modalBg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;z-index:50;overflow:auto;padding:30px 10px}
-#modal{background:#fff;max-width:900px;width:100%;padding:16px 18px;border-top:4px solid var(--bleu);box-shadow:0 8px 30px rgba(0,0,0,.3)}
-#modal h2{margin:0 0 8px;color:var(--bleu);font-size:17px}
-#toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:#161616;color:#fff;padding:9px 16px;border-radius:4px;display:none;z-index:99;max-width:90%}
+details.opt{margin:10px 0;border:1px solid var(--bord);border-radius:6px;padding:8px 12px;background:#fafafa}details.opt summary{cursor:pointer;color:var(--bleu);font-weight:bold}
+#modalBg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;z-index:50;overflow:auto;padding:24px 10px}
+#modal{background:#fff;max-width:920px;width:100%;padding:16px 20px;border-top:5px solid var(--bleu);box-shadow:0 8px 30px rgba(0,0,0,.3);border-radius:0 0 8px 8px}
+#modal h2{margin:0 0 8px;font-size:20px}
+#toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:#161616;color:#fff;padding:10px 18px;border-radius:6px;display:none;z-index:99;max-width:90%;font-size:16px}
 #toast.err{background:var(--rouge)}
 #printLayer{position:fixed;inset:0;background:#fff;z-index:60;display:none;flex-direction:column}
 #printLayer .tb{display:flex;gap:8px;padding:8px 12px;border-bottom:3px solid var(--bleu);align-items:center}
 #printLayer iframe{flex:1;border:0;width:100%}
-.catrow{display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid var(--bord)}
-.catrow input{flex:1}
+.catrow{display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid var(--bord)}.catrow input[type=text]{flex:1}
 .thumb{max-width:260px;max-height:90px;border:1px solid var(--bord);display:block;margin:4px 0}
-.nowrap{white-space:nowrap}
+.rule{display:flex;gap:10px;margin:6px 0}.rule i{font-style:normal;flex:none;width:26px;height:26px;border-radius:50%;background:var(--bleu);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px}
+@media(max-width:900px){
+  .app{grid-template-columns:1fr}
+  .side{position:static;height:auto;border-right:0;border-bottom:1px solid #dcdcf5;display:flex;flex-wrap:wrap;gap:4px}
+  .side .brand{width:100%}.step{width:auto;flex:1 1 150px}.step small{display:none}.helpbox,.syncinfo{display:none}
+  main{padding:18px 14px}
+}
 </style>
 </head>
 <body>
-<header class="top">
-  <span class="flag" aria-hidden="true"></span>
-  <h1 id="ttl">Vœux – Invitations</h1>
-  <nav class="tabs" id="tabs"></nav>
-  <div class="right"><span id="syncInfo"></span><button class="b sec sm" data-act="refresh">Actualiser</button></div>
-</header>
-<main id="main"><p class="muted">Chargement…</p></main>
+<div class="app">
+  <aside class="side" id="side"></aside>
+  <main id="main"><p class="muted">Chargement…</p></main>
+</div>
 <div id="modalBg"><div id="modal"></div></div>
 <div id="printLayer"><div class="tb"><strong id="plTitle">Aperçu</strong><span style="flex:1"></span>
 <button class="b" data-act="pl-print">Imprimer</button><button class="b sec" data-act="pl-dl">Télécharger (.html)</button><button class="b sec" data-act="pl-close">Fermer</button></div>
 <iframe id="plFrame" title="Aperçu"></iframe></div>
 <div id="toast"></div>
-
 <script>
+
 'use strict';
 /* =====================================================================
-   Widget Grist « Vœux – Invitations »  — SDCIRE / Préfecture 04
+   Widget Grist « Vœux – Invitations » (Pas à pas) — SDCIRE / Préfecture 04
    Tables créées automatiquement : Invites, Reponses, Envois, Categories, Parametres
    ===================================================================== */
 const EXCELJS_URLS=['exceljs.min.js','https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'];
-const PRES_OUI='Je serai présent(e)', PRES_NON='Je ne pourrai pas être présent(e)';
+const PRES_OUI='Je serai présent(e)', PRES_NON='Je ne pourrai pas être présent(e)', AUTRE='Autre / je ne sais pas';
 
 function C(id,type,label,extra){return Object.assign({id,type:type||'Text',label:label||id},extra||{});}
 const SCHEMA={
@@ -110,21 +137,25 @@ const SCHEMA={
   C('RepresentePar','Text','Représenté par'),C('SourceReponse','Text','Source de la réponse'),C('DateReponse','Text','Date de réponse'),
   C('DateInvitation','Text','Date d’invitation'),C('NbRelances','Int','Nb relances'),C('DateRelance','Text','Dernière relance'),
   C('Rang','Int','Rang (préséance)'),C('NotesProtocole','Text','Notes protocole'),C('PresentAnneePrecedente','Bool','Présent l’an dernier'),
-  C('ListeAttente','Bool','Liste d’attente'),C('Arrive','Bool','Arrivé(e) le jour J'),C('Remarques','Text','Remarques')],
- Reponses:[C('Email','Text','Votre adresse e-mail'),
+  C('ListeAttente','Bool','Liste d’attente'),C('Arrive','Bool','Arrivé(e) le jour J'),C('Remarques','Text','Remarques'),
+  C('ReponseModifiee','Bool','Réponse modifiée (à vérifier)')],
+ Reponses:[C('Nom','Text','Nom'),C('Prenom','Text','Prénom'),C('Fonction','Text','Fonction ou titre'),
+  C('Categorie','Choice','Votre catégorie',{widgetOptions:JSON.stringify({choices:[AUTRE]})}),
+  C('Email','Text','Adresse e-mail'),
   C('Presence','Choice','Votre réponse',{widgetOptions:JSON.stringify({choices:[PRES_OUI,PRES_NON]})}),
   C('NbAccompagnants','Int','Nombre de personnes qui vous accompagnent'),C('Accompagnants','Text','Nom des personnes qui vous accompagnent'),
   C('RepresentePar','Text','Si vous êtes excusé(e) : nom de la personne qui vous représente'),C('Remarques','Text','Remarques'),
   C('RecuLe','DateTime:Europe/Paris','Reçu le',{isFormula:false,formula:'NOW()',recalcWhen:0}),
   C('Traitee','Bool','Traitée'),C('Invite','Int','Invité (id)')],
  Envois:[C('DateEnvoi','Text','Date'),C('Type','Text','Type'),C('NbDestinataires','Int','Destinataires'),C('Objet','Text','Objet'),C('Details','Text','Détails')],
- Categories:[C('Nom','Text','Nom'),C('Ordre','Int','Ordre')],
+ Categories:[C('Nom','Text','Nom'),C('Ordre','Int','Ordre'),C('PubForm','Bool','Proposée dans le formulaire')],
  Parametres:[C('Cle','Text','Clé'),C('Valeur','Text','Valeur')]
 };
 const DEF={
  titre:'Cérémonie des vœux 2027',titreListe:'Liste des invités vœux protocolaires 2027',
  dateCeremonie:'',lieu:'',dateLimite:'',lienFormulaire:'',jauge:'',
  expediteur:'',destinataireVisible:'',delaiRelance:'0',tailleLot:'0',adresseTest:'',
+ emailNotif:'pref-voeux@alpes-de-haute-provence.gouv.fr',notifJusqua:'0',pubFormInit:'',
  objetInvitation:'Invitation – Cérémonie des vœux 2027',
  objetRelance:'Rappel – Cérémonie des vœux 2027 : merci de répondre à l’invitation',
  introInvitation:'Madame la Préfète des Alpes-de-Haute-Provence a le plaisir de vous convier à',
@@ -138,7 +169,7 @@ const STAT_LABEL={ainviter:'À inviter',invite:'Invité, sans réponse',relance:
 
 /* ------------------------------ état ------------------------------ */
 const S={inv:[],rep:[],env:[],cat:[],par:{},parId:{}};
-const UI={tab:'dash',q:'',fcat:'',fstat:'',dup:false,pending:null,att:{invitation:null,relance:null},jq:'',impPreview:null,printHtml:'',printName:''};
+const UI={step:'liste',rsub:'traiter',q:'',fcat:'',fstat:'',dup:false,pending:null,pendingNotif:null,att:{invitation:null,relance:null},jq:'',printHtml:'',printName:'',incAll:false,val:null,syncInfo:''};
 let busy=false;
 
 /* ----------------------------- utilitaires ----------------------------- */
@@ -149,7 +180,7 @@ const norm=v=>s_(v).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replac
 const todayIso=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
 const fmtD=v=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s_(v));return m?m[3]+'/'+m[2]+'/'+m[1]:s_(v);};
 const P=()=>Object.assign({},DEF,S.par);
-function toast(msg,err){const t=$('#toast');t.textContent=msg;t.className=err?'err':'';t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.display='none',err?6000:3000);}
+function toast(msg,err){const t=$('#toast');t.textContent=msg;t.className=err?'err':'';t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.display='none',err?7000:3500);}
 function emails(v){const out=[],seen=new Set();s_(v).split(/[;,\s]+/).forEach(x=>{x=x.trim().toLowerCase();if(/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x)&&!seen.has(x)){seen.add(x);out.push(x);}});return out;}
 const fullName=i=>[i.Prenom,i.Nom].filter(Boolean).join(' ');
 const dispName=i=>[i.Civilite,i.Prenom,s_(i.Nom).toUpperCase()].filter(Boolean).join(' ');
@@ -181,10 +212,10 @@ async function ensureSchema(){
 }
 async function loadAll(){
   const [inv,rep,env,cat,par]=await Promise.all(['Invites','Reponses','Envois','Categories','Parametres'].map(fetchRows));
-  S.inv=inv;S.rep=rep;S.env=env;S.cat=cat.sort((a,b)=>(a.Ordre||0)-(b.Ordre||0));
+  S.inv=inv;S.rep=rep;S.env=env;S.cat=cat.sort((a,b)=>(a.Ordre||0)-(b.Ordre||0)||a.id-b.id);
   S.par={};S.parId={};par.forEach(r=>{S.par[r.Cle]=s_(r.Valeur);S.parId[r.Cle]=r.id;});
 }
-async function act(actions){await grist.docApi.applyUserActions(actions);}
+async function act(actions){return await grist.docApi.applyUserActions(actions);}
 async function updInv(id,fields){const r=S.inv.find(x=>x.id===id);if(r)Object.assign(r,fields);await act([['UpdateRecord','Invites',id,fields]]);}
 async function setPar(k,v){
   S.par[k]=v;
@@ -196,8 +227,22 @@ async function ensureCategories(){
   S.inv.forEach(i=>{const c=s_(i.Categorie);if(c&&!known.has(c)){known.add(c);missing.push(c);}});
   if(!missing.length)return;
   let o=S.cat.reduce((m,c)=>Math.max(m,c.Ordre||0),0);
-  await act(missing.map(n=>['AddRecord','Categories',null,{Nom:n,Ordre:++o}]));
-  S.cat=(await fetchRows('Categories')).sort((a,b)=>(a.Ordre||0)-(b.Ordre||0));
+  await act(missing.map(n=>['AddRecord','Categories',null,{Nom:n,Ordre:++o,PubForm:true}]));
+  S.cat=(await fetchRows('Categories')).sort((a,b)=>(a.Ordre||0)-(b.Ordre||0)||a.id-b.id);
+  await syncFormChoices();
+}
+/* Liste déroulante « catégorie » du formulaire = catégories cochées + « Autre / je ne sais pas » */
+async function syncFormChoices(){
+  const ch=S.cat.filter(c=>c.PubForm).map(c=>c.Nom);ch.push(AUTRE);
+  await act([['ModifyColumn','Reponses','Categorie',{widgetOptions:JSON.stringify({choices:ch})}]]);
+  return ch.length;
+}
+async function initFormCats(){
+  if(P().pubFormInit==='1'||!S.cat.length)return;
+  const acts=S.cat.filter(c=>!c.PubForm).map(c=>['UpdateRecord','Categories',c.id,{PubForm:true}]);
+  if(acts.length)await act(acts);
+  S.cat.forEach(c=>c.PubForm=true);
+  await syncFormChoices();await setPar('pubFormInit','1');
 }
 
 /* ----------------------------- logique métier ----------------------------- */
@@ -231,59 +276,109 @@ function stats(){
   const cats=Object.keys(per).sort((a,b)=>catRank(a)-catRank(b)||a.localeCompare(b,'fr'));
   return {per,cats,T};
 }
-function dupSet(){
-  const byE={},byN={},dup=new Set();
-  S.inv.forEach(i=>{
-    emails(i.Email).forEach(e=>{(byE[e]=byE[e]||[]).push(i.id);});
-    const k=norm(i.Nom)&&norm(i.Prenom)?norm(i.Nom)+'|'+norm(i.Prenom):'';if(k)(byN[k]=byN[k]||[]).push(i.id);
-  });
-  [byE,byN].forEach(m=>Object.values(m).forEach(a=>{if(a.length>1)a.forEach(x=>dup.add(x));}));
-  return dup;
+/* Doublons : même nom + prénom (probable) / même adresse e-mail (parfois normal : boîte partagée) */
+const nameKey=o=>norm(o.Nom)&&norm(o.Prenom)?norm(o.Nom)+'|'+norm(o.Prenom):'';
+function dupGroups(){
+  const byE={},byN={};
+  S.inv.forEach(i=>{emails(i.Email).forEach(e=>(byE[e]=byE[e]||[]).push(i));const k=nameKey(i);if(k)(byN[k]=byN[k]||[]).push(i);});
+  const nameG=Object.values(byN).filter(a=>a.length>1);
+  const inName=new Set(nameG.flat().map(i=>i.id));
+  const seen=new Set(),mailG=[];
+  Object.values(byE).filter(a=>a.length>1).forEach(a=>{const key=a.map(i=>i.id).sort().join(',');if(seen.has(key))return;seen.add(key);if(a.every(i=>inName.has(i.id))&&a.map(nameKey).every((k,_,arr)=>k===arr[0]))return;mailG.push(a);});
+  return {nameG,mailG};
 }
+function dupSet(){const g=dupGroups();return new Set([...g.nameG.flat(),...g.mailG.flat()].map(i=>i.id));}
 function eligible(type){
   const p=P();
   if(type==='invitation'){
-    const all=UI.incAll;
-    return S.inv.filter(i=>emails(i.Email).length&&!answered(i)&&(all||!i.DateInvitation));
+    return S.inv.filter(i=>emails(i.Email).length&&!answered(i)&&(UI.incAll||!i.DateInvitation));
   }
   const delai=+p.delaiRelance||0,lim=new Date();lim.setDate(lim.getDate()-delai);
   return S.inv.filter(i=>emails(i.Email).length&&i.DateInvitation&&!answered(i)&&(!delai||new Date((i.DateRelance||i.DateInvitation)+'T00:00:00')<=lim));
 }
+
+/* ---- Réponses du formulaire : règles ----
+   1. Une personne = une fiche = UNE réponse active : la plus récente (même adresse e-mail). Les précédentes restent en historique.
+   2. Si elle change d'avis, la fiche est mise à jour et marquée « a modifié sa réponse » (jusqu'à ce que l'administrateur clique sur « Vu »).
+   3. Si ce qu'elle a saisi (nom, catégorie, adresse) ne correspond pas à la base : la réponse attend la validation de l'administrateur. */
 function normPres(v){v=norm(v);if(!v)return '';if(/nepourrai|pas|non|excus|regret|absent|indisponible/.test(v))return 'Excusé';if(/present|oui|serai|participe|viendrai|confirme|ok/.test(v))return 'Présent';return '';}
 function respDate(r){return r.RecuLe?new Date(r.RecuLe*1000).toISOString().slice(0,10):todayIso();}
 function respFields(r){
   const p=normPres(r.Presence);
   return {Reponse:p,NbAccompagnants:p==='Présent'?(+r.NbAccompagnants||0):0,Accompagnants:p==='Présent'?s_(r.Accompagnants):'',RepresentePar:p==='Excusé'?s_(r.RepresentePar):'',SourceReponse:'Formulaire',DateReponse:respDate(r)};
 }
+const emailKey=r=>emails(r.Email)[0]||'';
 function findInviteByEmail(e){e=s_(e).trim().toLowerCase();if(!e)return null;return S.inv.find(i=>emails(i.Email).includes(e))||null;}
+function nameMatch(r,inv){
+  const ln=norm(r.Nom),fn=norm(r.Prenom),iln=norm(inv.Nom),ifn=norm(inv.Prenom);
+  if(!ln||!iln)return false;
+  const lastOk=ln===iln||(ln.length>=4&&iln.includes(ln))||(iln.length>=4&&ln.includes(iln));
+  const firstOk=!fn||!ifn||fn===ifn||(fn.length>=3&&ifn.startsWith(fn))||(ifn.length>=3&&fn.startsWith(ifn));
+  return lastOk&&firstOk;
+}
+function laterExists(r){const k=emailKey(r);if(!k)return false;return S.rep.some(x=>x.id>r.id&&x.Invite!==-1&&emailKey(x)===k);}
+function checkResponse(r){
+  const e=emailKey(r);let inv=e?findInviteByEmail(e):null;const reasons=[];
+  const hasId=!!(norm(r.Nom)||norm(r.Prenom));
+  if(inv){
+    if(hasId&&!nameMatch(r,inv))reasons.push('Le nom saisi ne correspond pas à celui de la base ('+fullName(inv)+')');
+    const cat=s_(r.Categorie);
+    if(cat&&cat!==AUTRE&&norm(cat)!==norm(inv.Categorie))reasons.push('Catégorie différente : « '+cat+' » au lieu de « '+s_(inv.Categorie)+' »');
+  }else{
+    if(hasId){const c=S.inv.filter(i=>nameMatch(r,i));if(c.length)inv=c[0];}
+    reasons.push(inv?'Adresse e-mail inconnue, mais cette personne existe dans la base':(e?'Nouvelle personne : absente de la base':'Adresse e-mail absente ou invalide'));
+  }
+  return {inv,reasons,auto:!!inv&&reasons.length===0};
+}
+function repState(r){
+  if(r.Invite===-1)return {k:'ign',t:'Rejetée'};
+  if(laterExists(r))return {k:'old',t:'Remplacée par une réponse plus récente'};
+  const inv=r.Invite>0?S.inv.find(i=>i.id===r.Invite):null;
+  if(inv)return {k:'ok',t:'Intégrée → '+dispName(inv)};
+  if(!normPres(r.Presence))return {k:'bad',t:'Réponse non reconnue',c:checkResponse(r)};
+  const c=checkResponse(r);
+  return {k:'val',t:'À valider',c};
+}
+const pendingReps=()=>S.rep.filter(r=>{const k=repState(r).k;return k==='val'||k==='bad';});
+function applyActions(r,inv,extra){
+  const f=Object.assign(respFields(r),extra||{});
+  if(answered(inv)&&(inv.Reponse!==f.Reponse||(+inv.NbAccompagnants||0)!==f.NbAccompagnants||s_(inv.RepresentePar)!==f.RepresentePar))f.ReponseModifiee=true;
+  const e=emailKey(r);if(e&&!emails(inv.Email).includes(e))f.Email=(s_(inv.Email).trim()?s_(inv.Email).trim()+' ; ':'')+e;
+  if(!inv.Fonction1&&r.Fonction)f.Fonction1=r.Fonction;
+  if(!inv.Prenom&&r.Prenom)f.Prenom=r.Prenom;if(!inv.Nom&&r.Nom)f.Nom=r.Nom;
+  Object.assign(inv,f);r.Traitee=true;r.Invite=inv.id;
+  return [['UpdateRecord','Invites',inv.id,f],['UpdateRecord','Reponses',r.id,{Traitee:true,Invite:inv.id}]];
+}
 async function syncReponses(){
-  const todo=S.rep.filter(r=>repState(r).k==='rap').sort((a,b)=>a.id-b.id);
+  const todo=S.rep.filter(r=>repState(r).k==='val').sort((a,b)=>a.id-b.id);
   const acts=[];let n=0;
-  todo.forEach(r=>{
-    const inv=findInviteByEmail(r.Email);if(!inv)return;
-    const f=respFields(r);Object.assign(inv,f);
-    acts.push(['UpdateRecord','Invites',inv.id,f]);acts.push(['UpdateRecord','Reponses',r.id,{Traitee:true,Invite:inv.id}]);r.Traitee=true;r.Invite=inv.id;n++;
-  });
+  for(const r of todo){const c=checkResponse(r);if(!c.auto)continue;acts.push(...applyActions(r,c.inv));n++;}
   if(acts.length)await act(acts);
   return n;
 }
-function repState(r){
-  const inv=r.Invite>0?S.inv.find(i=>i.id===r.Invite):null;
-  if(inv)return {k:'ok',t:'Intégrée → '+dispName(inv)};
-  if(r.Invite===-1)return {k:'ign',t:'Ignorée'};
-  if(!normPres(r.Presence))return {k:'bad',t:'Texte de réponse non reconnu'};
-  return {k:'rap',t:'Adresse inconnue : à rapprocher'};
+async function mergeInvites(keepId,dropIds){
+  const keep=S.inv.find(i=>i.id===keepId);const acts=[];const f={};
+  ['Categorie','Civilite','Prenom','Nom','Fonction1','Fonction2','Fonction3','Adresse1','Adresse2','CP','Ville','NotesProtocole','Accompagnants','RepresentePar'].forEach(k=>{if(!s_(keep[k]).trim()){for(const id of dropIds){const d=S.inv.find(i=>i.id===id);if(d&&s_(d[k]).trim()){f[k]=d[k];break;}}}});
+  const em=emails(keep.Email);dropIds.forEach(id=>{const d=S.inv.find(i=>i.id===id);emails(d.Email).forEach(e=>{if(!em.includes(e))em.push(e);});});
+  f.Email=em.join(' ; ');
+  let best=answered(keep)?keep:null;dropIds.forEach(id=>{const d=S.inv.find(i=>i.id===id);if(answered(d)&&(!best||s_(d.DateReponse)>s_(best.DateReponse)))best=d;});
+  if(best&&best!==keep)['Reponse','NbAccompagnants','Accompagnants','RepresentePar','SourceReponse','DateReponse'].forEach(k=>f[k]=best[k]);
+  dropIds.forEach(id=>{const d=S.inv.find(i=>i.id===id);if(d.DateInvitation&&(!keep.DateInvitation||d.DateInvitation<keep.DateInvitation))f.DateInvitation=d.DateInvitation;if((+d.NbRelances||0)>(+keep.NbRelances||0))f.NbRelances=d.NbRelances;if(d.ListeAttente&&keep.ListeAttente)f.ListeAttente=true;});
+  acts.push(['UpdateRecord','Invites',keepId,f]);
+  S.rep.filter(r=>dropIds.includes(r.Invite)).forEach(r=>acts.push(['UpdateRecord','Reponses',r.id,{Invite:keepId}]));
+  dropIds.forEach(id=>acts.push(['RemoveRecord','Invites',id]));
+  await act(acts);await loadAll();
 }
-const unmatched=()=>S.rep.filter(r=>{const k=repState(r).k;return k==='rap'||k==='bad';});
 async function refresh(silent){
   if(busy)return;busy=true;
   try{
-    await loadAll();const n=await syncReponses();await ensureCategories();
-    $('#syncInfo').textContent='Actualisé à '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
-    if(n&&!silent)toast(n+' réponse(s) du formulaire intégrée(s)');
+    await loadAll();await ensureCategories();await initFormCats();const n=await syncReponses();
+    UI.syncInfo='Actualisé à '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    if(n&&!silent)toast(n+' réponse(s) du formulaire intégrée(s) automatiquement');
   }catch(e){console.error(e);toast('Erreur de chargement : '+(e.message||e),true);}
   busy=false;render();
 }
+
 
 /* ----------------------------- Excel (ExcelJS) ----------------------------- */
 function loadScript(src,ms){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;const t=setTimeout(()=>{s.remove();rej(new Error('délai dépassé'));},ms||8000);s.onload=()=>{clearTimeout(t);res();};s.onerror=()=>{clearTimeout(t);s.remove();rej(new Error('introuvable'));};document.head.appendChild(s);});}
@@ -332,7 +427,6 @@ function importReponse(v){
   if(typeof v==='number')return v>0?{Reponse:'Présent',NbAccompagnants:Math.max(0,Math.round(v)-1)}:{};
   const n=norm(v);if(/^(1|oui|present|presente|ok|x)/.test(n))return {Reponse:'Présent'};if(/^(non|excuse|absent)/.test(n))return {Reponse:'Excusé'};return {};
 }
-function nameKey(o){return norm(o.Nom)&&norm(o.Prenom)?norm(o.Nom)+'|'+norm(o.Prenom):'';}
 function planImport(rows){
   /* Rapprochement avec la base existante : nom + prénom d'abord ; l'e-mail seul ne sert que si la ligne n'a pas de nom complet
      (une adresse peut être partagée par plusieurs personnes : mairie, cabinet…). Aucune ligne du fichier n'est écartée. */
@@ -443,14 +537,15 @@ function printShell(title,sub,body){
   '<h1>'+esc(title)+'</h1><div class="bar"></div><p class="sub">'+esc(sub)+'</p>'+body+
   '</td></tr></tbody><tfoot><tr><td><div class="foot">'+foot+'</div></td></tr></tfoot></table></body></html>';
 }
-function docPrefete(mode,onlyPres,blanks){
+function docPrefete(mode,onlyPres,blanks,cat){
   const p=P();let inv=sortedInv();const st=stats();
+  if(cat)inv=inv.filter(i=>s_(i.Categorie)===cat);
   const aval=mode==='aval';
   if(aval&&onlyPres)inv=inv.filter(i=>['present','represente'].includes(status(i)));
   let sum='<table class="d"><thead><tr><th>Catégorie</th><th class="num">Invités</th>'+(aval?'<th class="num">Présents (pers.)</th><th class="num">Excusés</th><th class="num">Sans réponse</th>':'')+'</tr></thead><tbody>';
   st.cats.forEach(c=>{const r=st.per[c];sum+='<tr><td>'+esc(c)+'</td><td class="num">'+r.n+'</td>'+(aval?'<td class="num">'+r.pres+'</td><td class="num">'+r.exc+'</td><td class="num">'+(r.n-r.rep)+'</td>':'')+'</tr>';});
   const T=st.T;sum+='<tr class="tot"><td>TOTAL</td><td class="num">'+T.n+'</td>'+(aval?'<td class="num">'+T.pres+'</td><td class="num">'+T.exc+'</td><td class="num">'+(T.n-T.rep)+'</td>':'')+'</tr></tbody></table>';
-  let body='<h2><div>Synthèse</div><span></span></h2>'+sum+'<div class="pb"></div>';
+  let body=cat?'':'<h2><div>Synthèse</div><span></span></h2>'+sum+'<div class="pb"></div>';
   const groups={};inv.forEach(i=>{const c=s_(i.Categorie)||'(sans catégorie)';(groups[c]=groups[c]||[]).push(i);});
   Object.keys(groups).sort((a,b)=>catRank(a)-catRank(b)||a.localeCompare(b,'fr')).forEach(c=>{
     const list=groups[c],r=st.per[c]||{n:list.length,pres:0,exc:0,rep:0};
@@ -464,7 +559,7 @@ function docPrefete(mode,onlyPres,blanks){
     body+='</tbody></table>';
   });
   const title=(aval?'Réponses – ':'Invités – ')+p.titre;
-  return printShell(title,(aval?'Situation au ':'Édité le ')+fmtD(todayIso())+(aval&&onlyPres?' — présents uniquement':''),body);
+  return printShell(title,(aval?'Situation au ':'Édité le ')+fmtD(todayIso())+(cat?' — '+cat:'')+(aval&&onlyPres?' — présents uniquement':''),body);
 }
 function docEmargement(){
   const p=P();const list=sortedInv(S.inv.filter(i=>['present','represente'].includes(status(i))));
@@ -561,39 +656,80 @@ async function confirmSent(){
   await act(acts);S.env=await fetchRows('Envois');UI.pending=null;toast('Envoi enregistré : '+pd.ids.length+' invité(s) marqué(s)');render();
 }
 
-/* ----------------------------- Rendu ----------------------------- */
-const TABS=[['dash','Tableau de bord'],['inv','Invités'],['rep','Réponses reçues'],['send','Envois'],['exp','Exports'],['day','Jour J'],['cfg','Réglages']];
-function renderTabs(){
-  const n=unmatched().length;
-  $('#tabs').innerHTML=TABS.map(([k,l])=>'<button class="'+(UI.tab===k?'on':'')+'" data-tab="'+k+'">'+l+(k==='inv'&&n?' <span class="badge b-relance">'+n+' à rapprocher</span>':'')+'</button>').join('');
-  $('#ttl').textContent=P().titre;
+/* ----------------------------- Notification : mail récapitulatif des réponses ----------------------------- */
+function buildSimpleEml(o){
+  const p=P(),id=Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+  const alt=mime('multipart/alternative','alt_'+id,[
+    'Content-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n'+wrap76(u8b64(o.text)),
+    'Content-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n'+wrap76(u8b64(o.html))]);
+  const head=[];if(p.expediteur)head.push('From: '+p.expediteur);
+  head.push('To: '+o.to,'Subject: '+encHeader(o.subject),'Date: '+new Date().toUTCString().replace('GMT','+0000'),'Message-ID: <'+id+'@voeux.local>','MIME-Version: 1.0','X-Unsent: 1');
+  return head.join('\r\n')+'\r\n'+alt;
 }
-function render(){renderTabs();const m=$('#main');({dash:rDash,inv:rInv,rep:rRep,send:rSend,exp:rExp,day:rDay,cfg:rCfg})[UI.tab](m);}
-
-function badge(i){const k=status(i);return '<span class="badge b-'+k+'">'+STAT_LABEL[k]+'</span>';}
-function rDash(m){
-  const st=stats(),T=st.T,p=P(),j=+p.jauge||0,um=unmatched().length;
-  const rate=T.n?Math.round(100*T.rep/T.n):0;
-  let h='';
-  if(!S.inv.length)h+='<div class="warn"><b>La base est vide.</b> Allez dans l’onglet « Invités » puis « Importer un Excel » pour charger la liste.</div>';
-  if(um)h+='<div class="warn"><b>'+um+' réponse(s) du formulaire</b> ne correspondent à aucun invité (adresse e-mail inconnue). <button class="b sm" data-act="rap">Rapprocher</button></div>';
-  h+='<div class="cards"><div class="kpi"><div class="n">'+T.n+'</div><div class="l">invités dans la base</div></div>'+
-  '<div class="kpi"><div class="n">'+T.invites+'</div><div class="l">invitations envoyées</div></div>'+
-  '<div class="kpi orange"><div class="n">'+T.sans+'</div><div class="l">invités sans réponse</div></div>'+
-  '<div class="kpi"><div class="n">'+T.rep+' <span class="small muted">('+rate+' %)</span></div><div class="l">réponses reçues</div></div>'+
-  '<div class="kpi vert"><div class="n">'+T.pres+'</div><div class="l">personnes présentes (avec accompagnants)</div></div>'+
-  '<div class="kpi"><div class="n">'+T.exc+'</div><div class="l">excusés</div></div>'+
-  (T.att?'<div class="kpi"><div class="n">'+T.att+'</div><div class="l">en liste d’attente</div></div>':'')+
-  (T.sansMail?'<div class="kpi click" data-act="goto-sansmail"><div class="n">'+T.sansMail+'</div><div class="l">sans e-mail (courrier / téléphone)</div></div>':'')+'</div>';
-  if(j){const pc=Math.min(100,Math.round(100*T.pres/j));h+='<div class="panel"><b>Jauge de la salle : '+T.pres+' / '+j+' places</b>'+(T.pres>j?' <span class="badge b-relance">dépassée de '+(T.pres-j)+'</span>':'<span class="muted"> — reste '+(j-T.pres)+' place(s)</span>')+'<div class="bar jauge'+(T.pres>j?' full':'')+'" style="margin-top:6px"><i style="width:'+pc+'%"></i></div></div>';}
-  h+='<div class="panel"><h2>Par catégorie</h2><table class="t"><thead><tr><th>Catégorie</th><th class="num">Invités</th><th class="num">Sans réponse</th><th class="num">Présents (pers.)</th><th class="num">Excusés</th><th style="width:140px">Réponses</th></tr></thead><tbody>';
-  st.cats.forEach(c=>{const r=st.per[c],pc=r.n?Math.round(100*r.rep/r.n):0;h+='<tr><td>'+esc(c)+'</td><td class="num">'+r.n+'</td><td class="num">'+r.sans+'</td><td class="num">'+r.pres+'</td><td class="num">'+r.exc+'</td><td><div class="bar" title="'+pc+' %"><i style="width:'+pc+'%"></i></div></td></tr>';});
-  h+='<tr class="tot"><td>TOTAL</td><td class="num">'+T.n+'</td><td class="num">'+T.sans+'</td><td class="num">'+T.pres+'</td><td class="num">'+T.exc+'</td><td>'+rate+' %</td></tr></tbody></table></div>';
-  const last=S.inv.filter(i=>i.DateReponse).sort((a,b)=>s_(b.DateReponse).localeCompare(s_(a.DateReponse))||b.id-a.id).slice(0,8);
-  if(last.length)h+='<div class="panel"><h2>Dernières réponses</h2><table class="t"><tbody>'+last.map(i=>'<tr><td class="nowrap">'+fmtD(i.DateReponse)+'</td><td>'+esc(dispName(i))+'</td><td>'+esc(i.Categorie)+'</td><td>'+badge(i)+'</td><td class="muted">'+esc(i.SourceReponse)+'</td></tr>').join('')+'</tbody></table></div>';
-  m.innerHTML=h;
+const newReps=()=>{const lim=+P().notifJusqua||0;return S.rep.filter(r=>r.id>lim).sort((a,b)=>a.id-b.id);};
+function digestRows(reps){
+  return reps.map(r=>{
+    const st=repState(r),inv=r.Invite>0?S.inv.find(i=>i.id===r.Invite):findInviteByEmail(r.Email);
+    const nom=[r.Prenom||(inv&&inv.Prenom),s_(r.Nom||(inv&&inv.Nom)).toUpperCase()].filter(Boolean).join(' ')||s_(r.Email);
+    const pres=normPres(r.Presence);
+    const rep=pres==='Présent'?('PRÉSENT(E)'+((+r.NbAccompagnants)?' + '+r.NbAccompagnants+' accompagnant(s)':'')):pres==='Excusé'?('EXCUSÉ(E)'+(r.RepresentePar?' – représenté(e) par '+r.RepresentePar:'')):s_(r.Presence)||'(non précisé)';
+    const note=st.k==='ok'?'Intégrée à la liste':(st.k==='val'||st.k==='bad')?('À valider : '+((st.c&&st.c.reasons.join(' ; '))||'réponse non reconnue')):st.k==='old'?'Remplacée par une réponse plus récente':'Rejetée';
+    return {date:r.RecuLe?new Date(r.RecuLe*1000).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'',nom,titre:s_(r.Fonction)||(inv?fonctions(inv):''),cat:s_(r.Categorie)||(inv?s_(inv.Categorie):''),rep,note,email:s_(r.Email)};
+  });
+}
+function buildDigestEml(reps){
+  const p=P(),R=digestRows(reps);
+  const th='style="text-align:left;background:#f0f0f0;border:1px solid #ccc;padding:5px 8px;font-size:13px"',td='style="border:1px solid #ccc;padding:5px 8px;font-size:13px;vertical-align:top"';
+  const html='<html><body style="font-family:Arial,sans-serif;color:#161616"><p>Bonjour,</p><p><b>'+R.length+' nouvelle(s) réponse(s)</b> au formulaire d’invitation — '+esc(p.titre)+'.</p>'+
+   '<table style="border-collapse:collapse"><tr><th '+th+'>Reçue le</th><th '+th+'>Prénom NOM</th><th '+th+'>Titre / fonction</th><th '+th+'>Catégorie</th><th '+th+'>Réponse</th><th '+th+'>Suite donnée</th></tr>'+
+   R.map(x=>'<tr><td '+td+'>'+esc(x.date)+'</td><td '+td+'><b>'+esc(x.nom)+'</b><br><span style="color:#666">'+esc(x.email)+'</span></td><td '+td+'>'+esc(x.titre)+'</td><td '+td+'>'+esc(x.cat)+'</td><td '+td+'>'+esc(x.rep)+'</td><td '+td+'>'+esc(x.note)+'</td></tr>').join('')+'</table><p style="color:#666;font-size:12px">Message préparé depuis l’application « Vœux – Invitations ».</p></body></html>';
+  const text='Bonjour,\r\n\r\n'+R.length+' nouvelle(s) réponse(s) au formulaire — '+p.titre+'\r\n\r\n'+R.map(x=>'- '+x.nom+' ('+x.titre+') — '+x.cat+' : '+x.rep+' ['+x.note+']').join('\r\n')+'\r\n';
+  return buildSimpleEml({to:p.emailNotif,subject:'Vœux – '+R.length+' nouvelle(s) réponse(s) au formulaire',html,text});
 }
 
+/* ----------------------------- Rendu : coque Pas à pas ----------------------------- */
+const STEPS=[['liste','Ma liste d’invités'],['inviter','Envoyer l’invitation'],['reponses','Suivre les réponses'],['relancer','Relancer'],['imprimer','Imprimer pour la Préfète'],['jourj','Le jour de la cérémonie']];
+function stepInfo(k,st){
+  const T=st.T,pend=pendingReps().length;
+  switch(k){
+    case 'liste':return {done:T.n>0,sub:T.n+' personnes'};
+    case 'inviter':return {done:T.invites>0&&T.aInviter===0,sub:T.aInviter?T.aInviter+' à inviter':(T.invites?'invitations envoyées':'rien à envoyer')};
+    case 'reponses':return {done:false,sub:T.rep+' réponses reçues',alert:pend};
+    case 'relancer':return {done:T.invites>0&&T.sans===0,sub:T.sans+' à relancer'};
+    case 'imprimer':return {done:false,sub:'listes par catégorie'};
+    default:return {done:false,sub:'pointage à l’accueil'};
+  }
+}
+function renderSide(){
+  const st=stats();
+  $('#side').innerHTML='<div class="brand"><div class="flag"></div><b>'+esc(P().titre)+'<span>Invitations</span></b></div>'+
+  STEPS.map(([k,l],i)=>{const inf=stepInfo(k,st);return '<button class="step'+(UI.step===k?' now':'')+(inf.done&&UI.step!==k?' done':'')+'" data-step="'+k+'"><div class="n">'+(inf.done&&UI.step!==k?'✓':i+1)+'</div><div><b>'+l+(inf.alert?'<span class="alert">'+inf.alert+' à valider</span>':'')+'</b><small>'+esc(inf.sub)+'</small></div></button>';}).join('')+
+  '<div class="sep"></div><button class="small-link'+(UI.step==='cfg'?' on':'')+'" data-step="cfg">⚙ Réglages (administrateur)</button>'+
+  '<div class="helpbox"><b>Besoin d’aide ?</b><br>Appelez le SDCIRE.</div><div class="syncinfo">'+esc(UI.syncInfo)+' · <a href="#" data-act="refresh">Actualiser</a></div>';
+}
+function render(){renderSide();const m=$('#main');({liste:rListe,inviter:rInviter,reponses:rReponses,relancer:rRelancer,imprimer:rImprimer,jourj:rJourJ,cfg:rCfg})[UI.step](m);}
+const headS=(n,t,lead)=>'<h1>Étape '+n+' – '+t+'</h1><p class="lead">'+lead+'</p>';
+const fig=(n,l,c)=>'<div class="fig"><b'+(c?' style="color:'+c+'"':'')+'>'+n+'</b><span>'+l+'</span></div>';
+function foot(k){
+  const i=STEPS.findIndex(s=>s[0]===k),pr=STEPS[i-1],nx=STEPS[i+1];
+  return '<div class="foot">'+(pr?'<button class="nav" data-step="'+pr[0]+'">← '+pr[1]+'</button>':'<span></span>')+'<span>Étape '+(i+1)+' sur '+STEPS.length+'</span>'+(nx?'<button class="nav" data-step="'+nx[0]+'">'+nx[1]+' →</button>':'<span></span>')+'</div>';
+}
+function badge(i){const k=status(i);return '<span class="badge b-'+k+'">'+STAT_LABEL[k]+'</span>'+(i.ReponseModifiee?' <span class="badge b-modif" title="La personne a changé sa réponse">a modifié sa réponse</span>':'');}
+
+/* ---- Étape 1 : liste ---- */
+function rListe(m){
+  const st=stats(),T=st.T,dg=dupGroups(),nd=dg.nameG.length,ne=dg.mailG.length;
+  m.innerHTML=headS(1,'Ma liste d’invités','Voici les personnes invitées à la cérémonie. Vous pouvez en ajouter, en modifier, ou charger une liste Excel.')+
+  '<div class="big"><div class="figs">'+fig(T.n,'personnes dans la liste')+fig(T.sansMail,'sans adresse e-mail',T.sansMail?'#6b006b':'')+fig(nd,'personnes en double (même nom)',nd?'#b34000':'')+'</div></div>'+
+  ((nd||ne)?'<div class="warn">'+(nd?'<b>'+nd+' personne(s) apparaissent plusieurs fois</b> (même nom et prénom). ':'')+(ne?ne+' adresse(s) e-mail sont partagées par plusieurs personnes (parfois normal : mairie, secrétariat). ':'')+'<button class="b sm" data-act="dups">Vérifier et fusionner</button></div>':'')+
+  '<div class="actions" style="grid-template-columns:1fr 1fr"><label class="act main"><span class="ic">📥</span><span>Charger une liste Excel<small>Ajoute les nouvelles personnes, met à jour les autres</small></span><input type="file" id="fimp" accept=".xlsx" hidden></label>'+
+  '<button class="act" data-act="new"><span class="ic">➕</span><span>Ajouter une personne</span></button></div>'+
+  '<div class="row"><input id="q" type="search" placeholder="🔍 Chercher un nom, une fonction…" value="'+esc(UI.q)+'" style="min-width:260px;flex:1">'+
+  '<select id="fcat"><option value="">Toutes les catégories</option>'+S.cat.map(c=>'<option'+(UI.fcat===c.Nom?' selected':'')+' value="'+esc(c.Nom)+'">'+esc(c.Nom)+'</option>').join('')+'</select>'+
+  '<select id="fstat"><option value="">Tous les statuts</option>'+Object.entries(STAT_LABEL).map(([k,l])=>'<option'+(UI.fstat===k?' selected':'')+' value="'+k+'">'+l+'</option>').join('')+'</select>'+
+  '<label class="small"><input type="checkbox" id="fdup"'+(UI.dup?' checked':'')+'> seulement les doublons</label></div><div id="invTable"></div>'+foot('liste');
+  invRows();
+}
 function filteredInv(){
   const q=norm(UI.q),dups=UI.dup?dupSet():null;
   return sortedInv().filter(i=>{
@@ -604,103 +740,143 @@ function filteredInv(){
     return true;
   });
 }
-function rInv(m){
-  const um=unmatched().length,dn=dupSet().size;
-  m.innerHTML=(um?'<div class="warn"><b>'+um+' réponse(s) du formulaire à rapprocher</b> d’un invité. <button class="b sm" data-act="rap">Rapprocher</button></div>':'')+
-  '<div class="row"><input id="q" type="search" placeholder="Rechercher (nom, fonction, e-mail…)" value="'+esc(UI.q)+'" style="min-width:260px">'+
-  '<select id="fcat"><option value="">Toutes les catégories</option>'+S.cat.map(c=>'<option'+(UI.fcat===c.Nom?' selected':'')+' value="'+esc(c.Nom)+'">'+esc(c.Nom)+'</option>').join('')+'</select>'+
-  '<select id="fstat"><option value="">Tous les statuts</option>'+Object.entries(STAT_LABEL).map(([k,l])=>'<option'+(UI.fstat===k?' selected':'')+' value="'+k+'">'+l+'</option>').join('')+'</select>'+
-  '<label class="small"><input type="checkbox" id="fdup"'+(UI.dup?' checked':'')+'> Doublons possibles ('+dn+')</label><span style="flex:1"></span>'+
-  '<button class="b" data-act="new">+ Ajouter un invité</button><label class="b sec">Importer un Excel<input type="file" id="fimp" accept=".xlsx" hidden></label></div>'+
-  '<div id="invTable"></div>';
-  invRows();
-}
 function invRows(){
   const L=filteredInv();
-  $('#invTable').innerHTML='<p class="muted small">'+L.length+' invité(s) affiché(s) sur '+S.inv.length+'</p><table class="t"><thead><tr><th>Catégorie</th><th>Invité</th><th>Fonction</th><th>E-mail</th><th>Statut</th><th>Réponse</th><th class="num">Acc.</th><th></th></tr></thead><tbody>'+
-  L.map(i=>'<tr data-id="'+i.id+'"><td class="small">'+esc(i.Categorie)+'</td><td><b>'+esc(dispName(i))+'</b></td><td class="small">'+esc(fonctions(i))+'</td><td class="small">'+esc(i.Email)+'</td><td>'+badge(i)+'</td>'+
-  '<td><select data-quick="'+i.id+'"><option value="">—</option><option'+(i.Reponse==='Présent'?' selected':'')+'>Présent</option><option'+(i.Reponse==='Excusé'?' selected':'')+' value="Excusé">Excusé</option></select></td>'+
-  '<td class="num">'+(i.NbAccompagnants||'')+'</td><td><button class="b sec sm" data-edit="'+i.id+'">Fiche</button></td></tr>').join('')+'</tbody></table>';
+  $('#invTable').innerHTML='<p class="muted small">'+L.length+' personne(s) affichée(s) sur '+S.inv.length+'</p><table class="t"><thead><tr><th>Catégorie</th><th>Personne</th><th>Fonction</th><th>E-mail</th><th>Où en est-elle ?</th><th></th></tr></thead><tbody>'+
+  L.map(i=>'<tr><td class="small">'+esc(i.Categorie)+'</td><td><b>'+esc(dispName(i))+'</b></td><td class="small">'+esc(fonctions(i))+'</td><td class="small">'+esc(i.Email)+'</td><td>'+badge(i)+'</td><td><button class="b sec sm" data-edit="'+i.id+'">Ouvrir la fiche</button></td></tr>').join('')+'</tbody></table>';
 }
 
+/* ---- Étapes 2 et 4 : envois ---- */
 function pendingBox(type){
   const pd=UI.pending;if(!pd||pd.type!==type)return '';
-  return '<div class="ok"><b>Étape 2 – après l’envoi dans Thunderbird</b><br>'+pd.files+' fichier(s) .eml téléchargé(s) pour '+pd.n+' adresse(s). Ouvrez-le, vérifiez, envoyez, puis cliquez :<br><button class="b" data-act="confirm-sent" style="margin-top:6px">J’ai envoyé le mail → enregistrer l’envoi</button> <button class="b sec" data-act="cancel-sent" style="margin-top:6px">Annuler</button></div>';
+  return '<div class="okbox"><b>Le message est prêt.</b><br>1) Ouvrez le fichier qui vient d’être téléchargé (il s’ouvre dans Thunderbird). '+(pd.files>1?'<b>'+pd.files+' fichiers</b> ont été préparés. ':'')+'<br>2) Relisez-le, puis cliquez sur « Envoyer » dans Thunderbird.<br>3) Revenez ici et confirmez :<br><button class="b vert" data-act="confirm-sent" style="margin-top:8px;font-size:16px">✔ Oui, j’ai envoyé le message à ces '+pd.n+' adresses</button> <button class="b sec" data-act="cancel-sent" style="margin-top:8px">Non, je ne l’ai pas envoyé</button></div>';
 }
-function rRep(m){
-  const L=S.rep.slice().sort((a,b)=>b.id-a.id),um=unmatched().length;
-  const lab={ok:'b-present',ign:'b-excuse',bad:'b-relance',rap:'b-sansmail'};
-  m.innerHTML=(um?'<div class="warn"><b>'+um+' réponse(s)</b> à traiter. <button class="b sm" data-act="rap">Rapprocher</button></div>':'')+
-  '<p class="muted small">Toutes les lignes de la table « Reponses » (formulaire), de la plus récente à la plus ancienne. '+L.length+' réponse(s) reçue(s).</p>'+
-  '<table class="t"><thead><tr><th>Reçue le</th><th>Adresse saisie</th><th>Réponse</th><th class="num">Acc.</th><th>État</th><th></th></tr></thead><tbody>'+
-  (L.length?L.map(r=>{const st=repState(r);return '<tr><td class="nowrap small">'+(r.RecuLe?new Date(r.RecuLe*1000).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'—')+'</td><td>'+esc(r.Email)+'</td><td class="small">'+esc(r.Presence)+'</td><td class="num">'+(r.NbAccompagnants||'')+'</td><td><span class="badge '+lab[st.k]+'">'+esc(st.t)+'</span></td><td class="nowrap">'+
-    (st.k==='ok'||st.k==='ign'?'<button class="b sec sm" data-redo="'+r.id+'">Retraiter</button>':'<button class="b sm" data-act="rap">Rapprocher</button>')+'</td></tr>';}).join(''):'<tr><td colspan="6" class="muted">Aucune réponse reçue pour l’instant.</td></tr>')+'</tbody></table>';
+function missingSettings(){const p=P();return [!p.lienFormulaire&&'le lien du formulaire',!p.dateCeremonie&&'la date de la cérémonie',!p.lieu&&'le lieu',!p.dateLimite&&'la date limite de réponse'].filter(Boolean);}
+function sendOptions(type){
+  return '<details class="opt"><summary>Options (administrateur)</summary>'+
+   (type==='invitation'?'<p><label><input type="checkbox" id="incAll"'+(UI.incAll?' checked':'')+'> Inclure aussi ceux qui ont déjà été invités (renvoi complet)</label></p>':'<p class="small">Délai minimum depuis la dernière invitation ou relance : <b>'+(P().delaiRelance||0)+' jour(s)</b> (réglable dans Réglages).</p>')+
+   '<p class="small">Joindre un document (par exemple le carton en PDF) : <input type="file" data-att="'+type+'"></p>'+
+   '<p><button class="b sec sm" data-gen-test="'+type+'">Préparer un message de test (une seule adresse)</button></p></details>';
 }
-function rSend(m){
-  const p=P(),inv=eligible('invitation'),rel=eligible('relance');
-  const noMail=S.inv.filter(i=>!emails(i.Email).length&&!answered(i)).length;
-  const miss=[!p.lienFormulaire&&'lien du formulaire',!p.dateCeremonie&&'date de la cérémonie',!p.lieu&&'lieu',!p.dateLimite&&'date limite de réponse'].filter(Boolean);
-  const card=(type,title,list,desc)=>'<div class="panel"><h2>'+title+'</h2><p class="muted">'+desc+'</p>'+
-    (type==='invitation'?'<label class="small"><input type="checkbox" id="incAll"'+(UI.incAll?' checked':'')+'> Inclure ceux déjà invités (renvoi complet)</label><br>':'<p class="small">Délai minimum depuis la dernière invitation/relance : <b>'+(P().delaiRelance||0)+' jour(s)</b> (modifiable dans Réglages)</p>')+
-    '<div class="row"><label class="small">Pièce jointe (facultatif, ex. carton PDF) : <input type="file" data-att="'+type+'"></label></div>'+
-    '<div class="row"><button class="b" data-gen="'+type+'"'+(!list.length||!p.lienFormulaire?' disabled':'')+'>'+(type==='relance'?'Relancer ':'Inviter ')+list.length+' personne(s) ('+new Set(list.flatMap(i=>emails(i.Email))).size+' adresses) — générer le .eml</button> <button class="b sec" data-prev="'+type+'">Aperçu du mail</button> <button class="b sec" data-gen-test="'+type+'">Fichier de test</button></div>'+pendingBox(type)+'</div>';
-  m.innerHTML=(miss.length?'<div class="warn">À renseigner dans <b>Réglages</b> avant l’envoi : '+miss.join(', ')+'.</div>':'')+
-  '<p class="muted">Un seul mail est généré (adresses en <b>copie cachée</b>), à ouvrir dans Thunderbird. Rien n’est marqué « envoyé » tant que vous ne confirmez pas.'+(noMail?' <b>'+noMail+'</b> invité(s) sans adresse e-mail valide ne seront pas inclus.':'')+'</p>'+
-  '<div class="grid2">'+card('invitation','1. Invitation',inv,'Destinataires : invités avec une adresse e-mail, sans réponse, pas encore invités.')+card('relance','2. Relance',rel,'Destinataires : invités déjà invités qui n’ont pas encore répondu.')+'</div>'+
-  '<div class="panel"><h2>Journal des envois</h2>'+(S.env.length?'<table class="t"><thead><tr><th>Date</th><th>Type</th><th class="num">Adresses</th><th>Détails</th></tr></thead><tbody>'+S.env.slice().reverse().slice(0,20).map(e=>'<tr><td>'+fmtD(e.DateEnvoi)+'</td><td>'+esc(e.Type)+'</td><td class="num">'+e.NbDestinataires+'</td><td class="muted">'+esc(e.Details)+'</td></tr>').join('')+'</tbody></table>':'<p class="muted">Aucun envoi enregistré.</p>')+'</div>';
+function journal(){return '<div class="panel"><h2>Messages déjà envoyés</h2>'+(S.env.length?'<table class="t"><thead><tr><th>Date</th><th>Type</th><th class="num">Adresses</th><th>Détails</th></tr></thead><tbody>'+S.env.slice().reverse().slice(0,20).map(e=>'<tr><td>'+fmtD(e.DateEnvoi)+'</td><td>'+esc(e.Type)+'</td><td class="num">'+e.NbDestinataires+'</td><td class="muted">'+esc(e.Details)+'</td></tr>').join('')+'</tbody></table>':'<p class="muted">Aucun message enregistré pour l’instant.</p>')+'</div>';}
+function sendPage(m,type){
+  const rel=type==='relance',list=eligible(type),addr=new Set(list.flatMap(i=>emails(i.Email))).size,miss=missingSettings(),T=stats().T;
+  m.innerHTML=headS(rel?4:2,rel?'Relancer':'Envoyer l’invitation',rel?'Un seul message de rappel part vers ceux qui n’ont pas encore répondu. Les adresses restent cachées.':'Un seul message part pour tout le monde. Les adresses des invités restent cachées les unes des autres.')+
+  (miss.length?'<div class="warn"><b>Avant l’envoi</b>, il faut renseigner dans Réglages : '+miss.join(', ')+'. <button class="b sm" data-step="cfg">Ouvrir les Réglages</button></div>':'')+
+  '<div class="big"><div class="figs">'+fig(list.length,rel?'personnes à relancer':'personnes à inviter')+fig(addr,'adresses e-mail')+(rel?fig(T.rep,'ont déjà répondu','#18753c'):fig(T.sansMail,'sans e-mail (courrier ou téléphone)','#6b006b'))+'</div></div>'+
+  '<div class="actions"><button class="act main" data-gen="'+type+'"'+(!list.length||!P().lienFormulaire?' disabled':'')+'><span class="ic">✉️</span><span>Préparer le message '+(rel?'de relance':'d’invitation')+' pour '+list.length+' personne(s)<small>Un fichier est préparé pour Thunderbird ; il ne part pas tout seul.</small></span></button>'+
+  '<button class="act" data-prev="'+type+'"><span class="ic">👁️</span><span>Voir un aperçu du message</span></button></div>'+
+  pendingBox(type)+sendOptions(type)+journal()+foot(rel?'relancer':'inviter');
 }
-function rExp(m){
-  m.innerHTML='<div class="grid2"><div class="panel"><h2>Document pour la Préfète</h2><p class="muted">Liste organisée par catégorie, avec synthèse. À imprimer (ou enregistrer en PDF).</p>'+
-  '<div class="row"><button class="b" data-doc="amont">En amont : qui pourrait être invité</button><label class="small">lignes vierges « nouveaux noms » par catégorie : <select id="nbBlank">'+[0,3,4,5,6,8,10].map(n=>'<option'+(n===5?' selected':'')+'>'+n+'</option>').join('')+'</select></label></div>'+
-  '<div class="row"><button class="b" data-doc="aval">En aval : qui a répondu</button><label class="small"><input type="checkbox" id="onlyPres"> présents uniquement</label></div></div>'+
-  '<div class="panel"><h2>Export de la base (Excel)</h2><p class="muted">Classeur à 2 feuilles, dans la même organisation que votre modèle : « Liste complète » (colonnes A à M + détail des réponses, total des présents) et « liste Préfète pour impression ».</p>'+
-  '<div class="row"><button class="b" data-act="xlsx">Exporter en .xlsx</button></div></div></div>';
+const rInviter=m=>sendPage(m,'invitation'),rRelancer=m=>sendPage(m,'relance');
+
+/* ---- Étape 3 : réponses ---- */
+function rReponses(m){
+  const st=stats(),T=st.T,p=P(),j=+p.jauge||0,pend=pendingReps(),mod=S.inv.filter(i=>i.ReponseModifiee),nr=newReps();
+  const rate=T.n?Math.round(100*T.rep/T.n):0;
+  let h=headS(3,'Suivre les réponses','Les réponses du formulaire arrivent ici toutes seules. Celles qui ne correspondent pas à la liste attendent votre validation.');
+  h+='<div class="big"><div class="ring" style="background:conic-gradient(var(--vert) 0 '+rate+'%,#e1e1e1 '+rate+'% 100%)"><i>'+rate+' %</i></div><div class="figs">'+fig(T.pres,'personnes viendront','#18753c')+fig(T.exc,'se sont excusées','#555')+fig(T.sans,'n’ont pas répondu','#b34000')+'</div></div>';
+  if(j){const pc=Math.min(100,Math.round(100*T.pres/j));h+='<div class="panel"><b>Places dans la salle : '+T.pres+' sur '+j+'</b>'+(T.pres>j?' <span class="badge b-relance">dépassé de '+(T.pres-j)+'</span>':' <span class="muted">— il reste '+(j-T.pres)+' place(s)</span>')+'<div class="bar jauge'+(T.pres>j?' full':'')+'" style="margin-top:6px"><i style="width:'+pc+'%"></i></div></div>';}
+  h+='<div class="pills">'+[['traiter','À traiter'+(pend.length+mod.length?' ('+(pend.length+mod.length)+')':'')],['toutes','Toutes les réponses reçues'],['cat','Résultats par catégorie']].map(([k,l])=>'<button class="pill'+(UI.rsub===k?' on':'')+'" data-rsub="'+k+'">'+l+'</button>').join('')+'</div>';
+  if(UI.rsub==='traiter'){
+    if(pend.length){
+      h+='<div class="panel alert"><h2>'+pend.length+' réponse(s) à valider</h2><p class="muted small">Ce que la personne a écrit ne correspond pas exactement à la liste. Vous choisissez : accepter, corriger ou rejeter.</p>'+
+        pend.map(r=>{const stt=repState(r),c=stt.c||checkResponse(r);const nb=S.rep.filter(x=>emailKey(x)&&emailKey(x)===emailKey(r)).length;
+          return '<div class="row" style="border-top:1px solid #eee;padding-top:8px"><div style="flex:1;min-width:260px"><b>'+esc([r.Prenom,s_(r.Nom).toUpperCase()].filter(Boolean).join(' ')||r.Email)+'</b> — '+esc(r.Fonction)+' <span class="muted">('+esc(r.Categorie)+')</span><br><span class="small muted">'+esc(r.Email)+' · '+esc(r.Presence||'réponse vide')+(nb>1?' · <b>'+nb+' réponses de cette adresse</b> (seule la dernière compte)':'')+'</span><br><span class="small" style="color:#b34000">'+esc(c.reasons.join(' · ')||'Réponse non reconnue')+'</span></div><button class="b" data-valid="'+r.id+'">Examiner</button></div>';}).join('')+'</div>';
+    }
+    if(mod.length)h+='<div class="panel alert"><h2>'+mod.length+' personne(s) ont changé leur réponse</h2>'+mod.map(i=>'<div class="row" style="border-top:1px solid #eee"><div style="flex:1"><b>'+esc(dispName(i))+'</b> — maintenant : '+badge(i).replace(/<span class="badge b-modif".*$/,'')+'</div><button class="b sec sm" data-edit="'+i.id+'">Ouvrir la fiche</button><button class="b sm" data-seen="'+i.id+'">J’ai vu</button></div>').join('')+'</div>';
+    if(!pend.length&&!mod.length)h+='<div class="okbox">✔ Rien à traiter pour le moment.</div>';
+    h+='<div class="panel"><h2>Prévenir par mail</h2><p>'+(nr.length?'<b>'+nr.length+' réponse(s)</b> du formulaire n’ont pas encore été signalées à <b>'+esc(p.emailNotif)+'</b>.':'Toutes les réponses ont été signalées à '+esc(p.emailNotif)+'.')+'</p>'+
+      '<button class="act'+(nr.length?' orange':'')+'" data-act="notif"'+(nr.length?'':' disabled')+'><span class="ic">🔔</span><span>Préparer le mail de notification ('+nr.length+')<small>Nom, prénom, titre et réponse de chaque personne, dans un seul message.</small></span></button>'+
+      (UI.pendingNotif?'<div class="okbox"><b>Le mail est prêt</b> (fichier téléchargé). Ouvrez-le dans Thunderbird et envoyez-le, puis confirmez : <button class="b vert" data-act="notif-ok">✔ J’ai envoyé le mail</button> <button class="b sec" data-act="notif-cancel">Annuler</button></div>':'')+'</div>';
+    h+='<div class="actions"><button class="act" data-act="note"><span class="ic">☎️</span><span>Noter une réponse reçue par téléphone ou par courrier</span></button></div>';
+  }else if(UI.rsub==='toutes'){
+    const L=S.rep.slice().sort((a,b)=>b.id-a.id);
+    const lab={ok:'b-present',ign:'b-excuse',bad:'b-relance',val:'b-sansmail',old:'b-excuse'};
+    h+='<p class="muted small">'+L.length+' réponse(s) reçue(s) via le formulaire, de la plus récente à la plus ancienne. Si une personne répond plusieurs fois, seule la dernière compte.</p><table class="t"><thead><tr><th>Reçue le</th><th>Personne</th><th>Réponse</th><th>État</th><th></th></tr></thead><tbody>'+
+    (L.length?L.map(r=>{const s2=repState(r);return '<tr><td class="nowrap small">'+(r.RecuLe?new Date(r.RecuLe*1000).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'—')+'</td><td><b>'+esc([r.Prenom,s_(r.Nom).toUpperCase()].filter(Boolean).join(' ')||'(sans nom)')+'</b><br><span class="small muted">'+esc(r.Fonction)+' · '+esc(r.Email)+'</span></td><td class="small">'+esc(r.Presence)+(r.NbAccompagnants?' (+'+r.NbAccompagnants+')':'')+'</td><td><span class="badge '+lab[s2.k]+'">'+esc(s2.t)+'</span></td><td class="nowrap">'+((s2.k==='val'||s2.k==='bad')?'<button class="b sm" data-valid="'+r.id+'">Examiner</button>':(s2.k==='ok'||s2.k==='ign'?'<button class="b sec sm" data-redo="'+r.id+'">Retraiter</button>':''))+'</td></tr>';}).join(''):'<tr><td colspan="5" class="muted">Aucune réponse reçue pour l’instant.</td></tr>')+'</tbody></table>';
+  }else{
+    h+='<table class="t"><thead><tr><th>Catégorie</th><th class="num">Invités</th><th class="num">Sans réponse</th><th class="num">Présents (pers.)</th><th class="num">Excusés</th><th style="width:140px">Réponses</th></tr></thead><tbody>'+
+    st.cats.map(c=>{const r=st.per[c],pc=r.n?Math.round(100*r.rep/r.n):0;return '<tr><td>'+esc(c)+'</td><td class="num">'+r.n+'</td><td class="num">'+r.sans+'</td><td class="num">'+r.pres+'</td><td class="num">'+r.exc+'</td><td><div class="bar" title="'+pc+' %"><i style="width:'+pc+'%"></i></div></td></tr>';}).join('')+
+    '<tr class="tot"><td>TOTAL</td><td class="num">'+T.n+'</td><td class="num">'+T.sans+'</td><td class="num">'+T.pres+'</td><td class="num">'+T.exc+'</td><td>'+rate+' %</td></tr></tbody></table>';
+  }
+  m.innerHTML=h+foot('reponses');
 }
-function rDay(m){
+
+/* ---- Étape 5 : impression ---- */
+function rImprimer(m){
+  const catSel=(id)=>'<select id="'+id+'"><option value="">Toutes les catégories</option>'+S.cat.filter(c=>S.inv.some(i=>i.Categorie===c.Nom)).map(c=>'<option value="'+esc(c.Nom)+'">'+esc(c.Nom)+'</option>').join('')+'</select>';
+  m.innerHTML=headS(5,'Imprimer pour la Préfète','Les listes sont présentées par catégorie, avec la charte de l’État. Dans l’aperçu, cliquez sur « Imprimer » puis choisissez « Enregistrer au format PDF » pour obtenir un PDF.')+
+  '<div class="panel"><h2>📋 Avant : qui pourrait être invité</h2><p class="muted">Liste des invités par catégorie, avec des lignes vierges pour que la Préfète propose de nouveaux noms.</p>'+
+  '<div class="row"><label>Catégorie : '+catSel('docCatAmont')+'</label><label>Lignes vierges par catégorie : <select id="nbBlank">'+[0,3,4,5,6,8,10].map(n=>'<option'+(n===5?' selected':'')+'>'+n+'</option>').join('')+'</select></label></div>'+
+  '<button class="act main" data-doc="amont"><span class="ic">🖨️</span><span>Préparer la liste « avant »</span></button></div>'+
+  '<div class="panel"><h2>✅ Après : qui a répondu</h2><p class="muted">Mêmes listes, avec la réponse de chacun (présent, excusé, représenté…) et une synthèse en première page.</p>'+
+  '<div class="row"><label>Catégorie : '+catSel('docCatAval')+'</label><label><input type="checkbox" id="onlyPres"> seulement les présents</label></div>'+
+  '<button class="act main" data-doc="aval"><span class="ic">🖨️</span><span>Préparer la liste « après »</span></button></div>'+
+  '<div class="panel"><h2>📊 Fichier Excel</h2><p class="muted">Toute la base dans un classeur à 2 feuilles : « Liste complète » et « liste Préfète pour impression ».</p><button class="act" data-act="xlsx"><span class="ic">📊</span><span>Télécharger le fichier Excel</span></button></div>'+foot('imprimer');
+}
+
+/* ---- Étape 6 : jour J ---- */
+function rJourJ(m){
   const exp=sortedInv(S.inv.filter(i=>['present','represente'].includes(status(i))));
   const q=norm(UI.jq),L=exp.filter(i=>!q||norm(dispName(i)+' '+i.Categorie+' '+fonctions(i)).includes(q));
   const arr=exp.filter(i=>i.Arrive).length;
-  m.innerHTML='<div class="cards"><div class="kpi vert"><div class="n">'+arr+' / '+exp.length+'</div><div class="l">invités arrivés</div></div></div>'+
-  '<div class="row"><input id="jq" type="search" placeholder="Rechercher un invité à l’accueil" value="'+esc(UI.jq)+'" style="min-width:280px"><span style="flex:1"></span><button class="b sec" data-act="emarg">Imprimer la liste d’émargement</button></div>'+
+  m.innerHTML=headS(6,'Le jour de la cérémonie','À l’accueil, cochez les personnes à mesure qu’elles arrivent.')+
+  '<div class="big"><div class="figs">'+fig(arr+' / '+exp.length,'invités arrivés','#18753c')+'</div></div>'+
+  '<div class="row"><input id="jq" type="search" placeholder="🔍 Chercher un invité à l’accueil" value="'+esc(UI.jq)+'" style="min-width:280px;flex:1"><button class="b sec" data-act="emarg">🖨️ Imprimer la liste d’émargement</button></div>'+
   '<table class="t"><thead><tr><th>Arrivé(e)</th><th>Invité</th><th>Fonction</th><th>Accompagnants</th><th>Notes protocole</th></tr></thead><tbody>'+
-  L.map(i=>'<tr><td><input type="checkbox" data-arr="'+i.id+'"'+(i.Arrive?' checked':'')+' style="width:20px;height:20px"></td><td><b>'+esc(dispName(i))+'</b><br><span class="small muted">'+esc(i.Categorie)+'</span></td><td class="small">'+esc(fonctions(i))+'</td><td class="small">'+(status(i)==='represente'?'Représenté(e) par '+esc(i.RepresentePar):((+i.NbAccompagnants)?'+'+i.NbAccompagnants+' '+esc(i.Accompagnants):''))+'</td><td class="small">'+esc(i.NotesProtocole)+'</td></tr>').join('')+'</tbody></table>';
+  L.map(i=>'<tr><td><input type="checkbox" data-arr="'+i.id+'"'+(i.Arrive?' checked':'')+' style="width:22px;height:22px"></td><td><b>'+esc(dispName(i))+'</b><br><span class="small muted">'+esc(i.Categorie)+'</span></td><td class="small">'+esc(fonctions(i))+'</td><td class="small">'+(status(i)==='represente'?'Représenté(e) par '+esc(i.RepresentePar):((+i.NbAccompagnants)?'+'+i.NbAccompagnants+' '+esc(i.Accompagnants):''))+'</td><td class="small">'+esc(i.NotesProtocole)+'</td></tr>').join('')+'</tbody></table>'+foot('jourj');
 }
+
+/* ---- Réglages (administrateur) ---- */
 function rCfg(m){
   const p=P();
   const f=(k,l,type,help)=>'<div class="field"><label>'+l+'</label>'+(type==='area'?'<textarea data-par="'+k+'">'+esc(p[k])+'</textarea>':'<input data-par="'+k+'" value="'+esc(p[k])+'"'+(type==='color'?' type="color"':'')+'>')+(help?'<span class="small muted">'+help+'</span>':'')+'</div>';
-  const cats=S.cat.map((c,k)=>{const n=S.inv.filter(i=>s_(i.Categorie)===c.Nom).length;return '<div class="catrow"><span class="small muted nowrap" style="width:30px">'+(k+1)+'</span><input data-catname="'+c.id+'" value="'+esc(c.Nom)+'"><span class="small muted nowrap">'+n+' invité(s)</span><button class="b sec sm" data-catup="'+c.id+'">↑</button><button class="b sec sm" data-catdn="'+c.id+'">↓</button></div>';}).join('');
-  m.innerHTML='<div class="panel"><h2>Cérémonie</h2><div class="fields">'+f('titre','Titre de la cérémonie')+f('titreListe','Titre de la liste (feuille Excel)')+f('dateCeremonie','Date et heure (texte du mail)',0,'ex. : le vendredi 8 janvier 2027 à 18h')+f('lieu','Lieu (texte du mail)')+f('dateLimite','Date limite de réponse',0,'ex. : lundi 4 janvier 2027')+f('jauge','Jauge de la salle (nombre de places)')+'</div></div>'+
-  '<div class="panel"><h2>Formulaire et envoi</h2><div class="fields">'+f('lienFormulaire','Lien public du formulaire Grist',0,'Obtenu via « Publier » sur le formulaire (vue Formulaire de la table Reponses)')+f('texteBouton','Texte du bouton')+f('expediteur','Expéditeur (From)',0,'laisser vide = identité par défaut de Thunderbird')+f('destinataireVisible','Destinataire visible (To)',0,'ex. : boîte fonctionnelle du service ; vide = destinataires masqués')+f('adresseTest','Adresse pour le fichier de test')+f('delaiRelance','Relance : délai minimum (jours)')+f('tailleLot','Taille des lots (0 = un seul mail)')+'</div>'+
-  '<div class="fields">'+f('objetInvitation','Objet – invitation')+f('objetRelance','Objet – relance')+'</div>'+
-  '<div class="fields">'+f('introInvitation','Phrase d’introduction – invitation','area')+f('introRelance','Phrase d’introduction – relance','area')+f('signature','Signature')+'</div></div>'+
-  '<div class="panel"><h2>Graphisme du mail</h2><p class="muted small">Le graphisme définitif viendra ensuite ; en attendant, un gabarit sobre aux couleurs ci-dessous. Les images sont intégrées au mail (pièces inline).</p><div class="fields">'+f('couleur','Couleur principale','color')+
+  const cats=S.cat.map((c,k)=>{const n=S.inv.filter(i=>s_(i.Categorie)===c.Nom).length;return '<div class="catrow"><span class="small muted nowrap" style="width:26px">'+(k+1)+'</span><input type="text" data-catname="'+c.id+'" value="'+esc(c.Nom)+'"><span class="small muted nowrap">'+n+'</span><label class="small nowrap" title="Cette catégorie est proposée dans la liste déroulante du formulaire"><input type="checkbox" data-pub="'+c.id+'"'+(c.PubForm?' checked':'')+'> dans le formulaire</label><button class="b sec sm" data-catup="'+c.id+'">↑</button><button class="b sec sm" data-catdn="'+c.id+'">↓</button></div>';}).join('');
+  m.innerHTML='<h1>Réglages <span class="small muted">(administrateur)</span></h1><p class="lead">Ces réglages se font une fois. Les secrétaires n’ont pas besoin de venir ici.</p>'+
+  '<div class="panel"><h2>Cérémonie</h2><div class="fields">'+f('titre','Titre de la cérémonie')+f('titreListe','Titre de la liste (feuille Excel)')+f('dateCeremonie','Date et heure (texte du mail)',0,'ex. : le vendredi 8 janvier 2027 à 18h')+f('lieu','Lieu (texte du mail)')+f('dateLimite','Date limite de réponse',0,'ex. : lundi 4 janvier 2027')+f('jauge','Nombre de places dans la salle')+'</div></div>'+
+  '<div class="panel"><h2>Formulaire de réponse</h2>'+
+  '<div class="rule"><i>1</i><div>Dans Grist, ouvrez la table <b>Reponses</b>, ajoutez une vue « Formulaire » et placez les champs dans cet ordre : <b>Prénom, Nom, Fonction ou titre, Votre catégorie, Adresse e-mail, Votre réponse</b>, puis les accompagnants, le représentant et les remarques.</div></div>'+
+  '<div class="rule"><i>2</i><div>Cliquez sur chacun des champs <b>Prénom, Nom, Votre catégorie, Adresse e-mail, Votre réponse</b> et activez « <b>Champ requis</b> » : le formulaire refusera alors l’envoi tant qu’ils sont vides.</div></div>'+
+  '<div class="rule"><i>3</i><div>Publiez le formulaire, copiez son lien public, collez-le ci-dessous.</div></div>'+
+  '<div class="fields">'+f('lienFormulaire','Lien public du formulaire')+f('emailNotif','Adresse qui reçoit les notifications de réponses')+'</div>'+
+  '<p class="small muted">La liste déroulante « catégorie » du formulaire est alimentée par les catégories cochées « dans le formulaire » ci-dessous, plus « '+esc(AUTRE)+' ». <button class="b sm" data-act="syncform">Mettre à jour la liste du formulaire</button></p></div>'+
+  '<div class="panel"><h2>Règles appliquées aux réponses</h2>'+
+  '<div class="rule"><i>1</i><div><b>Une personne = une réponse.</b> Si elle répond plusieurs fois avec la même adresse, seule sa dernière réponse compte ; les précédentes restent dans l’historique, mais ne sont jamais additionnées.</div></div>'+
+  '<div class="rule"><i>2</i><div><b>Si elle change d’avis</b>, sa fiche est mise à jour automatiquement et marquée « a modifié sa réponse » jusqu’à ce que vous cliquiez sur « J’ai vu ».</div></div>'+
+  '<div class="rule"><i>3</i><div><b>Si ce qu’elle a saisi ne correspond pas à la liste</b> (nom différent, autre catégorie, adresse inconnue, nouvelle personne), la réponse attend votre validation : vous acceptez, corrigez la catégorie ou rejetez.</div></div></div>'+
+  '<div class="panel"><h2>Envoi des messages</h2><div class="fields">'+f('texteBouton','Texte du bouton')+f('expediteur','Expéditeur (From)',0,'vide = identité par défaut de Thunderbird')+f('destinataireVisible','Destinataire visible (To)',0,'vide = destinataires masqués')+f('adresseTest','Adresse pour le message de test')+f('delaiRelance','Relance : délai minimum (jours)')+f('tailleLot','Taille des lots (0 = un seul message)')+'</div>'+
+  '<div class="fields">'+f('objetInvitation','Objet – invitation')+f('objetRelance','Objet – relance')+'</div><div class="fields">'+f('introInvitation','Introduction – invitation','area')+f('introRelance','Introduction – relance','area')+f('signature','Signature')+'</div></div>'+
+  '<div class="panel"><h2>Graphisme du mail</h2><div class="fields">'+f('couleur','Couleur principale','color')+
   '<div class="field"><label>Image d’en-tête (bandeau)</label>'+(p.imgEntete?'<img class="thumb" src="'+p.imgEntete+'" alt="">':'')+'<input type="file" accept="image/*" data-img="imgEntete">'+(p.imgEntete?'<button class="b sec sm" data-delimg="imgEntete">Retirer</button>':'')+'</div>'+
   '<div class="field"><label>Image du carton d’invitation</label>'+(p.imgCarton?'<img class="thumb" src="'+p.imgCarton+'" alt="">':'')+'<input type="file" accept="image/*" data-img="imgCarton">'+(p.imgCarton?'<button class="b sec sm" data-delimg="imgCarton">Retirer</button>':'')+'</div></div></div>'+
-  '<div class="panel"><h2>Documents imprimés (charte État)</h2><p class="muted small">En-tête et pied de page des listes pour la Préfète et de l’émargement. Importez le logo (bloc-marque) tel qu’il figure dans vos modèles de correspondance.</p><div class="fields">'+
+  '<div class="panel"><h2>Documents imprimés (charte de l’État)</h2><div class="fields">'+
   '<div class="field"><label>Logo / bloc-marque (image)</label>'+(p.imgLogo?'<img class="thumb" src="'+p.imgLogo+'" alt="">':'')+'<input type="file" accept="image/*" data-img="imgLogo">'+(p.imgLogo?'<button class="b sec sm" data-delimg="imgLogo">Retirer</button>':'')+'</div>'+
-  f('enteteNom','Texte d’en-tête (si pas de logo)')+f('lieuEdition','Lieu d’édition (« Digne-les-Bains, le … »)')+f('pied','Pied de page','area')+'</div></div>'+
-  '<div class="panel"><h2>Catégories</h2><p class="muted small">Ordre d’affichage dans les documents. Pour fusionner deux catégories (ex. « Magitrats » et « Magistrats »), renommez-en une avec le nom exact de l’autre.</p>'+cats+'</div>';
+  f('enteteNom','Texte d’en-tête (si pas de logo)')+f('lieuEdition','Lieu d’édition')+f('pied','Pied de page','area')+'</div></div>'+
+  '<div class="panel"><h2>Catégories</h2><p class="muted small">Ordre d’affichage dans les documents. Pour fusionner deux catégories (ex. « Magitrats » et « Magistrats »), renommez-en une avec le nom exact de l’autre. Décochez « dans le formulaire » les catégories internes qui ne doivent pas être proposées au public.</p>'+cats+'</div>';
 }
 
 /* ----------------------------- Modales ----------------------------- */
 function modal(html){$('#modal').innerHTML=html;$('#modalBg').style.display='flex';}
-function closeModal(){$('#modalBg').style.display='none';$('#modal').innerHTML='';}
+function closeModal(){$('#modalBg').style.display='none';$('#modal').innerHTML='';UI.val=null;}
 const IFIELDS=[['Categorie','Catégorie'],['Civilite','Civilité'],['Prenom','Prénom'],['Nom','Nom'],['Fonction1','Fonction 1'],['Fonction2','Fonction 2'],['Fonction3','Fonction 3'],['Email','E-mail (plusieurs : séparés par « ; »)'],['Adresse1','Adresse 1'],['Adresse2','Adresse 2'],['CP','CP'],['Ville','Ville'],['Rang','Rang de préséance','number'],['NotesProtocole','Notes protocole']];
 function openInvite(id){
   const i=id?S.inv.find(x=>x.id===id):{Reponse:'',NbAccompagnants:0};
-  modal('<h2>'+(id?esc(dispName(i)):'Nouvel invité')+'</h2><div class="fields">'+
+  modal('<h2>'+(id?esc(dispName(i)):'Nouvelle personne')+'</h2><div class="fields">'+
    IFIELDS.map(([k,l,t])=>'<div class="field"><label>'+l+'</label><input data-f="'+k+'" '+(t==='number'?'type="number" ':'')+(k==='Categorie'?'list="catlist" ':'')+'value="'+esc(i[k]==null?'':i[k])+'"></div>').join('')+'</div><datalist id="catlist">'+S.cat.map(c=>'<option value="'+esc(c.Nom)+'">').join('')+'</datalist>'+
    '<h3>Réponse</h3><div class="fields"><div class="field"><label>Réponse</label><select data-f="Reponse"><option value="">— pas de réponse —</option><option'+(i.Reponse==='Présent'?' selected':'')+'>Présent</option><option'+(i.Reponse==='Excusé'?' selected':'')+'>Excusé</option></select></div>'+
    '<div class="field"><label>Nombre d’accompagnants</label><input data-f="NbAccompagnants" type="number" min="0" value="'+(i.NbAccompagnants||0)+'"></div>'+
    '<div class="field"><label>Noms des accompagnants</label><input data-f="Accompagnants" value="'+esc(i.Accompagnants)+'"></div>'+
    '<div class="field"><label>Excusé, représenté par</label><input data-f="RepresentePar" value="'+esc(i.RepresentePar)+'"></div>'+
    '<div class="field"><label>Source de la réponse</label><select data-f="SourceReponse">'+['','Formulaire','Mail','Téléphone','Courrier','Saisie manuelle','Import Excel'].map(x=>'<option'+(i.SourceReponse===x?' selected':'')+'>'+x+'</option>').join('')+'</select></div></div>'+
-   '<div class="row"><label><input type="checkbox" data-f="PresentAnneePrecedente"'+(i.PresentAnneePrecedente?' checked':'')+'> Présent l’an dernier</label><label><input type="checkbox" data-f="ListeAttente"'+(i.ListeAttente?' checked':'')+'> En liste d’attente</label></div>'+
+   '<div class="row"><label><input type="checkbox" data-f="PresentAnneePrecedente"'+(i.PresentAnneePrecedente?' checked':'')+'> Présent l’an dernier</label><label><input type="checkbox" data-f="ListeAttente"'+(i.ListeAttente?' checked':'')+'> En liste d’attente</label><label><input type="checkbox" data-f="ReponseModifiee"'+(i.ReponseModifiee?' checked':'')+'> Réponse modifiée (à vérifier)</label></div>'+
    '<div class="row"><button class="b" data-act="save-inv" data-id="'+(id||'')+'">Enregistrer</button><button class="b sec" data-act="close">Annuler</button><span style="flex:1"></span>'+(id?'<button class="b red sm" data-act="del-ask" data-id="'+id+'">Supprimer</button>':'')+'</div>'+
    (id?'<p class="small muted">Invité le '+(fmtD(i.DateInvitation)||'—')+' · relances : '+(i.NbRelances||0)+(i.DateRelance?' (dernière le '+fmtD(i.DateRelance)+')':'')+(i.DateReponse?' · réponse le '+fmtD(i.DateReponse):'')+'</p>':''));
 }
 async function saveInvite(id){
   const f={};document.querySelectorAll('#modal [data-f]').forEach(el=>{const k=el.dataset.f;f[k]=el.type==='checkbox'?el.checked:(el.type==='number'?(el.value===''?0:+el.value):el.value.trim());});
+  if(!id){const dup=S.inv.find(i=>nameKey(i)&&nameKey(i)===nameKey(f));if(dup&&!openInvite.force){openInvite.force=true;toast('Une personne de ce nom existe déjà ('+dispName(dup)+'). Cliquez encore sur « Enregistrer » pour créer quand même un doublon.',true);return;}}
+  openInvite.force=false;
   if(f.Reponse&&!f.SourceReponse)f.SourceReponse='Saisie manuelle';
   const old=id?S.inv.find(x=>x.id===id):null;
   if(f.Reponse&&(!old||old.Reponse!==f.Reponse||!old.DateReponse))f.DateReponse=todayIso();
@@ -709,54 +885,105 @@ async function saveInvite(id){
   if(id){await act([['UpdateRecord','Invites',id,f]]);}else{await act([['AddRecord','Invites',null,f]]);}
   await loadAll();await ensureCategories();closeModal();render();toast('Fiche enregistrée');
 }
-function openRap(){
-  const L=unmatched();
-  modal('<h2>Réponses à rapprocher</h2><p class="muted small">Ces réponses viennent d’une adresse e-mail absente de la base. Choisissez l’invité concerné : l’adresse y sera ajoutée et ses prochaines réponses seront rapprochées automatiquement.</p>'+
-   (L.length?L.map(r=>'<div class="panel" data-rap="'+r.id+'"><b>'+esc(r.Email||'(sans adresse)')+'</b> — '+esc(r.Presence||'(réponse vide)')+(r.NbAccompagnants?' (+'+r.NbAccompagnants+')':'')+(r.Accompagnants?' : '+esc(r.Accompagnants):'')+(r.RepresentePar?' — représenté par '+esc(r.RepresentePar):'')+(r.Remarques?'<br><span class="muted small">'+esc(r.Remarques)+'</span>':'')+
-   (repState(r).k==='bad'?'<div class="warn small">Texte de réponse non reconnu : « '+esc(r.Presence)+' ». <button class="b sm" data-fix="'+r.id+'|Présent">Compter comme présent</button> <button class="b sm" data-fix="'+r.id+'|Excusé">Compter comme excusé</button></div>':'')+'<div class="row"><input data-rapq="'+r.id+'" placeholder="Rechercher l’invité (nom, prénom…)"><button class="b sec sm" data-rapnew="'+r.id+'">Créer un nouvel invité</button><button class="b sec sm" data-rapign="'+r.id+'">Ignorer</button></div><div data-rapres="'+r.id+'"></div></div>').join(''):'<p class="ok">Tout est rapproché.</p>')+
+/* Noter une réponse reçue par téléphone / courrier */
+function openNote(){
+  modal('<h2>Noter une réponse reçue par téléphone ou par courrier</h2><p>Tapez le nom de la personne, puis choisissez-la dans la liste.</p><input id="nsearch" type="search" placeholder="🔍 Nom de la personne…" style="width:100%;font-size:18px"><div id="nres" style="margin-top:10px"></div><div class="row"><button class="b sec" data-act="close">Fermer</button></div>');
+  setTimeout(()=>{const n=$('#nsearch');if(n)n.focus();},50);
+}
+/* Doublons */
+function openDups(){
+  const g=dupGroups();
+  const card=(a,why)=>'<div class="panel"><div class="small muted">'+why+'</div>'+a.map(i=>'<div class="row" style="border-top:1px solid #eee"><div style="flex:1"><b>'+esc(dispName(i))+'</b> — '+esc(i.Categorie)+'<br><span class="small muted">'+esc(fonctions(i))+' · '+esc(i.Email)+'</span></div>'+badge(i)+'<button class="b sm" data-keep="'+i.id+'" data-drop="'+a.filter(x=>x.id!==i.id).map(x=>x.id).join(',')+'">Garder celle-ci et fusionner</button><button class="b sec sm" data-edit="'+i.id+'">Fiche</button></div>').join('')+'</div>';
+  modal('<h2>Doublons possibles</h2><p class="muted small">« Fusionner » garde la fiche choisie, y ajoute les informations manquantes des autres (adresses, réponse la plus récente…), puis supprime les autres fiches.</p>'+
+   (g.nameG.length?'<h3>Même nom et prénom ('+g.nameG.length+')</h3>'+g.nameG.map(a=>card(a,'Même nom et prénom')).join(''):'<div class="okbox">Aucune personne en double (même nom et prénom).</div>')+
+   (g.mailG.length?'<h3>Même adresse e-mail pour des personnes différentes ('+g.mailG.length+')</h3><p class="small muted">C’est parfois normal (adresse de mairie, de cabinet). Fusionnez seulement s’il s’agit de la même personne.</p>'+g.mailG.map(a=>card(a,'Adresse partagée : '+esc(emails(a[0].Email).find(e=>a.every(i=>emails(i.Email).includes(e)))||''))).join(''):'')+
    '<div class="row"><button class="b" data-act="close">Fermer</button></div>');
 }
-async function assignResp(rid,iid){
-  const r=S.rep.find(x=>x.id===rid),inv=S.inv.find(x=>x.id===iid);if(!r||!inv)return;
-  const f=respFields(r);const em=emails(inv.Email);const e=s_(r.Email).trim().toLowerCase();
-  if(e&&!em.includes(e))f.Email=(s_(inv.Email).trim()?inv.Email.trim()+' ; ':'')+e;
-  Object.assign(inv,f);await act([['UpdateRecord','Invites',iid,f],['UpdateRecord','Reponses',rid,{Traitee:true,Invite:iid}]]);r.Traitee=true;r.Invite=iid;
-  toast('Réponse rapprochée de '+dispName(inv));openRap();render();
+/* Validation d'une réponse par l'administrateur */
+function saveValState(){const v=UI.val;if(!v)return;const c=$('#vcat'),p=$('#vpres');if(c)v.cat=c.value;if(p)v.pres=p.value;}
+function openValidate(rid){const r=S.rep.find(x=>x.id===rid);if(!r)return;const c=checkResponse(r);UI.val={rid,cand:c.inv?c.inv.id:0,cat:undefined,pres:''};renderValidate();}
+function renderValidate(){
+  const v=UI.val,r=S.rep.find(x=>x.id===v.rid);if(!r){closeModal();return;}
+  const cand=v.cand?S.inv.find(i=>i.id===v.cand):null,c=checkResponse(r),declared=s_(r.Categorie);
+  const defCat=v.cat!==undefined?v.cat:(cand?s_(cand.Categorie):(declared&&declared!==AUTRE&&S.cat.some(x=>x.Nom===declared)?declared:''));
+  const row=(l,a,b)=>{const diff=cand&&norm(a)&&norm(b)&&norm(a)!==norm(b);return '<tr><th>'+l+'</th><td>'+esc(a)+'</td><td'+(diff?' class="diff"':'')+'>'+(cand?esc(b):'<span class="muted">—</span>')+'</td></tr>';};
+  const pres=normPres(r.Presence);
+  const dupWarn=!cand&&S.inv.some(i=>nameMatch(r,i));
+  modal('<h2>Valider une réponse</h2><p class="small muted">Comparez ce que la personne a saisi avec la liste. Les différences sont en jaune.</p>'+
+   '<table class="t cmp"><thead><tr><th></th><th>Saisi dans le formulaire</th><th>Dans la liste'+(cand?' : '+esc(dispName(cand)):'')+'</th></tr></thead><tbody>'+
+   row('Prénom',r.Prenom,cand&&cand.Prenom)+row('Nom',r.Nom,cand&&cand.Nom)+row('Fonction ou titre',r.Fonction,cand&&fonctions(cand))+row('Catégorie',declared,cand&&cand.Categorie)+row('Adresse e-mail',r.Email,cand&&cand.Email)+'</tbody></table>'+
+   '<div class="warn"><b>Pourquoi cette validation :</b> '+esc(c.reasons.join(' · ')||'réponse non reconnue')+'</div>'+
+   '<h3>Sa réponse</h3>'+(pres?'<p><span class="badge '+(pres==='Présent'?'b-present':'b-excuse')+'">'+pres+'</span>'+((+r.NbAccompagnants)?' avec '+r.NbAccompagnants+' accompagnant(s) '+esc(r.Accompagnants):'')+(r.RepresentePar?' — représenté(e) par '+esc(r.RepresentePar):'')+(r.Remarques?'<br><span class="muted small">Remarque : '+esc(r.Remarques)+'</span>':'')+'</p>':
+     '<p>Texte reçu : « '+esc(r.Presence)+' » — non reconnu. Indiquez : <select id="vpres"><option value="">— choisir —</option><option'+(v.pres==='Présent'?' selected':'')+'>Présent</option><option'+(v.pres==='Excusé'?' selected':'')+'>Excusé</option></select></p>')+
+   '<h3>À qui rattacher cette réponse ?</h3><div class="row"><div style="flex:1;min-width:240px">'+(cand?'✔ <b>'+esc(dispName(cand))+'</b> ('+esc(cand.Categorie)+')':'<b>Nouvelle personne</b> (elle sera ajoutée à la liste)')+'</div><input id="vsearch" type="search" placeholder="🔍 Choisir une autre personne de la liste…" style="min-width:260px">'+(cand?'<button class="b sec sm" data-vnew="1">C’est une nouvelle personne</button>':'')+'</div><div id="vres"></div>'+
+   (dupWarn?'<div class="warn">⚠ Une personne portant ce nom existe déjà dans la liste. Évitez de créer un doublon : cherchez-la ci-dessus.</div>':'')+
+   '<h3>Catégorie à enregistrer</h3><div class="row"><select id="vcat"><option value="">— à choisir —</option>'+S.cat.map(x=>'<option'+(defCat===x.Nom?' selected':'')+' value="'+esc(x.Nom)+'">'+esc(x.Nom)+'</option>').join('')+'</select><span class="small muted">'+(declared?'La personne a choisi : « '+esc(declared)+' ».':'')+'</span></div>'+
+   '<div class="row" style="margin-top:16px"><button class="b vert" data-act="v-accept" style="font-size:16px">✔ Accepter'+(cand?' et rattacher à '+esc(fullName(cand)):' et ajouter à la liste')+'</button><button class="b red" data-act="v-reject">✖ Rejeter cette réponse</button><button class="b sec" data-act="close">Annuler</button></div>');
+}
+async function acceptValidate(){
+  const v=UI.val,r=S.rep.find(x=>x.id===v.rid);saveValState();
+  const cand=v.cand?S.inv.find(i=>i.id===v.cand):null;
+  if(!normPres(r.Presence)){
+    if(!v.pres){toast('Indiquez d’abord si la personne vient ou non.',true);return;}
+    const lbl=v.pres==='Présent'?PRES_OUI:PRES_NON;await act([['UpdateRecord','Reponses',r.id,{Presence:lbl}]]);r.Presence=lbl;
+  }
+  const cat=v.cat||'';
+  if(cand){await act(applyActions(r,cand,cat?{Categorie:cat}:{}));}
+  else{
+    if(!cat){toast('Choisissez la catégorie de cette nouvelle personne.',true);return;}
+    const f=Object.assign({Categorie:cat,Prenom:s_(r.Prenom),Nom:s_(r.Nom),Fonction1:s_(r.Fonction),Email:emailKey(r)||s_(r.Email).trim(),Remarques:'Inscrit via le formulaire'},respFields(r));
+    const res=await act([['AddRecord','Invites',null,f]]);let id=res&&res.retValues&&res.retValues[0];
+    await loadAll();if(!id){const m=findInviteByEmail(f.Email);id=m&&m.id;}
+    if(id)await act([['UpdateRecord','Reponses',r.id,{Traitee:true,Invite:id}]]);
+  }
+  await loadAll();await ensureCategories();closeModal();render();toast('Réponse enregistrée');
 }
 
 /* ----------------------------- Événements ----------------------------- */
+const CLICK_SEL='[data-step],[data-rsub],[data-act],[data-edit],[data-gen],[data-gen-test],[data-prev],[data-doc],[data-catup],[data-catdn],[data-delimg],[data-valid],[data-vpick],[data-vnew],[data-pickfiche],[data-seen],[data-redo],[data-keep]';
 document.addEventListener('click',async ev=>{
-  const t=ev.target.closest('[data-tab],[data-act],[data-edit],[data-gen],[data-gen-test],[data-prev],[data-doc],[data-catup],[data-catdn],[data-delimg],[data-rapnew],[data-rapign],[data-pick],[data-fix],[data-redo]');if(!t)return;
+  const t=ev.target.closest(CLICK_SEL);if(!t)return;
   try{
-    if(t.dataset.tab){UI.tab=t.dataset.tab;render();return;}
+    if(t.dataset.step){UI.step=t.dataset.step;render();window.scrollTo(0,0);if(t.tagName==='A')ev.preventDefault();return;}
+    if(t.dataset.rsub){UI.rsub=t.dataset.rsub;render();return;}
     if(t.dataset.edit){openInvite(+t.dataset.edit);return;}
     if(t.dataset.gen){await generate(t.dataset.gen,false);return;}
     if(t.dataset.genTest){await generate(t.dataset.genTest,true);return;}
     if(t.dataset.prev){const m=buildMail(t.dataset.prev,true);modal('<h2>Aperçu – '+(t.dataset.prev==='relance'?'relance':'invitation')+'</h2><iframe style="width:100%;height:560px;border:1px solid #ddd" srcdoc="'+esc(m.html)+'"></iframe><div class="row"><button class="b" data-act="close">Fermer</button></div>');return;}
-    if(t.dataset.doc){const m=t.dataset.doc;showPrint(docPrefete(m,m==='aval'&&$('#onlyPres')&&$('#onlyPres').checked,m==='amont'?(+($('#nbBlank')||{}).value||0):0),'Liste_Prefete_'+m+'_'+todayIso()+'.html',m==='aval'?'Réponses par catégorie':'Invités par catégorie');return;}
+    if(t.dataset.doc){
+      const m=t.dataset.doc,cat=($(m==='amont'?'#docCatAmont':'#docCatAval')||{}).value||'';
+      showPrint(docPrefete(m,m==='aval'&&$('#onlyPres')&&$('#onlyPres').checked,m==='amont'?(+($('#nbBlank')||{}).value||0):0,cat),'Liste_Prefete_'+m+(cat?'_'+norm(cat).slice(0,24):'')+'_'+todayIso()+'.html',(m==='aval'?'Réponses':'Invités')+(cat?' – '+cat:' par catégorie'));return;}
     if(t.dataset.delimg){await setPar(t.dataset.delimg,'');render();return;}
     if(t.dataset.catup||t.dataset.catdn){
       const id=+(t.dataset.catup||t.dataset.catdn),k=S.cat.findIndex(c=>c.id===id),k2=t.dataset.catup?k-1:k+1;if(k<0||k2<0||k2>=S.cat.length)return;
       const a=S.cat[k],b=S.cat[k2];const oa=a.Ordre,ob=b.Ordre;
       await act([['UpdateRecord','Categories',a.id,{Ordre:ob===oa?ob+(t.dataset.catup?-1:1):ob}],['UpdateRecord','Categories',b.id,{Ordre:oa}]]);
       S.cat=(await fetchRows('Categories')).sort((x,y)=>(x.Ordre||0)-(y.Ordre||0)||x.id-y.id);render();return;}
-    if(t.dataset.rapnew){const r=S.rep.find(x=>x.id===+t.dataset.rapnew);const f=Object.assign({Email:s_(r.Email).trim(),Categorie:'',Nom:s_(r.Email).trim()},respFields(r));await act([['AddRecord','Invites',null,f]]);await loadAll();const inv=findInviteByEmail(r.Email);if(inv){await act([['UpdateRecord','Reponses',r.id,{Traitee:true,Invite:inv.id}]]);r.Traitee=true;r.Invite=inv.id;}toast('Invité créé : complétez sa fiche');openRap();render();return;}
-    if(t.dataset.rapign){const r=S.rep.find(x=>x.id===+t.dataset.rapign);await act([['UpdateRecord','Reponses',r.id,{Traitee:true,Invite:-1}]]);r.Traitee=true;r.Invite=-1;openRap();render();return;}
-    if(t.dataset.fix){const [id,v]=t.dataset.fix.split('|');const r=S.rep.find(x=>x.id===+id);const lbl=v==='Présent'?PRES_OUI:PRES_NON;await act([['UpdateRecord','Reponses',r.id,{Presence:lbl}]]);r.Presence=lbl;await syncReponses();openRap();render();return;}
+    if(t.dataset.valid){openValidate(+t.dataset.valid);return;}
+    if(t.dataset.vpick){saveValState();UI.val.cand=+t.dataset.vpick;UI.val.cat=undefined;renderValidate();return;}
+    if(t.dataset.vnew){saveValState();UI.val.cand=0;UI.val.cat=undefined;renderValidate();return;}
+    if(t.dataset.pickfiche){closeModal();openInvite(+t.dataset.pickfiche);return;}
+    if(t.dataset.seen){await updInv(+t.dataset.seen,{ReponseModifiee:false});render();return;}
     if(t.dataset.redo){const r=S.rep.find(x=>x.id===+t.dataset.redo);await act([['UpdateRecord','Reponses',r.id,{Traitee:false,Invite:0}]]);r.Traitee=false;r.Invite=0;await syncReponses();render();toast('Réponse retraitée');return;}
-    if(t.dataset.pick){await assignResp(+t.dataset.rid,+t.dataset.pick);return;}
+    if(t.dataset.keep){const keep=+t.dataset.keep,drop=t.dataset.drop.split(',').map(Number);await mergeInvites(keep,drop);toast('Fiches fusionnées');openDups();render();return;}
     switch(t.dataset.act){
-      case 'refresh':await refresh();break;
+      case 'refresh':ev.preventDefault();await refresh();break;
       case 'close':closeModal();break;
       case 'new':openInvite(null);break;
-      case 'rap':openRap();break;
-      case 'goto-sansmail':UI.tab='inv';UI.fstat='sansmail';render();break;
+      case 'dups':openDups();break;
+      case 'note':openNote();break;
       case 'save-inv':await saveInvite(t.dataset.id?+t.dataset.id:null);break;
-      case 'del-ask':modal('<h2>Supprimer cet invité ?</h2><p>Cette action est définitive.</p><div class="row"><button class="b red" data-act="del-ok" data-id="'+t.dataset.id+'">Oui, supprimer</button><button class="b sec" data-act="close">Non</button></div>');break;
-      case 'del-ok':await act([['RemoveRecord','Invites',+t.dataset.id]]);await loadAll();closeModal();render();toast('Invité supprimé');break;
+      case 'del-ask':modal('<h2>Supprimer cette personne ?</h2><p>Cette action est définitive.</p><div class="row"><button class="b red" data-act="del-ok" data-id="'+t.dataset.id+'">Oui, supprimer</button><button class="b sec" data-act="close">Non</button></div>');break;
+      case 'del-ok':await act([['RemoveRecord','Invites',+t.dataset.id]]);await loadAll();closeModal();render();toast('Personne supprimée');break;
       case 'confirm-sent':await confirmSent();break;
       case 'cancel-sent':UI.pending=null;render();break;
-      case 'xlsx':try{await exportXlsx();toast('Export généré');}catch(e){toast(e.message,true);}break;
+      case 'v-accept':await acceptValidate();break;
+      case 'v-reject':{const v=UI.val;await act([['UpdateRecord','Reponses',v.rid,{Traitee:true,Invite:-1}]]);const r=S.rep.find(x=>x.id===v.rid);r.Traitee=true;r.Invite=-1;closeModal();render();toast('Réponse rejetée');break;}
+      case 'notif':{const reps=newReps();if(!reps.length)break;download(new Blob([buildDigestEml(reps)],{type:'message/rfc822'}),'Notification_reponses_'+todayIso()+'.eml');UI.pendingNotif={max:Math.max(...reps.map(r=>r.id))};render();break;}
+      case 'notif-ok':await setPar('notifJusqua',String(UI.pendingNotif.max));UI.pendingNotif=null;render();toast('Notification enregistrée');break;
+      case 'notif-cancel':UI.pendingNotif=null;render();break;
+      case 'syncform':{const n=await syncFormChoices();toast('Liste du formulaire mise à jour ('+n+' choix)');break;}
+      case 'xlsx':try{await exportXlsx();toast('Fichier Excel généré');}catch(e){toast(e.message,true);}break;
       case 'emarg':showPrint(docEmargement(),'Emargement_'+todayIso()+'.html','Liste d’émargement');break;
       case 'pl-close':$('#printLayer').style.display='none';break;
       case 'pl-print':try{$('#plFrame').contentWindow.focus();$('#plFrame').contentWindow.print();}catch(e){toast('Impression bloquée : téléchargez le fichier .html et imprimez-le depuis le navigateur.',true);}break;
@@ -768,11 +995,14 @@ document.addEventListener('click',async ev=>{
 document.addEventListener('input',ev=>{
   const t=ev.target;
   if(t.id==='q'){UI.q=t.value;invRows();}
-  else if(t.id==='jq'){UI.jq=t.value;const pos=t.selectionStart;rDay($('#main'));const n=$('#jq');n.focus();n.setSelectionRange(pos,pos);}
-  else if(t.dataset.rapq){
-    const q=norm(t.value),box=document.querySelector('[data-rapres="'+t.dataset.rapq+'"]');
-    const L=q.length<2?[]:S.inv.filter(i=>norm(i.Nom+' '+i.Prenom+' '+i.Email).includes(q)).slice(0,6);
-    box.innerHTML=L.map(i=>'<button class="b sec sm" style="margin:2px" data-pick="'+i.id+'" data-rid="'+t.dataset.rapq+'">'+esc(dispName(i))+' <span class="muted">('+esc(i.Categorie)+')</span></button>').join('');
+  else if(t.id==='jq'){UI.jq=t.value;const pos=t.selectionStart;rJourJ($('#main'));const n=$('#jq');n.focus();n.setSelectionRange(pos,pos);}
+  else if(t.id==='vsearch'){
+    const q=norm(t.value),box=$('#vres'),L=q.length<2?[]:S.inv.filter(i=>norm(i.Nom+' '+i.Prenom+' '+i.Email).includes(q)).slice(0,8);
+    box.innerHTML=L.map(i=>'<button class="b sec sm" style="margin:2px" data-vpick="'+i.id+'">'+esc(dispName(i))+' <span class="muted">('+esc(i.Categorie)+')</span></button>').join('');
+  }
+  else if(t.id==='nsearch'){
+    const q=norm(t.value),box=$('#nres'),L=q.length<2?[]:S.inv.filter(i=>norm(i.Nom+' '+i.Prenom).includes(q)).slice(0,10);
+    box.innerHTML=L.map(i=>'<div class="row" style="border-top:1px solid #eee"><div style="flex:1"><b>'+esc(dispName(i))+'</b> — '+esc(i.Categorie)+'<br><span class="small muted">'+esc(fonctions(i))+'</span></div>'+badge(i)+'<button class="b" data-pickfiche="'+i.id+'">Noter sa réponse</button></div>').join('')||(q.length>=2?'<p class="muted">Personne ne porte ce nom dans la liste.</p>':'');
   }
 });
 document.addEventListener('change',async ev=>{
@@ -782,18 +1012,15 @@ document.addEventListener('change',async ev=>{
     else if(t.id==='fstat'){UI.fstat=t.value;invRows();}
     else if(t.id==='fdup'){UI.dup=t.checked;invRows();}
     else if(t.id==='incAll'){UI.incAll=t.checked;render();}
-    else if(t.dataset.quick){
-      const id=+t.dataset.quick,v=t.value;const f=v?{Reponse:v,SourceReponse:'Saisie manuelle',DateReponse:todayIso()}:{Reponse:'',NbAccompagnants:0,Accompagnants:'',RepresentePar:'',DateReponse:'',SourceReponse:''};
-      if(v==='Excusé'){f.NbAccompagnants=0;f.Accompagnants='';}await updInv(id,f);invRows();renderTabs();
-    }
-    else if(t.dataset.arr){await updInv(+t.dataset.arr,{Arrive:t.checked});rDay($('#main'));}
-    else if(t.dataset.par){await setPar(t.dataset.par,t.value.trim());if(t.dataset.par==='titre')renderTabs();}
+    else if(t.dataset.arr){await updInv(+t.dataset.arr,{Arrive:t.checked});rJourJ($('#main'));}
+    else if(t.dataset.par){await setPar(t.dataset.par,t.value.trim());if(t.dataset.par==='titre')renderSide();}
+    else if(t.dataset.pub){const c=S.cat.find(x=>x.id===+t.dataset.pub);c.PubForm=t.checked;await act([['UpdateRecord','Categories',c.id,{PubForm:t.checked}]]);await syncFormChoices();toast('Liste du formulaire mise à jour');}
     else if(t.dataset.catname){
       const c=S.cat.find(x=>x.id===+t.dataset.catname),nv=t.value.trim();if(!nv||nv===c.Nom)return;
       const acts=S.inv.filter(i=>s_(i.Categorie)===c.Nom).map(i=>['UpdateRecord','Invites',i.id,{Categorie:nv}]);
       const other=S.cat.find(x=>x.Nom===nv&&x.id!==c.id);
       if(other)acts.push(['RemoveRecord','Categories',c.id]);else acts.push(['UpdateRecord','Categories',c.id,{Nom:nv}]);
-      await act(acts);await loadAll();render();toast(other?'Catégories fusionnées':'Catégorie renommée');
+      await act(acts);await loadAll();render();await syncFormChoices();toast(other?'Catégories fusionnées':'Catégorie renommée');
     }
     else if(t.dataset.att){UI.att[t.dataset.att]=t.files[0]||null;}
     else if(t.dataset.img){const f=t.files[0];if(f){const d=await readImage(f,1200);await setPar(t.dataset.img,d);render();toast('Image enregistrée');}}
@@ -801,9 +1028,10 @@ document.addEventListener('change',async ev=>{
       const f=t.files[0];t.value='';if(!f)return;toast('Lecture du fichier…');
       const {rows,sheet}=await parseExcel(f);const plan=planImport(rows);UI.impPlan=plan;
       const cats=new Set(rows.map(r=>r.Categorie).filter(Boolean));
-      modal('<h2>Importer « '+esc(f.name)+' »</h2><p>Feuille lue : <b>'+esc(sheet)+'</b> — '+rows.length+' ligne(s) avec contenu, '+cats.size+' catégorie(s).</p>'+
-       (plan.dupRows?'<div class="warn"><b>'+plan.dupRows+' ligne(s)</b> semblent en doublon dans le fichier (même nom + prénom ou même e-mail). Elles sont importées quand même ; repérez-les ensuite avec le filtre « Doublons possibles » de l’onglet Invités.</div>':'')+(plan.noCat?'<div class="warn"><b>'+plan.noCat+' ligne(s) sans catégorie</b> : elles apparaîtront sous « (sans catégorie) ».</div>':'')+'<div class="ok"><b>'+plan.add.length+'</b> nouvel(le)(s) invité(s) seront ajouté(e)s.<br><b>'+plan.upd.length+'</b> invité(s) déjà présents (même e-mail ou même nom + prénom) seront mis à jour (coordonnées et catégorie ; les réponses déjà enregistrées sont conservées).</div>'+
-       '<div class="row"><button class="b" data-act="imp-ok">Lancer l’import</button><button class="b sec" data-act="close">Annuler</button></div>');
+      modal('<h2>Charger « '+esc(f.name)+' »</h2><p>Feuille lue : <b>'+esc(sheet)+'</b> — '+rows.length+' ligne(s) avec contenu, '+cats.size+' catégorie(s).</p>'+
+       (plan.dupRows?'<div class="warn"><b>'+plan.dupRows+' ligne(s)</b> semblent en doublon dans le fichier (même nom + prénom ou même e-mail). Elles sont importées quand même ; repérez-les ensuite avec « Vérifier et fusionner ».</div>':'')+(plan.noCat?'<div class="warn"><b>'+plan.noCat+' ligne(s) sans catégorie</b> : elles apparaîtront sous « (sans catégorie) ».</div>':'')+
+       '<div class="okbox"><b>'+plan.add.length+'</b> nouvelle(s) personne(s) seront ajoutée(s).<br><b>'+plan.upd.length+'</b> personne(s) déjà présentes (même nom et prénom) seront mises à jour (coordonnées et catégorie ; les réponses déjà enregistrées sont conservées).</div>'+
+       '<div class="row"><button class="b" data-act="imp-ok">Lancer le chargement</button><button class="b sec" data-act="close">Annuler</button></div>');
     }
   }catch(e){console.error(e);toast('Erreur : '+(e.message||e),true);}
 });
