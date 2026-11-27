@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vœux – Invitations</title>
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+<style>
+:root{--bleu:#000091;--bleu2:#e3e3fd;--rouge:#e1000f;--gris:#f6f6f6;--bord:#dddddd;--txt:#161616;--mute:#666;--vert:#18753c;--vert2:#b8fec9;--orange:#b34000;--orange2:#ffe9e6;--jaune2:#feebd0}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;font:14px/1.45 Arial,Helvetica,sans-serif;color:var(--txt);background:#fff}
+header.top{display:flex;align-items:center;gap:14px;padding:8px 14px;border-bottom:3px solid var(--bleu);background:#fff;position:sticky;top:0;z-index:5;flex-wrap:wrap}
+header.top h1{font-size:16px;margin:0;color:var(--bleu)}
+header.top .flag{display:inline-block;width:26px;height:18px;background:linear-gradient(90deg,var(--bleu) 0 33%,#fff 33% 66%,var(--rouge) 66%);border:1px solid var(--bord)}
+nav.tabs{display:flex;gap:2px;flex-wrap:wrap;flex:1}
+nav.tabs button{border:0;background:transparent;padding:8px 12px;font:inherit;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-11px;color:var(--txt)}
+nav.tabs button.on{color:var(--bleu);border-bottom-color:var(--bleu);font-weight:bold}
+nav.tabs button:hover{background:var(--gris)}
+.right{display:flex;gap:8px;align-items:center;color:var(--mute);font-size:12px}
+main{padding:14px;max-width:1300px;margin:0 auto}
+button.b,label.b{display:inline-block;border:1px solid var(--bleu);background:var(--bleu);color:#fff;padding:6px 12px;font:inherit;cursor:pointer;border-radius:3px}
+button.b:hover,label.b:hover{background:#1212ff}
+button.b.sec,label.b.sec{background:#fff;color:var(--bleu)}
+button.b.sec:hover,label.b.sec:hover{background:var(--bleu2)}
+button.b.red{background:var(--rouge);border-color:var(--rouge)}
+button.b:disabled{opacity:.45;cursor:not-allowed}
+button.b.sm{padding:2px 8px;font-size:12px}
+input,select,textarea{font:inherit;border:1px solid #929292;border-radius:3px;padding:5px 7px;background:#fff;max-width:100%}
+textarea{width:100%;min-height:70px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:10px 0}
+.kpi{border:1px solid var(--bord);border-top:4px solid var(--bleu);padding:10px 12px;background:#fff;cursor:default}
+.kpi .n{font-size:28px;font-weight:bold;color:var(--bleu);line-height:1.1}
+.kpi .l{font-size:12px;color:var(--mute)}
+.kpi.vert{border-top-color:var(--vert)}.kpi.vert .n{color:var(--vert)}
+.kpi.orange{border-top-color:var(--orange)}.kpi.orange .n{color:var(--orange)}
+.kpi.click{cursor:pointer}.kpi.click:hover{background:var(--gris)}
+.panel{border:1px solid var(--bord);padding:12px 14px;margin:12px 0;background:#fff}
+.panel h2{font-size:15px;margin:0 0 8px;color:var(--bleu)}
+.panel h3{font-size:14px;margin:12px 0 4px}
+table.t{border-collapse:collapse;width:100%}
+table.t th,table.t td{border-bottom:1px solid var(--bord);padding:5px 7px;text-align:left;vertical-align:top}
+table.t th{background:var(--gris);font-size:12px;position:sticky;top:44px;z-index:2}
+table.t td.num,table.t th.num{text-align:right;font-variant-numeric:tabular-nums}
+table.t tr:hover td{background:#fafafa}
+table.t tr.tot td{font-weight:bold;border-top:2px solid var(--bleu);background:var(--gris)}
+.badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;white-space:nowrap}
+.b-present{background:var(--vert2);color:#0a5a28}
+.b-excuse{background:#e5e5e5;color:#3a3a3a}
+.b-represente{background:#dfe7fd;color:#000091}
+.b-invite{background:var(--jaune2);color:#6e4a00}
+.b-relance{background:var(--orange2);color:var(--orange)}
+.b-ainviter{background:#f0f0f0;color:#555;border:1px dashed #999}
+.b-sansmail{background:#f4d7f4;color:#6b006b}
+.b-attente{background:#fff3b0;color:#6a5a00}
+.bar{height:8px;background:#e9e9e9;border-radius:4px;overflow:hidden;min-width:70px}
+.bar i{display:block;height:100%;background:var(--vert)}
+.bar.jauge{height:16px}.bar.jauge i{background:var(--bleu)}.bar.jauge.full i{background:var(--rouge)}
+.muted{color:var(--mute)}.small{font-size:12px}
+.warn{background:var(--jaune2);border-left:4px solid #b34000;padding:8px 10px;margin:8px 0}
+.ok{background:#e6f6ea;border-left:4px solid var(--vert);padding:8px 10px;margin:8px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:2px;margin:6px 0;flex:1 1 200px}
+.field label{font-size:12px;color:var(--mute)}
+.fields{display:flex;gap:10px;flex-wrap:wrap}
+#modalBg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;z-index:50;overflow:auto;padding:30px 10px}
+#modal{background:#fff;max-width:900px;width:100%;padding:16px 18px;border-top:4px solid var(--bleu);box-shadow:0 8px 30px rgba(0,0,0,.3)}
+#modal h2{margin:0 0 8px;color:var(--bleu);font-size:17px}
+#toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:#161616;color:#fff;padding:9px 16px;border-radius:4px;display:none;z-index:99;max-width:90%}
+#toast.err{background:var(--rouge)}
+#printLayer{position:fixed;inset:0;background:#fff;z-index:60;display:none;flex-direction:column}
+#printLayer .tb{display:flex;gap:8px;padding:8px 12px;border-bottom:3px solid var(--bleu);align-items:center}
+#printLayer iframe{flex:1;border:0;width:100%}
+.catrow{display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid var(--bord)}
+.catrow input{flex:1}
+.thumb{max-width:260px;max-height:90px;border:1px solid var(--bord);display:block;margin:4px 0}
+.nowrap{white-space:nowrap}
+</style>
+</head>
+<body>
+<header class="top">
+  <span class="flag" aria-hidden="true"></span>
+  <h1 id="ttl">Vœux – Invitations</h1>
+  <nav class="tabs" id="tabs"></nav>
+  <div class="right"><span id="syncInfo"></span><button class="b sec sm" data-act="refresh">Actualiser</button></div>
+</header>
+<main id="main"><p class="muted">Chargement…</p></main>
+<div id="modalBg"><div id="modal"></div></div>
+<div id="printLayer"><div class="tb"><strong id="plTitle">Aperçu</strong><span style="flex:1"></span>
+<button class="b" data-act="pl-print">Imprimer</button><button class="b sec" data-act="pl-dl">Télécharger (.html)</button><button class="b sec" data-act="pl-close">Fermer</button></div>
+<iframe id="plFrame" title="Aperçu"></iframe></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* =====================================================================
+   Widget Grist « Vœux – Invitations »  — SDCIRE / Préfecture 04
+   Tables créées automatiquement : Invites, Reponses, Envois, Categories, Parametres
+   ===================================================================== */
+const EXCELJS_URLS=['exceljs.min.js','https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'];
+const PRES_OUI='Je serai présent(e)', PRES_NON='Je ne pourrai pas être présent(e)';
+
+function C(id,type,label,extra){return Object.assign({id,type:type||'Text',label:label||id},extra||{});}
+const SCHEMA={
+ Invites:[C('Categorie','Text','Catégorie'),C('Civilite','Text','Civilité'),C('Prenom','Text','Prénom'),C('Nom','Text','Nom'),
+  C('Fonction1','Text','Fonction 1'),C('Fonction2','Text','Fonction 2'),C('Fonction3','Text','Fonction 3'),
+  C('Adresse1','Text','Adresse 1'),C('Adresse2','Text','Adresse 2'),C('CP','Text','CP'),C('Ville','Text','Ville'),C('Email','Text','Email'),
+  C('Reponse','Text','Réponse'),C('NbAccompagnants','Int','Nb accompagnants'),C('Accompagnants','Text','Accompagnants'),
+  C('RepresentePar','Text','Représenté par'),C('SourceReponse','Text','Source de la réponse'),C('DateReponse','Text','Date de réponse'),
+  C('DateInvitation','Text','Date d’invitation'),C('NbRelances','Int','Nb relances'),C('DateRelance','Text','Dernière relance'),
+  C('Rang','Int','Rang (préséance)'),C('NotesProtocole','Text','Notes protocole'),C('PresentAnneePrecedente','Bool','Présent l’an dernier'),
+  C('ListeAttente','Bool','Liste d’attente'),C('Arrive','Bool','Arrivé(e) le jour J'),C('Remarques','Text','Remarques')],
+ Reponses:[C('Email','Text','Votre adresse e-mail'),
+  C('Presence','Choice','Votre réponse',{widgetOptions:JSON.stringify({choices:[PRES_OUI,PRES_NON]})}),
+  C('NbAccompagnants','Int','Nombre de personnes qui vous accompagnent'),C('Accompagnants','Text','Nom des personnes qui vous accompagnent'),
+  C('RepresentePar','Text','Si vous êtes excusé(e) : nom de la personne qui vous représente'),C('Remarques','Text','Remarques'),
+  C('RecuLe','DateTime:Europe/Paris','Reçu le',{isFormula:false,formula:'NOW()',recalcWhen:0}),
+  C('Traitee','Bool','Traitée'),C('Invite','Int','Invité (id)')],
+ Envois:[C('DateEnvoi','Text','Date'),C('Type','Text','Type'),C('NbDestinataires','Int','Destinataires'),C('Objet','Text','Objet'),C('Details','Text','Détails')],
+ Categories:[C('Nom','Text','Nom'),C('Ordre','Int','Ordre')],
+ Parametres:[C('Cle','Text','Clé'),C('Valeur','Text','Valeur')]
+};
+const DEF={
+ titre:'Cérémonie des vœux 2027',titreListe:'Liste des invités vœux protocolaires 2027',
+ dateCeremonie:'',lieu:'',dateLimite:'',lienFormulaire:'',jauge:'',
+ expediteur:'',destinataireVisible:'',delaiRelance:'0',tailleLot:'0',adresseTest:'',
+ objetInvitation:'Invitation – Cérémonie des vœux 2027',
+ objetRelance:'Rappel – Cérémonie des vœux 2027 : merci de répondre à l’invitation',
+ introInvitation:'Madame la Préfète des Alpes-de-Haute-Provence a le plaisir de vous convier à',
+ introRelance:'Nous n’avons pas encore reçu votre réponse à l’invitation à',
+ texteBouton:'Répondre à l’invitation',
+ signature:'Le cabinet de la Préfète',
+ couleur:'#000091',imgEntete:'',imgCarton:''
+};
+const STAT_LABEL={ainviter:'À inviter',invite:'Invité, sans réponse',relance:'Relancé, sans réponse',present:'Présent',excuse:'Excusé',represente:'Excusé, représenté',sansmail:'Sans e-mail',attente:'Liste d’attente'};
+
+/* ------------------------------ état ------------------------------ */
+const S={inv:[],rep:[],env:[],cat:[],par:{},parId:{}};
+const UI={tab:'dash',q:'',fcat:'',fstat:'',dup:false,pending:null,att:{invitation:null,relance:null},jq:'',impPreview:null,printHtml:'',printName:''};
+let busy=false;
+
+/* ----------------------------- utilitaires ----------------------------- */
+const $=(s,r)=>(r||document).querySelector(s);
+const s_=v=>v==null?'':String(v);
+const esc=v=>s_(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const norm=v=>s_(v).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+const todayIso=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+const fmtD=v=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s_(v));return m?m[3]+'/'+m[2]+'/'+m[1]:s_(v);};
+const P=()=>Object.assign({},DEF,S.par);
+function toast(msg,err){const t=$('#toast');t.textContent=msg;t.className=err?'err':'';t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.display='none',err?6000:3000);}
+function emails(v){const out=[],seen=new Set();s_(v).split(/[;,\s]+/).forEach(x=>{x=x.trim().toLowerCase();if(/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x)&&!seen.has(x)){seen.add(x);out.push(x);}});return out;}
+const fullName=i=>[i.Prenom,i.Nom].filter(Boolean).join(' ');
+const dispName=i=>[i.Civilite,i.Prenom,s_(i.Nom).toUpperCase()].filter(Boolean).join(' ');
+const fonctions=i=>[i.Fonction1,i.Fonction2,i.Fonction3].filter(Boolean).join(' – ');
+function nowIso(){return new Date().toISOString();}
+
+/* ----------------------------- Grist : accès données ----------------------------- */
+async function fetchRows(t){
+  const d=await grist.docApi.fetchTable(t);const ids=d.id||[];const rows=[];
+  for(let i=0;i<ids.length;i++){const o={id:ids[i]};for(const k in d){if(k!=='id'&&k!=='manualSort')o[k]=d[k][i];}rows.push(o);}
+  return rows;
+}
+const spec=c=>{const o={id:c.id,type:c.type,isFormula:c.isFormula===true,label:c.label};if(c.widgetOptions)o.widgetOptions=c.widgetOptions;if(c.formula!=null)o.formula=c.formula;if(c.recalcWhen!=null)o.recalcWhen=c.recalcWhen;return o;};
+async function ensureSchema(){
+  const tables=await grist.docApi.listTables();
+  let existing={};
+  try{
+    const mt=await grist.docApi.fetchTable('_grist_Tables'),mc=await grist.docApi.fetchTable('_grist_Tables_column');
+    const byId={};mt.id.forEach((id,i)=>byId[id]=mt.tableId[i]);
+    mc.id.forEach((id,i)=>{const t=byId[mc.parentId[i]];if(t)(existing[t]=existing[t]||new Set()).add(mc.colId[i]);});
+  }catch(e){existing={};}
+  const actions=[];
+  for(const [t,cols] of Object.entries(SCHEMA)){
+    if(!tables.includes(t))actions.push(['AddTable',t,cols.map(spec)]);
+    else if(existing[t])for(const c of cols)if(!existing[t].has(c.id))actions.push(['AddColumn',t,c.id,spec(c)]);
+  }
+  if(actions.length)await grist.docApi.applyUserActions(actions);
+  return actions.length;
+}
+async function loadAll(){
+  const [inv,rep,env,cat,par]=await Promise.all(['Invites','Reponses','Envois','Categories','Parametres'].map(fetchRows));
+  S.inv=inv;S.rep=rep;S.env=env;S.cat=cat.sort((a,b)=>(a.Ordre||0)-(b.Ordre||0));
+  S.par={};S.parId={};par.forEach(r=>{S.par[r.Cle]=s_(r.Valeur);S.parId[r.Cle]=r.id;});
+}
+async function act(actions){await grist.docApi.applyUserActions(actions);}
+async function updInv(id,fields){const r=S.inv.find(x=>x.id===id);if(r)Object.assign(r,fields);await act([['UpdateRecord','Invites',id,fields]]);}
+async function setPar(k,v){
+  S.par[k]=v;
+  if(S.parId[k])await act([['UpdateRecord','Parametres',S.parId[k],{Valeur:v}]]);
+  else{await act([['AddRecord','Parametres',null,{Cle:k,Valeur:v}]]);const rows=await fetchRows('Parametres');rows.forEach(r=>S.parId[r.Cle]=r.id);}
+}
+async function ensureCategories(){
+  const known=new Set(S.cat.map(c=>c.Nom));const missing=[];
+  S.inv.forEach(i=>{const c=s_(i.Categorie);if(c&&!known.has(c)){known.add(c);missing.push(c);}});
+  if(!missing.length)return;
+  let o=S.cat.reduce((m,c)=>Math.max(m,c.Ordre||0),0);
+  await act(missing.map(n=>['AddRecord','Categories',null,{Nom:n,Ordre:++o}]));
+  S.cat=(await fetchRows('Categories')).sort((a,b)=>(a.Ordre||0)-(b.Ordre||0));
+}
+
+/* ----------------------------- logique métier ----------------------------- */
+function status(i){
+  if(i.Reponse==='Présent')return i.ListeAttente?'attente':'present';
+  if(i.Reponse==='Excusé')return i.RepresentePar?'represente':'excuse';
+  if(!i.DateInvitation)return emails(i.Email).length?'ainviter':'sansmail';
+  return (i.NbRelances>0)?'relance':'invite';
+}
+function persons(i){const st=status(i);if(st==='present')return 1+(+i.NbAccompagnants||0);if(st==='represente')return 1;return 0;}
+const answered=i=>i.Reponse==='Présent'||i.Reponse==='Excusé';
+function catRank(n){const k=S.cat.findIndex(c=>c.Nom===n);return k<0?9999:k;}
+function sortedInv(list){
+  return (list||S.inv).slice().sort((a,b)=>catRank(a.Categorie)-catRank(b.Categorie)||s_(a.Categorie).localeCompare(s_(b.Categorie),'fr')||((a.Rang||1e9)-(b.Rang||1e9))||s_(a.Nom).localeCompare(s_(b.Nom),'fr')||s_(a.Prenom).localeCompare(s_(b.Prenom),'fr'));
+}
+function stats(){
+  const per={};let T={n:0,aInviter:0,sansMail:0,invites:0,rep:0,pres:0,exc:0,sans:0,att:0};
+  const row=c=>per[c]||(per[c]={n:0,rep:0,pres:0,exc:0,sans:0});
+  S.inv.forEach(i=>{
+    const r=row(s_(i.Categorie)||'(sans catégorie)'),st=status(i);
+    r.n++;T.n++;
+    if(st==='ainviter')T.aInviter++;if(st==='sansmail')T.sansMail++;
+    if(i.DateInvitation)T.invites++;
+    if(answered(i)){r.rep++;T.rep++;}
+    if(st==='present'){const p=persons(i);r.pres+=p;T.pres+=p;}
+    if(st==='represente'){r.pres+=1;T.pres+=1;r.exc++;T.exc++;}
+    if(st==='excuse'){r.exc++;T.exc++;}
+    if(st==='attente')T.att++;
+    if(st==='invite'||st==='relance'){r.sans++;T.sans++;}
+  });
+  const cats=Object.keys(per).sort((a,b)=>catRank(a)-catRank(b)||a.localeCompare(b,'fr'));
+  return {per,cats,T};
+}
+function dupSet(){
+  const byE={},byN={},dup=new Set();
+  S.inv.forEach(i=>{
+    emails(i.Email).forEach(e=>{(byE[e]=byE[e]||[]).push(i.id);});
+    const k=norm(i.Nom)&&norm(i.Prenom)?norm(i.Nom)+'|'+norm(i.Prenom):'';if(k)(byN[k]=byN[k]||[]).push(i.id);
+  });
+  [byE,byN].forEach(m=>Object.values(m).forEach(a=>{if(a.length>1)a.forEach(x=>dup.add(x));}));
+  return dup;
+}
+function eligible(type){
+  const p=P();
+  if(type==='invitation'){
+    const all=UI.incAll;
+    return S.inv.filter(i=>emails(i.Email).length&&!answered(i)&&(all||!i.DateInvitation));
+  }
+  const delai=+p.delaiRelance||0,lim=new Date();lim.setDate(lim.getDate()-delai);
+  return S.inv.filter(i=>emails(i.Email).length&&i.DateInvitation&&!answered(i)&&(!delai||new Date((i.DateRelance||i.DateInvitation)+'T00:00:00')<=lim));
+}
+function normPres(v){v=s_(v);if(/^je serai|^pr[ée]sent/i.test(v))return 'Présent';if(/^je ne|^excus/i.test(v))return 'Excusé';return '';}
+function respDate(r){return r.RecuLe?new Date(r.RecuLe*1000).toISOString().slice(0,10):todayIso();}
+function respFields(r){
+  const p=normPres(r.Presence);
+  return {Reponse:p,NbAccompagnants:p==='Présent'?(+r.NbAccompagnants||0):0,Accompagnants:p==='Présent'?s_(r.Accompagnants):'',RepresentePar:p==='Excusé'?s_(r.RepresentePar):'',SourceReponse:'Formulaire',DateReponse:respDate(r)};
+}
+function findInviteByEmail(e){e=s_(e).trim().toLowerCase();if(!e)return null;return S.inv.find(i=>emails(i.Email).includes(e))||null;}
+async function syncReponses(){
+  const todo=S.rep.filter(r=>!r.Traitee&&normPres(r.Presence)).sort((a,b)=>a.id-b.id);
+  const acts=[];let n=0;
+  todo.forEach(r=>{
+    const inv=findInviteByEmail(r.Email);if(!inv)return;
+    const f=respFields(r);Object.assign(inv,f);
+    acts.push(['UpdateRecord','Invites',inv.id,f]);acts.push(['UpdateRecord','Reponses',r.id,{Traitee:true,Invite:inv.id}]);r.Traitee=true;r.Invite=inv.id;n++;
+  });
+  if(acts.length)await act(acts);
+  return n;
+}
+const unmatched=()=>S.rep.filter(r=>!r.Traitee);
+async function refresh(silent){
+  if(busy)return;busy=true;
+  try{
+    await loadAll();const n=await syncReponses();await ensureCategories();
+    $('#syncInfo').textContent='Actualisé à '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    if(n&&!silent)toast(n+' réponse(s) du formulaire intégrée(s)');
+  }catch(e){console.error(e);toast('Erreur de chargement : '+(e.message||e),true);}
+  busy=false;render();
+}
+
+/* ----------------------------- Excel (ExcelJS) ----------------------------- */
+function loadScript(src,ms){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;const t=setTimeout(()=>{s.remove();rej(new Error('délai dépassé'));},ms||8000);s.onload=()=>{clearTimeout(t);res();};s.onerror=()=>{clearTimeout(t);s.remove();rej(new Error('introuvable'));};document.head.appendChild(s);});}
+async function loadExcelJS(){
+  if(window.ExcelJS)return window.ExcelJS;
+  for(const u of EXCELJS_URLS){try{await loadScript(u);if(window.ExcelJS)return window.ExcelJS;}catch(e){}}
+  throw new Error('Bibliothèque ExcelJS inaccessible (déposez exceljs.min.js à côté du widget ou autorisez cdn.jsdelivr.net)');
+}
+function cellText(v){
+  if(v==null)return '';
+  if(typeof v==='object'){
+    if(v.richText)return v.richText.map(x=>x.text).join('');
+    if(v.text!=null)return typeof v.text==='object'?cellText(v.text):String(v.text);
+    if(v.result!=null)return String(v.result);
+    if(v.hyperlink)return String(v.hyperlink).replace(/^mailto:/,'');
+    if(v instanceof Date)return v.toISOString().slice(0,10);
+    return '';
+  }
+  return String(v);
+}
+const clean=v=>cellText(v).replace(/\s+/g,' ').trim();
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);}
+
+const IMPORT_MAP={categorie:'Categorie',civilite:'Civilite',prenom:'Prenom',nom:'Nom',fonction1:'Fonction1',fonction2:'Fonction2',fonction3:'Fonction3',adresse1:'Adresse1',adresse2:'Adresse2',cp:'CP',ville:'Ville',email:'Email',mail:'Email',courriel:'Email',reponse:'Reponse'};
+async function parseExcel(file){
+  const EJ=await loadExcelJS();const wb=new EJ.Workbook();await wb.xlsx.load(await file.arrayBuffer());
+  const ws=wb.worksheets.find(w=>norm(w.name)==='listecomplete')||wb.worksheets[0];
+  let hdrRow=0,cols={};
+  for(let r=1;r<=Math.min(6,ws.rowCount);r++){
+    const m={};ws.getRow(r).eachCell((c,ci)=>{const k=IMPORT_MAP[norm(clean(c.value))];if(k&&!m[k])m[k]=ci;});
+    if(m.Nom&&m.Categorie){hdrRow=r;cols=m;break;}
+  }
+  if(!hdrRow)throw new Error('En-têtes « Catégorie » et « NOM » introuvables dans la feuille « '+ws.name+' ».');
+  const out=[];
+  for(let r=hdrRow+1;r<=ws.rowCount;r++){
+    const row=ws.getRow(r);const o={};let content=0;
+    for(const [k,ci] of Object.entries(cols)){const v=row.getCell(ci).value;o[k]=k==='Reponse'?(typeof v==='number'?v:clean(v)):clean(v);if(k!=='Categorie'&&o[k]!==''&&o[k]!=null)content++;}
+    if(!content)continue; // ligne vide (ou total)
+    if(!o.Nom&&!o.Prenom&&!o.Email&&!o.Fonction1)continue;
+    out.push(o);
+  }
+  return {rows:out,sheet:ws.name};
+}
+function importReponse(v){
+  if(v===''||v==null)return {};
+  if(typeof v==='number')return v>0?{Reponse:'Présent',NbAccompagnants:Math.max(0,Math.round(v)-1)}:{};
+  const n=norm(v);if(/^(1|oui|present|presente|ok|x)/.test(n))return {Reponse:'Présent'};if(/^(non|excuse|absent)/.test(n))return {Reponse:'Excusé'};return {};
+}
+function nameKey(o){return norm(o.Nom)&&norm(o.Prenom)?norm(o.Nom)+'|'+norm(o.Prenom):'';}
+function planImport(rows){
+  /* Rapprochement avec la base existante : nom + prénom d'abord ; l'e-mail seul ne sert que si la ligne n'a pas de nom complet
+     (une adresse peut être partagée par plusieurs personnes : mairie, cabinet…). Aucune ligne du fichier n'est écartée. */
+  const plan={add:[],upd:[],dupRows:0,noCat:0};const idxE={},idxN={};
+  S.inv.forEach(i=>{emails(i.Email).forEach(e=>(idxE[e]=idxE[e]||[]).push(i));const k=nameKey(i);if(k)(idxN[k]=idxN[k]||[]).push(i);});
+  const seenN={},seenE={};
+  rows.forEach(r=>{
+    const em=emails(r.Email),k=nameKey(r);
+    if(!r.Categorie)plan.noCat++;
+    if((k&&seenN[k])||em.some(e=>seenE[e]))plan.dupRows++;
+    if(k)seenN[k]=1;em.forEach(e=>seenE[e]=1);
+    let ex=null;
+    if(k&&idxN[k])ex=idxN[k].find(i=>emails(i.Email).some(e=>em.includes(e)))||idxN[k][0];
+    else if(!k){for(const e of em){const c=idxE[e];if(c&&c.length===1){ex=c[0];break;}}}
+    if(ex)plan.upd.push({inv:ex,row:r});else plan.add.push({row:r});
+  });
+  return plan;
+}
+async function applyImport(plan){
+  const acts=[];const fields=['Categorie','Civilite','Prenom','Nom','Fonction1','Fonction2','Fonction3','Adresse1','Adresse2','CP','Ville','Email'];
+  plan.upd.forEach(({inv,row})=>{const f={};fields.forEach(k=>{if(row[k]!==''&&row[k]!=null&&row[k]!==inv[k])f[k]=row[k];});
+    if(!answered(inv)){const rr=importReponse(row.Reponse);if(rr.Reponse){Object.assign(f,rr,{SourceReponse:'Import Excel',DateReponse:todayIso()});}}
+    if(Object.keys(f).length)acts.push(['UpdateRecord','Invites',inv.id,f]);});
+  if(plan.add.length){
+    const cols={};[...fields,'Reponse','NbAccompagnants','SourceReponse','DateReponse'].forEach(k=>cols[k]=[]);
+    plan.add.forEach(({row})=>{fields.forEach(k=>cols[k].push(row[k]||''));const rr=importReponse(row.Reponse);cols.Reponse.push(rr.Reponse||'');cols.NbAccompagnants.push(rr.NbAccompagnants||0);cols.SourceReponse.push(rr.Reponse?'Import Excel':'');cols.DateReponse.push(rr.Reponse?todayIso():'');});
+    acts.push(['BulkAddRecord','Invites',plan.add.map(()=>null),cols]);
+  }
+  if(acts.length)await act(acts);
+  await loadAll();await ensureCategories();await syncReponses();
+}
+
+async function exportXlsx(){
+  const EJ=await loadExcelJS();const p=P();const wb=new EJ.Workbook();wb.creator='SDCIRE – Préfecture';
+  const thin={style:'thin',color:{argb:'FF808080'}};const border={top:thin,left:thin,bottom:thin,right:thin};
+  const inv=sortedInv();
+  /* Feuille 1 : liste complète (même structure que le modèle, colonnes A à M) + colonnes de détail */
+  const ws=wb.addWorksheet('Liste complète',{views:[{state:'frozen',ySplit:1}]});
+  const H=['Catégorie','CIVILITÉ','PRÉNOM','NOM','FONCTION 1','FONCTION 2','FONCTION 3','ADRESSE 1','ADRESSE 2','CP','VILLE','Email','RÉPONSE','STATUT','NB ACCOMPAGNANTS','ACCOMPAGNANTS','REPRÉSENTÉ PAR','DATE RÉPONSE','SOURCE RÉPONSE','NOTES PROTOCOLE'];
+  const W=[28,12,13,22,18,33,12,18,8,8,24,40,14,22,14,26,24,13,16,28];
+  ws.columns=H.map((h,i)=>({width:W[i]}));
+  const hr=ws.addRow(H);hr.height=30;
+  hr.eachCell((c,ci)=>{c.font={name:'Arial',size:10,bold:true,color:{argb:ci<=13?'FFFF0000':'FF000000'}};c.alignment={horizontal:'center',vertical:'middle',wrapText:true};c.border=border;});
+  let total=0;
+  inv.forEach(i=>{
+    const n=persons(i);total+=n;
+    const r=ws.addRow([i.Categorie,i.Civilite,i.Prenom,i.Nom,i.Fonction1,i.Fonction2,i.Fonction3,i.Adresse1,i.Adresse2,i.CP,i.Ville,i.Email,n||null,STAT_LABEL[status(i)],i.NbAccompagnants||null,i.Accompagnants,i.RepresentePar,fmtD(i.DateReponse),i.SourceReponse,i.NotesProtocole]);
+    r.eachCell({includeEmpty:true},(c,ci)=>{c.font={name:'Arial',size:10,bold:ci===1,color:{argb:ci===1?'FF0000FF':'FF000000'}};c.alignment={horizontal:ci===13?'center':'left',vertical:'top',wrapText:true};c.border=border;});
+  });
+  const last=ws.rowCount;const tr=ws.addRow([]);tr.getCell(12).value='TOTAL personnes présentes';tr.getCell(13).value={formula:'SUM(M2:M'+last+')',result:total};
+  tr.getCell(12).font=tr.getCell(13).font={name:'Arial',size:10,bold:true};tr.getCell(12).alignment={horizontal:'right'};tr.getCell(13).alignment={horizontal:'center'};
+  ws.autoFilter={from:{row:1,column:1},to:{row:last,column:H.length}};
+  ws.pageSetup={orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:'1:1'};
+  /* Feuille 2 : liste pour la Préfète (impression) */
+  const w2=wb.addWorksheet('liste Préfète pour impression');
+  const H2=['Catégorie','CIVILITÉ','PRÉNOM','NOM','FONCTION 1','FONCTION 2','FONCTION 3','RÉPONSE'];
+  w2.columns=[29,12,14,20,31,29,32,24].map(w=>({width:w}));
+  w2.mergeCells('A1:H1');const t=w2.getCell('A1');t.value=p.titreListe;t.font={name:'Arial',size:14,bold:true};t.alignment={horizontal:'center',vertical:'middle'};w2.getRow(1).height=28;
+  const h2=w2.addRow(H2);h2.height=30;h2.eachCell(c=>{c.font={name:'Arial',size:10,bold:true};c.alignment={horizontal:'center',vertical:'middle',wrapText:true};c.border=border;c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFEDEDED'}};});
+  inv.forEach(i=>{const r=w2.addRow([i.Categorie,i.Civilite,i.Prenom,i.Nom,i.Fonction1,i.Fonction2,i.Fonction3,respText(i)]);
+    r.eachCell({includeEmpty:true},(c,ci)=>{c.font={name:'Arial',size:10,bold:ci===1};c.alignment={horizontal:ci===8?'center':'left',vertical:'top',wrapText:true};c.border=border;});});
+  w2.pageSetup={orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:'1:2'};
+  const buf=await wb.xlsx.writeBuffer();
+  download(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'Liste_invites_voeux_'+todayIso()+'.xlsx');
+}
+function respText(i){
+  const st=status(i);
+  if(st==='present')return 'Présent'+((+i.NbAccompagnants)?' (+'+i.NbAccompagnants+')':'');
+  if(st==='attente')return 'Liste d’attente';
+  if(st==='represente')return 'Excusé – représenté par '+i.RepresentePar;
+  if(st==='excuse')return 'Excusé';
+  return '';
+}
+
+/* ----------------------------- Documents imprimables ----------------------------- */
+function printShell(title,sub,body){
+  return '<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>'+
+  '@page{size:A4 portrait;margin:14mm 12mm}body{font:11px/1.35 Arial,Helvetica,sans-serif;color:#000;margin:0}@media screen{body{padding:14px 18px}}'+
+  'h1{font-size:17px;margin:0 0 2px;color:#000091}.sub{color:#555;margin:0 0 10px}'+
+  'h2{font-size:12.5px;margin:14px 0 3px;padding:3px 6px;background:#e3e3fd;color:#000091;break-after:avoid;page-break-after:avoid}h2 span{font-weight:normal;color:#333;font-size:11px}'+
+  'table{border-collapse:collapse;width:100%}th,td{border:1px solid #888;padding:3px 5px;text-align:left;vertical-align:top}th{background:#f0f0f0;font-size:10px}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}'+
+  'td.r{width:26%}td.c{width:7%;text-align:center}td.num,th.num{text-align:right;width:12%}tr.tot td{font-weight:bold;background:#f0f0f0}.sum{margin-bottom:8px}.bx{display:inline-block;width:11px;height:11px;border:1px solid #000;vertical-align:middle}'+
+  '.pb{break-after:page;page-break-after:always}'+
+  '</style></head><body><h1>'+esc(title)+'</h1><p class="sub">'+esc(sub)+'</p>'+body+'</body></html>';
+}
+function docPrefete(mode,onlyPres){
+  const p=P();let inv=sortedInv();const st=stats();
+  const aval=mode==='aval';
+  if(aval&&onlyPres)inv=inv.filter(i=>['present','represente'].includes(status(i)));
+  let sum='<table class="sum"><thead><tr><th>Catégorie</th><th class="num">Invités</th>'+(aval?'<th class="num">Présents (pers.)</th><th class="num">Excusés</th><th class="num">Sans réponse</th>':'')+'</tr></thead><tbody>';
+  st.cats.forEach(c=>{const r=st.per[c];sum+='<tr><td>'+esc(c)+'</td><td class="num">'+r.n+'</td>'+(aval?'<td class="num">'+r.pres+'</td><td class="num">'+r.exc+'</td><td class="num">'+(r.n-r.rep)+'</td>':'')+'</tr>';});
+  const T=st.T;sum+='<tr class="tot"><td>TOTAL</td><td class="num">'+T.n+'</td>'+(aval?'<td class="num">'+T.pres+'</td><td class="num">'+T.exc+'</td><td class="num">'+(T.n-T.rep)+'</td>':'')+'</tr></tbody></table>';
+  let body='<h2>Synthèse</h2>'+sum+'<div class="pb"></div>';
+  const groups={};inv.forEach(i=>{const c=s_(i.Categorie)||'(sans catégorie)';(groups[c]=groups[c]||[]).push(i);});
+  Object.keys(groups).sort((a,b)=>catRank(a)-catRank(b)||a.localeCompare(b,'fr')).forEach(c=>{
+    const list=groups[c],r=st.per[c]||{n:list.length,pres:0,exc:0,rep:0};
+    const cnt=aval?(' — '+r.n+' invités · '+r.pres+' présent(s) · '+r.exc+' excusé(s) · '+(r.n-r.rep)+' sans réponse'):(' — '+list.length+' invité(s)');
+    body+='<h2>'+esc(c)+'<span>'+cnt+'</span></h2><table><thead><tr><th>Nom</th><th>Fonction</th><th>Réponse</th></tr></thead><tbody>';
+    list.forEach(i=>{body+='<tr><td><b>'+esc(dispName(i))+'</b></td><td>'+esc(fonctions(i))+'</td><td class="r">'+(aval?esc(respText(i)||'—'):'')+'</td></tr>';});
+    body+='</tbody></table>';
+  });
+  const title=(aval?'Réponses – ':'Invités – ')+p.titre;
+  return printShell(title,(aval?'Situation au ':'Édité le ')+fmtD(todayIso())+(aval&&onlyPres?' — présents uniquement':''),body);
+}
+function docEmargement(){
+  const p=P();const list=sortedInv(S.inv.filter(i=>['present','represente'].includes(status(i))));
+  let body='<table><thead><tr><th>Nom</th><th>Fonction</th><th>Accompagnant(s)</th><th class="c">Arrivé(e)</th></tr></thead><tbody>';
+  list.forEach(i=>{const acc=status(i)==='represente'?('Représenté(e) par '+i.RepresentePar):((+i.NbAccompagnants)?('+'+i.NbAccompagnants+(i.Accompagnants?' : '+i.Accompagnants:'')):'');
+    body+='<tr><td><b>'+esc(dispName(i))+'</b><br><span style="color:#555">'+esc(i.Categorie)+'</span></td><td>'+esc(fonctions(i))+'</td><td>'+esc(acc)+'</td><td class="c"><span class="bx"></span></td></tr>';});
+  body+='</tbody></table>';
+  return printShell('Émargement – '+p.titre,list.length+' invité(s) attendu(s) — édité le '+fmtD(todayIso()),body);
+}
+function showPrint(html,name,title){UI.printHtml=html;UI.printName=name;$('#plTitle').textContent=title;$('#plFrame').srcdoc=html;$('#printLayer').style.display='flex';}
+
+/* ----------------------------- Mail : gabarit & .eml ----------------------------- */
+function dataUri(u){const m=/^data:([^;]+);base64,(.*)$/.exec(u||'');return m?{mime:m[1],b64:m[2]}:null;}
+function buildMail(type,forPreview){
+  const p=P(),rel=type==='relance',col=p.couleur||'#000091';
+  const img=(k,cid)=>{const d=p[k];if(!d)return '';const src=forPreview?d:'cid:'+cid;return '<tr><td align="center" style="padding:0"><img src="'+src+'" alt="" style="display:block;width:100%;max-width:600px;height:auto;border:0"></td></tr>';};
+  const line=(t,sz,b,pad)=>t?'<tr><td align="center" style="padding:'+(pad||'6px 32px')+';font-size:'+sz+'px;line-height:1.4;'+(b?'font-weight:bold;':'')+'">'+esc(t)+'</td></tr>':'';
+  const html='<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>'+esc(p.titre)+'</title></head>'+
+  '<body style="margin:0;padding:0;background:#f3f3f3"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f3f3"><tr><td align="center" style="padding:20px 8px">'+
+  '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;background:#ffffff;font-family:Arial,Helvetica,sans-serif;color:#161616;border-top:6px solid '+col+'">'+
+  img('imgEntete','entete@voeux')+
+  (rel?'<tr><td align="center" style="padding:18px 32px 0;font-size:13px;letter-spacing:2px;color:'+col+';font-weight:bold">RAPPEL</td></tr>':'')+
+  line(rel?p.introRelance:p.introInvitation,16,false,'22px 32px 6px')+
+  line(p.titre.toUpperCase(),24,true,'6px 32px 10px').replace('font-weight:bold;','font-weight:bold;color:'+col+';')+
+  img('imgCarton','carton@voeux')+
+  line(p.dateCeremonie,18,true,'12px 32px 2px')+line(p.lieu,16,false,'2px 32px 14px')+
+  (p.lienFormulaire?'<tr><td align="center" style="padding:10px 32px 8px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td align="center" bgcolor="'+col+'" style="background:'+col+';border-radius:3px"><a href="'+esc(p.lienFormulaire)+'" style="display:inline-block;padding:13px 30px;font-size:16px;font-weight:bold;color:#ffffff;text-decoration:none">'+esc(p.texteBouton)+'</a></td></tr></table></td></tr>':'')+
+  line(p.dateLimite?'Nous vous remercions de bien vouloir confirmer votre présence avant le '+p.dateLimite+'.':'',14,false,'8px 32px 6px')+
+  (p.lienFormulaire?'<tr><td align="center" style="padding:2px 32px 10px;font-size:11px;color:#666">Si le bouton ne s’affiche pas : <a href="'+esc(p.lienFormulaire)+'" style="color:'+col+'">'+esc(p.lienFormulaire)+'</a></td></tr>':'')+
+  line(p.signature,13,false,'14px 32px 24px')+
+  '</table></td></tr></table></body></html>';
+  const text=[(rel?'RAPPEL\r\n':'')+(rel?p.introRelance:p.introInvitation),p.titre.toUpperCase(),p.dateCeremonie,p.lieu,'',p.lienFormulaire?(p.texteBouton+' : '+p.lienFormulaire):'',p.dateLimite?'Merci de confirmer votre présence avant le '+p.dateLimite+'.':'','',p.signature].filter((x,i,a)=>x!==''||a[i-1]!=='').join('\r\n');
+  return {html,text};
+}
+function u8b64(str){const b=new TextEncoder().encode(str);let bin='';for(let i=0;i<b.length;i+=0x8000)bin+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(bin);}
+const wrap76=b=>b.replace(/(.{76})/g,'$1\r\n').replace(/\r\n$/,'');
+function encHeader(str){
+  if(/^[\x20-\x7e]*$/.test(str))return str;
+  const ch=Array.from(str),parts=[];for(let i=0;i<ch.length;i+=10)parts.push('=?UTF-8?B?'+u8b64(ch.slice(i,i+10).join(''))+'?=');
+  return parts.join('\r\n ');
+}
+function foldList(name,list){
+  let out='',line=name+': ';
+  list.forEach((a,i)=>{const tok=a+(i<list.length-1?',':'');if(line.length+tok.length>76&&line.trim().length>name.length+1){out+=line.replace(/ $/,'')+'\r\n';line=' ';}line+=tok+' ';});
+  return out+line.replace(/\s+$/,'');
+}
+function mime(type,boundary,parts){return 'Content-Type: '+type+'; boundary="'+boundary+'"\r\n\r\n'+parts.map(x=>'--'+boundary+'\r\n'+x).join('\r\n')+'\r\n--'+boundary+'--\r\n';}
+function buildEml(type,addrs,attach){
+  const p=P(),m=buildMail(type,false),id=Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+  const subject=type==='relance'?p.objetRelance:p.objetInvitation;
+  const alt=mime('multipart/alternative','alt_'+id,[
+    'Content-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n'+wrap76(u8b64(m.text)),
+    'Content-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n'+wrap76(u8b64(m.html))]);
+  const relParts=[alt.replace(/^/,'')];
+  [['imgEntete','entete@voeux'],['imgCarton','carton@voeux']].forEach(([k,cid])=>{const d=dataUri(p[k]);if(d&&m.html.includes('cid:'+cid)){const ext=d.mime.split('/')[1].replace('jpeg','jpg');
+    relParts.push('Content-Type: '+d.mime+'; name="'+cid.split('@')[0]+'.'+ext+'"\r\nContent-Transfer-Encoding: base64\r\nContent-ID: <'+cid+'>\r\nContent-Disposition: inline; filename="'+cid.split('@')[0]+'.'+ext+'"\r\n\r\n'+wrap76(d.b64));}});
+  let body=relParts.length>1?mime('multipart/related','rel_'+id,relParts):alt;
+  if(attach){
+    const fn=attach.name.replace(/[^\w.\- ]+/g,'_');
+    body=mime('multipart/mixed','mix_'+id,[body.replace(/^/,''),'Content-Type: '+(attach.type||'application/octet-stream')+'; name="'+fn+'"\r\nContent-Transfer-Encoding: base64\r\nContent-Disposition: attachment; filename="'+fn+'"\r\n\r\n'+wrap76(attach.b64)]);
+  }
+  const head=[];
+  if(p.expediteur)head.push('From: '+p.expediteur);
+  head.push('To: '+(p.destinataireVisible||'undisclosed-recipients:;'));
+  head.push(foldList('Bcc',addrs));
+  head.push('Subject: '+encHeader(subject));
+  head.push('Date: '+new Date().toUTCString().replace('GMT','+0000'));
+  head.push('Message-ID: <'+id+'@voeux.local>');
+  head.push('MIME-Version: 1.0');
+  head.push('X-Unsent: 1');
+  return head.join('\r\n')+'\r\n'+body;
+}
+function readFileB64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res({name:file.name,type:file.type,b64:String(r.result).split(',')[1]});r.onerror=rej;r.readAsDataURL(file);});}
+function readImage(file,maxW){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,maxW/im.width);const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL(file.type==='image/png'?'image/png':'image/jpeg',0.9));};im.onerror=rej;im.src=fr.result;};fr.onerror=rej;fr.readAsDataURL(file);});}
+function lots(list,n){n=+n||0;if(!n||list.length<=n)return [list];const o=[];for(let i=0;i<list.length;i+=n)o.push(list.slice(i,i+n));return o;}
+async function generate(type,test){
+  const p=P();
+  if(!p.lienFormulaire){toast('Renseignez d’abord le lien du formulaire (onglet Réglages).',true);return;}
+  let att=null;const f=UI.att[type];if(f)att=await readFileB64(f);
+  if(test){
+    const a=emails(p.adresseTest);if(!a.length){toast('Indiquez une adresse de test dans Réglages.',true);return;}
+    download(new Blob([buildEml(type,a,att)],{type:'message/rfc822'}),'TEST_'+type+'.eml');toast('Fichier de test généré');return;
+  }
+  const list=eligible(type);const addrs=[...new Set(list.flatMap(i=>emails(i.Email)))];
+  if(!addrs.length){toast('Aucun destinataire.',true);return;}
+  const groups=lots(addrs,p.tailleLot);
+  groups.forEach((g,k)=>download(new Blob([buildEml(type,g,att)],{type:'message/rfc822'}),(type==='relance'?'Relance':'Invitation')+'_voeux_'+todayIso()+(groups.length>1?'_lot'+(k+1):'')+'.eml'));
+  UI.pending={type,ids:list.map(i=>i.id),n:addrs.length,files:groups.length};render();
+}
+async function confirmSent(){
+  const pd=UI.pending;if(!pd)return;const d=todayIso();const rel=pd.type==='relance';
+  const acts=pd.ids.map(id=>{const i=S.inv.find(x=>x.id===id);const f=rel?{NbRelances:(+i.NbRelances||0)+1,DateRelance:d}:{DateInvitation:i.DateInvitation||d};if(rel&&!i.DateInvitation)f.DateInvitation=d;Object.assign(i,f);return ['UpdateRecord','Invites',id,f];});
+  acts.push(['AddRecord','Envois',null,{DateEnvoi:nowIso(),Type:rel?'Relance':'Invitation',NbDestinataires:pd.n,Objet:rel?P().objetRelance:P().objetInvitation,Details:pd.ids.length+' invité(s), '+pd.files+' fichier(s)'}]);
+  await act(acts);S.env=await fetchRows('Envois');UI.pending=null;toast('Envoi enregistré : '+pd.ids.length+' invité(s) marqué(s)');render();
+}
+
+/* ----------------------------- Rendu ----------------------------- */
+const TABS=[['dash','Tableau de bord'],['inv','Invités'],['send','Envois'],['exp','Exports'],['day','Jour J'],['cfg','Réglages']];
+function renderTabs(){
+  const n=unmatched().length;
+  $('#tabs').innerHTML=TABS.map(([k,l])=>'<button class="'+(UI.tab===k?'on':'')+'" data-tab="'+k+'">'+l+(k==='inv'&&n?' <span class="badge b-relance">'+n+' à rapprocher</span>':'')+'</button>').join('');
+  $('#ttl').textContent=P().titre;
+}
+function render(){renderTabs();const m=$('#main');({dash:rDash,inv:rInv,send:rSend,exp:rExp,day:rDay,cfg:rCfg})[UI.tab](m);}
+
+function badge(i){const k=status(i);return '<span class="badge b-'+k+'">'+STAT_LABEL[k]+'</span>';}
+function rDash(m){
+  const st=stats(),T=st.T,p=P(),j=+p.jauge||0,um=unmatched().length;
+  const rate=T.n?Math.round(100*T.rep/T.n):0;
+  let h='';
+  if(!S.inv.length)h+='<div class="warn"><b>La base est vide.</b> Allez dans l’onglet « Invités » puis « Importer un Excel » pour charger la liste.</div>';
+  if(um)h+='<div class="warn"><b>'+um+' réponse(s) du formulaire</b> ne correspondent à aucun invité (adresse e-mail inconnue). <button class="b sm" data-act="rap">Rapprocher</button></div>';
+  h+='<div class="cards"><div class="kpi"><div class="n">'+T.n+'</div><div class="l">invités dans la base</div></div>'+
+  '<div class="kpi"><div class="n">'+T.invites+'</div><div class="l">invitations envoyées</div></div>'+
+  '<div class="kpi orange"><div class="n">'+T.sans+'</div><div class="l">invités sans réponse</div></div>'+
+  '<div class="kpi"><div class="n">'+T.rep+' <span class="small muted">('+rate+' %)</span></div><div class="l">réponses reçues</div></div>'+
+  '<div class="kpi vert"><div class="n">'+T.pres+'</div><div class="l">personnes présentes (avec accompagnants)</div></div>'+
+  '<div class="kpi"><div class="n">'+T.exc+'</div><div class="l">excusés</div></div>'+
+  (T.att?'<div class="kpi"><div class="n">'+T.att+'</div><div class="l">en liste d’attente</div></div>':'')+
+  (T.sansMail?'<div class="kpi click" data-act="goto-sansmail"><div class="n">'+T.sansMail+'</div><div class="l">sans e-mail (courrier / téléphone)</div></div>':'')+'</div>';
+  if(j){const pc=Math.min(100,Math.round(100*T.pres/j));h+='<div class="panel"><b>Jauge de la salle : '+T.pres+' / '+j+' places</b>'+(T.pres>j?' <span class="badge b-relance">dépassée de '+(T.pres-j)+'</span>':'<span class="muted"> — reste '+(j-T.pres)+' place(s)</span>')+'<div class="bar jauge'+(T.pres>j?' full':'')+'" style="margin-top:6px"><i style="width:'+pc+'%"></i></div></div>';}
+  h+='<div class="panel"><h2>Par catégorie</h2><table class="t"><thead><tr><th>Catégorie</th><th class="num">Invités</th><th class="num">Sans réponse</th><th class="num">Présents (pers.)</th><th class="num">Excusés</th><th style="width:140px">Réponses</th></tr></thead><tbody>';
+  st.cats.forEach(c=>{const r=st.per[c],pc=r.n?Math.round(100*r.rep/r.n):0;h+='<tr><td>'+esc(c)+'</td><td class="num">'+r.n+'</td><td class="num">'+r.sans+'</td><td class="num">'+r.pres+'</td><td class="num">'+r.exc+'</td><td><div class="bar" title="'+pc+' %"><i style="width:'+pc+'%"></i></div></td></tr>';});
+  h+='<tr class="tot"><td>TOTAL</td><td class="num">'+T.n+'</td><td class="num">'+T.sans+'</td><td class="num">'+T.pres+'</td><td class="num">'+T.exc+'</td><td>'+rate+' %</td></tr></tbody></table></div>';
+  const last=S.inv.filter(i=>i.DateReponse).sort((a,b)=>s_(b.DateReponse).localeCompare(s_(a.DateReponse))||b.id-a.id).slice(0,8);
+  if(last.length)h+='<div class="panel"><h2>Dernières réponses</h2><table class="t"><tbody>'+last.map(i=>'<tr><td class="nowrap">'+fmtD(i.DateReponse)+'</td><td>'+esc(dispName(i))+'</td><td>'+esc(i.Categorie)+'</td><td>'+badge(i)+'</td><td class="muted">'+esc(i.SourceReponse)+'</td></tr>').join('')+'</tbody></table></div>';
+  m.innerHTML=h;
+}
+
+function filteredInv(){
+  const q=norm(UI.q),dups=UI.dup?dupSet():null;
+  return sortedInv().filter(i=>{
+    if(UI.fcat&&s_(i.Categorie)!==UI.fcat)return false;
+    if(UI.fstat&&status(i)!==UI.fstat)return false;
+    if(dups&&!dups.has(i.id))return false;
+    if(q&&!norm([i.Nom,i.Prenom,i.Fonction1,i.Fonction2,i.Fonction3,i.Email,i.Categorie,i.Ville].join(' ')).includes(q))return false;
+    return true;
+  });
+}
+function rInv(m){
+  const um=unmatched().length,dn=dupSet().size;
+  m.innerHTML=(um?'<div class="warn"><b>'+um+' réponse(s) du formulaire à rapprocher</b> d’un invité. <button class="b sm" data-act="rap">Rapprocher</button></div>':'')+
+  '<div class="row"><input id="q" type="search" placeholder="Rechercher (nom, fonction, e-mail…)" value="'+esc(UI.q)+'" style="min-width:260px">'+
+  '<select id="fcat"><option value="">Toutes les catégories</option>'+S.cat.map(c=>'<option'+(UI.fcat===c.Nom?' selected':'')+' value="'+esc(c.Nom)+'">'+esc(c.Nom)+'</option>').join('')+'</select>'+
+  '<select id="fstat"><option value="">Tous les statuts</option>'+Object.entries(STAT_LABEL).map(([k,l])=>'<option'+(UI.fstat===k?' selected':'')+' value="'+k+'">'+l+'</option>').join('')+'</select>'+
+  '<label class="small"><input type="checkbox" id="fdup"'+(UI.dup?' checked':'')+'> Doublons possibles ('+dn+')</label><span style="flex:1"></span>'+
+  '<button class="b" data-act="new">+ Ajouter un invité</button><label class="b sec">Importer un Excel<input type="file" id="fimp" accept=".xlsx" hidden></label></div>'+
+  '<div id="invTable"></div>';
+  invRows();
+}
+function invRows(){
+  const L=filteredInv();
+  $('#invTable').innerHTML='<p class="muted small">'+L.length+' invité(s) affiché(s) sur '+S.inv.length+'</p><table class="t"><thead><tr><th>Catégorie</th><th>Invité</th><th>Fonction</th><th>E-mail</th><th>Statut</th><th>Réponse</th><th class="num">Acc.</th><th></th></tr></thead><tbody>'+
+  L.map(i=>'<tr data-id="'+i.id+'"><td class="small">'+esc(i.Categorie)+'</td><td><b>'+esc(dispName(i))+'</b></td><td class="small">'+esc(fonctions(i))+'</td><td class="small">'+esc(i.Email)+'</td><td>'+badge(i)+'</td>'+
+  '<td><select data-quick="'+i.id+'"><option value="">—</option><option'+(i.Reponse==='Présent'?' selected':'')+'>Présent</option><option'+(i.Reponse==='Excusé'?' selected':'')+' value="Excusé">Excusé</option></select></td>'+
+  '<td class="num">'+(i.NbAccompagnants||'')+'</td><td><button class="b sec sm" data-edit="'+i.id+'">Fiche</button></td></tr>').join('')+'</tbody></table>';
+}
+
+function pendingBox(type){
+  const pd=UI.pending;if(!pd||pd.type!==type)return '';
+  return '<div class="ok"><b>Étape 2 – après l’envoi dans Thunderbird</b><br>'+pd.files+' fichier(s) .eml téléchargé(s) pour '+pd.n+' adresse(s). Ouvrez-le, vérifiez, envoyez, puis cliquez :<br><button class="b" data-act="confirm-sent" style="margin-top:6px">J’ai envoyé le mail → enregistrer l’envoi</button> <button class="b sec" data-act="cancel-sent" style="margin-top:6px">Annuler</button></div>';
+}
+function rSend(m){
+  const p=P(),inv=eligible('invitation'),rel=eligible('relance');
+  const noMail=S.inv.filter(i=>!emails(i.Email).length&&!answered(i)).length;
+  const miss=[!p.lienFormulaire&&'lien du formulaire',!p.dateCeremonie&&'date de la cérémonie',!p.lieu&&'lieu',!p.dateLimite&&'date limite de réponse'].filter(Boolean);
+  const card=(type,title,list,desc)=>'<div class="panel"><h2>'+title+'</h2><p class="muted">'+desc+'</p>'+
+    (type==='invitation'?'<label class="small"><input type="checkbox" id="incAll"'+(UI.incAll?' checked':'')+'> Inclure ceux déjà invités (renvoi complet)</label><br>':'<p class="small">Délai minimum depuis la dernière invitation/relance : <b>'+(P().delaiRelance||0)+' jour(s)</b> (modifiable dans Réglages)</p>')+
+    '<div class="row"><label class="small">Pièce jointe (facultatif, ex. carton PDF) : <input type="file" data-att="'+type+'"></label></div>'+
+    '<div class="row"><button class="b" data-gen="'+type+'"'+(!list.length||!p.lienFormulaire?' disabled':'')+'>'+(type==='relance'?'Relancer ':'Inviter ')+list.length+' personne(s) ('+new Set(list.flatMap(i=>emails(i.Email))).size+' adresses) — générer le .eml</button> <button class="b sec" data-prev="'+type+'">Aperçu du mail</button> <button class="b sec" data-gen-test="'+type+'">Fichier de test</button></div>'+pendingBox(type)+'</div>';
+  m.innerHTML=(miss.length?'<div class="warn">À renseigner dans <b>Réglages</b> avant l’envoi : '+miss.join(', ')+'.</div>':'')+
+  '<p class="muted">Un seul mail est généré (adresses en <b>copie cachée</b>), à ouvrir dans Thunderbird. Rien n’est marqué « envoyé » tant que vous ne confirmez pas.'+(noMail?' <b>'+noMail+'</b> invité(s) sans adresse e-mail valide ne seront pas inclus.':'')+'</p>'+
+  '<div class="grid2">'+card('invitation','1. Invitation',inv,'Destinataires : invités avec une adresse e-mail, sans réponse, pas encore invités.')+card('relance','2. Relance',rel,'Destinataires : invités déjà invités qui n’ont pas encore répondu.')+'</div>'+
+  '<div class="panel"><h2>Journal des envois</h2>'+(S.env.length?'<table class="t"><thead><tr><th>Date</th><th>Type</th><th class="num">Adresses</th><th>Détails</th></tr></thead><tbody>'+S.env.slice().reverse().slice(0,20).map(e=>'<tr><td>'+fmtD(e.DateEnvoi)+'</td><td>'+esc(e.Type)+'</td><td class="num">'+e.NbDestinataires+'</td><td class="muted">'+esc(e.Details)+'</td></tr>').join('')+'</tbody></table>':'<p class="muted">Aucun envoi enregistré.</p>')+'</div>';
+}
+function rExp(m){
+  m.innerHTML='<div class="grid2"><div class="panel"><h2>Document pour la Préfète</h2><p class="muted">Liste organisée par catégorie, avec synthèse. À imprimer (ou enregistrer en PDF).</p>'+
+  '<div class="row"><button class="b" data-doc="amont">En amont : qui pourrait être invité</button></div>'+
+  '<div class="row"><button class="b" data-doc="aval">En aval : qui a répondu</button><label class="small"><input type="checkbox" id="onlyPres"> présents uniquement</label></div></div>'+
+  '<div class="panel"><h2>Export de la base (Excel)</h2><p class="muted">Classeur à 2 feuilles, dans la même organisation que votre modèle : « Liste complète » (colonnes A à M + détail des réponses, total des présents) et « liste Préfète pour impression ».</p>'+
+  '<div class="row"><button class="b" data-act="xlsx">Exporter en .xlsx</button></div></div></div>';
+}
+function rDay(m){
+  const exp=sortedInv(S.inv.filter(i=>['present','represente'].includes(status(i))));
+  const q=norm(UI.jq),L=exp.filter(i=>!q||norm(dispName(i)+' '+i.Categorie+' '+fonctions(i)).includes(q));
+  const arr=exp.filter(i=>i.Arrive).length;
+  m.innerHTML='<div class="cards"><div class="kpi vert"><div class="n">'+arr+' / '+exp.length+'</div><div class="l">invités arrivés</div></div></div>'+
+  '<div class="row"><input id="jq" type="search" placeholder="Rechercher un invité à l’accueil" value="'+esc(UI.jq)+'" style="min-width:280px"><span style="flex:1"></span><button class="b sec" data-act="emarg">Imprimer la liste d’émargement</button></div>'+
+  '<table class="t"><thead><tr><th>Arrivé(e)</th><th>Invité</th><th>Fonction</th><th>Accompagnants</th><th>Notes protocole</th></tr></thead><tbody>'+
+  L.map(i=>'<tr><td><input type="checkbox" data-arr="'+i.id+'"'+(i.Arrive?' checked':'')+' style="width:20px;height:20px"></td><td><b>'+esc(dispName(i))+'</b><br><span class="small muted">'+esc(i.Categorie)+'</span></td><td class="small">'+esc(fonctions(i))+'</td><td class="small">'+(status(i)==='represente'?'Représenté(e) par '+esc(i.RepresentePar):((+i.NbAccompagnants)?'+'+i.NbAccompagnants+' '+esc(i.Accompagnants):''))+'</td><td class="small">'+esc(i.NotesProtocole)+'</td></tr>').join('')+'</tbody></table>';
+}
+function rCfg(m){
+  const p=P();
+  const f=(k,l,type,help)=>'<div class="field"><label>'+l+'</label>'+(type==='area'?'<textarea data-par="'+k+'">'+esc(p[k])+'</textarea>':'<input data-par="'+k+'" value="'+esc(p[k])+'"'+(type==='color'?' type="color"':'')+'>')+(help?'<span class="small muted">'+help+'</span>':'')+'</div>';
+  const cats=S.cat.map((c,k)=>{const n=S.inv.filter(i=>s_(i.Categorie)===c.Nom).length;return '<div class="catrow"><span class="small muted nowrap" style="width:30px">'+(k+1)+'</span><input data-catname="'+c.id+'" value="'+esc(c.Nom)+'"><span class="small muted nowrap">'+n+' invité(s)</span><button class="b sec sm" data-catup="'+c.id+'">↑</button><button class="b sec sm" data-catdn="'+c.id+'">↓</button></div>';}).join('');
+  m.innerHTML='<div class="panel"><h2>Cérémonie</h2><div class="fields">'+f('titre','Titre de la cérémonie')+f('titreListe','Titre de la liste (feuille Excel)')+f('dateCeremonie','Date et heure (texte du mail)',0,'ex. : le vendredi 8 janvier 2027 à 18h')+f('lieu','Lieu (texte du mail)')+f('dateLimite','Date limite de réponse',0,'ex. : lundi 4 janvier 2027')+f('jauge','Jauge de la salle (nombre de places)')+'</div></div>'+
+  '<div class="panel"><h2>Formulaire et envoi</h2><div class="fields">'+f('lienFormulaire','Lien public du formulaire Grist',0,'Obtenu via « Publier » sur le formulaire (vue Formulaire de la table Reponses)')+f('texteBouton','Texte du bouton')+f('expediteur','Expéditeur (From)',0,'laisser vide = identité par défaut de Thunderbird')+f('destinataireVisible','Destinataire visible (To)',0,'ex. : boîte fonctionnelle du service ; vide = destinataires masqués')+f('adresseTest','Adresse pour le fichier de test')+f('delaiRelance','Relance : délai minimum (jours)')+f('tailleLot','Taille des lots (0 = un seul mail)')+'</div>'+
+  '<div class="fields">'+f('objetInvitation','Objet – invitation')+f('objetRelance','Objet – relance')+'</div>'+
+  '<div class="fields">'+f('introInvitation','Phrase d’introduction – invitation','area')+f('introRelance','Phrase d’introduction – relance','area')+f('signature','Signature')+'</div></div>'+
+  '<div class="panel"><h2>Graphisme du mail</h2><p class="muted small">Le graphisme définitif viendra ensuite ; en attendant, un gabarit sobre aux couleurs ci-dessous. Les images sont intégrées au mail (pièces inline).</p><div class="fields">'+f('couleur','Couleur principale','color')+
+  '<div class="field"><label>Image d’en-tête (bandeau)</label>'+(p.imgEntete?'<img class="thumb" src="'+p.imgEntete+'" alt="">':'')+'<input type="file" accept="image/*" data-img="imgEntete">'+(p.imgEntete?'<button class="b sec sm" data-delimg="imgEntete">Retirer</button>':'')+'</div>'+
+  '<div class="field"><label>Image du carton d’invitation</label>'+(p.imgCarton?'<img class="thumb" src="'+p.imgCarton+'" alt="">':'')+'<input type="file" accept="image/*" data-img="imgCarton">'+(p.imgCarton?'<button class="b sec sm" data-delimg="imgCarton">Retirer</button>':'')+'</div></div></div>'+
+  '<div class="panel"><h2>Catégories</h2><p class="muted small">Ordre d’affichage dans les documents. Pour fusionner deux catégories (ex. « Magitrats » et « Magistrats »), renommez-en une avec le nom exact de l’autre.</p>'+cats+'</div>';
+}
+
+/* ----------------------------- Modales ----------------------------- */
+function modal(html){$('#modal').innerHTML=html;$('#modalBg').style.display='flex';}
+function closeModal(){$('#modalBg').style.display='none';$('#modal').innerHTML='';}
+const IFIELDS=[['Categorie','Catégorie'],['Civilite','Civilité'],['Prenom','Prénom'],['Nom','Nom'],['Fonction1','Fonction 1'],['Fonction2','Fonction 2'],['Fonction3','Fonction 3'],['Email','E-mail (plusieurs : séparés par « ; »)'],['Adresse1','Adresse 1'],['Adresse2','Adresse 2'],['CP','CP'],['Ville','Ville'],['Rang','Rang de préséance','number'],['NotesProtocole','Notes protocole']];
+function openInvite(id){
+  const i=id?S.inv.find(x=>x.id===id):{Reponse:'',NbAccompagnants:0};
+  modal('<h2>'+(id?esc(dispName(i)):'Nouvel invité')+'</h2><div class="fields">'+
+   IFIELDS.map(([k,l,t])=>'<div class="field"><label>'+l+'</label><input data-f="'+k+'" '+(t==='number'?'type="number" ':'')+(k==='Categorie'?'list="catlist" ':'')+'value="'+esc(i[k]==null?'':i[k])+'"></div>').join('')+'</div><datalist id="catlist">'+S.cat.map(c=>'<option value="'+esc(c.Nom)+'">').join('')+'</datalist>'+
+   '<h3>Réponse</h3><div class="fields"><div class="field"><label>Réponse</label><select data-f="Reponse"><option value="">— pas de réponse —</option><option'+(i.Reponse==='Présent'?' selected':'')+'>Présent</option><option'+(i.Reponse==='Excusé'?' selected':'')+'>Excusé</option></select></div>'+
+   '<div class="field"><label>Nombre d’accompagnants</label><input data-f="NbAccompagnants" type="number" min="0" value="'+(i.NbAccompagnants||0)+'"></div>'+
+   '<div class="field"><label>Noms des accompagnants</label><input data-f="Accompagnants" value="'+esc(i.Accompagnants)+'"></div>'+
+   '<div class="field"><label>Excusé, représenté par</label><input data-f="RepresentePar" value="'+esc(i.RepresentePar)+'"></div>'+
+   '<div class="field"><label>Source de la réponse</label><select data-f="SourceReponse">'+['','Formulaire','Mail','Téléphone','Courrier','Saisie manuelle','Import Excel'].map(x=>'<option'+(i.SourceReponse===x?' selected':'')+'>'+x+'</option>').join('')+'</select></div></div>'+
+   '<div class="row"><label><input type="checkbox" data-f="PresentAnneePrecedente"'+(i.PresentAnneePrecedente?' checked':'')+'> Présent l’an dernier</label><label><input type="checkbox" data-f="ListeAttente"'+(i.ListeAttente?' checked':'')+'> En liste d’attente</label></div>'+
+   '<div class="row"><button class="b" data-act="save-inv" data-id="'+(id||'')+'">Enregistrer</button><button class="b sec" data-act="close">Annuler</button><span style="flex:1"></span>'+(id?'<button class="b red sm" data-act="del-ask" data-id="'+id+'">Supprimer</button>':'')+'</div>'+
+   (id?'<p class="small muted">Invité le '+(fmtD(i.DateInvitation)||'—')+' · relances : '+(i.NbRelances||0)+(i.DateRelance?' (dernière le '+fmtD(i.DateRelance)+')':'')+(i.DateReponse?' · réponse le '+fmtD(i.DateReponse):'')+'</p>':''));
+}
+async function saveInvite(id){
+  const f={};document.querySelectorAll('#modal [data-f]').forEach(el=>{const k=el.dataset.f;f[k]=el.type==='checkbox'?el.checked:(el.type==='number'?(el.value===''?0:+el.value):el.value.trim());});
+  if(f.Reponse&&!f.SourceReponse)f.SourceReponse='Saisie manuelle';
+  const old=id?S.inv.find(x=>x.id===id):null;
+  if(f.Reponse&&(!old||old.Reponse!==f.Reponse||!old.DateReponse))f.DateReponse=todayIso();
+  if(!f.Reponse){f.NbAccompagnants=0;f.Accompagnants='';f.RepresentePar='';f.DateReponse='';}
+  if(f.Reponse==='Présent')f.RepresentePar='';if(f.Reponse==='Excusé'){f.NbAccompagnants=0;f.Accompagnants='';}
+  if(id){await act([['UpdateRecord','Invites',id,f]]);}else{await act([['AddRecord','Invites',null,f]]);}
+  await loadAll();await ensureCategories();closeModal();render();toast('Fiche enregistrée');
+}
+function openRap(){
+  const L=unmatched();
+  modal('<h2>Réponses à rapprocher</h2><p class="muted small">Ces réponses viennent d’une adresse e-mail absente de la base. Choisissez l’invité concerné : l’adresse y sera ajoutée et ses prochaines réponses seront rapprochées automatiquement.</p>'+
+   (L.length?L.map(r=>'<div class="panel" data-rap="'+r.id+'"><b>'+esc(r.Email||'(sans adresse)')+'</b> — '+esc(r.Presence)+(r.NbAccompagnants?' (+'+r.NbAccompagnants+')':'')+(r.Accompagnants?' : '+esc(r.Accompagnants):'')+(r.RepresentePar?' — représenté par '+esc(r.RepresentePar):'')+(r.Remarques?'<br><span class="muted small">'+esc(r.Remarques)+'</span>':'')+
+   '<div class="row"><input data-rapq="'+r.id+'" placeholder="Rechercher l’invité (nom, prénom…)"><button class="b sec sm" data-rapnew="'+r.id+'">Créer un nouvel invité</button><button class="b sec sm" data-rapign="'+r.id+'">Ignorer</button></div><div data-rapres="'+r.id+'"></div></div>').join(''):'<p class="ok">Tout est rapproché.</p>')+
+   '<div class="row"><button class="b" data-act="close">Fermer</button></div>');
+}
+async function assignResp(rid,iid){
+  const r=S.rep.find(x=>x.id===rid),inv=S.inv.find(x=>x.id===iid);if(!r||!inv)return;
+  const f=respFields(r);const em=emails(inv.Email);const e=s_(r.Email).trim().toLowerCase();
+  if(e&&!em.includes(e))f.Email=(s_(inv.Email).trim()?inv.Email.trim()+' ; ':'')+e;
+  Object.assign(inv,f);await act([['UpdateRecord','Invites',iid,f],['UpdateRecord','Reponses',rid,{Traitee:true,Invite:iid}]]);r.Traitee=true;r.Invite=iid;
+  toast('Réponse rapprochée de '+dispName(inv));openRap();render();
+}
+
+/* ----------------------------- Événements ----------------------------- */
+document.addEventListener('click',async ev=>{
+  const t=ev.target.closest('[data-tab],[data-act],[data-edit],[data-gen],[data-gen-test],[data-prev],[data-doc],[data-catup],[data-catdn],[data-delimg],[data-rapnew],[data-rapign],[data-pick]');if(!t)return;
+  try{
+    if(t.dataset.tab){UI.tab=t.dataset.tab;render();return;}
+    if(t.dataset.edit){openInvite(+t.dataset.edit);return;}
+    if(t.dataset.gen){await generate(t.dataset.gen,false);return;}
+    if(t.dataset.genTest){await generate(t.dataset.genTest,true);return;}
+    if(t.dataset.prev){const m=buildMail(t.dataset.prev,true);modal('<h2>Aperçu – '+(t.dataset.prev==='relance'?'relance':'invitation')+'</h2><iframe style="width:100%;height:560px;border:1px solid #ddd" srcdoc="'+esc(m.html)+'"></iframe><div class="row"><button class="b" data-act="close">Fermer</button></div>');return;}
+    if(t.dataset.doc){const m=t.dataset.doc;showPrint(docPrefete(m,m==='aval'&&$('#onlyPres')&&$('#onlyPres').checked),'Liste_Prefete_'+m+'_'+todayIso()+'.html',m==='aval'?'Réponses par catégorie':'Invités par catégorie');return;}
+    if(t.dataset.delimg){await setPar(t.dataset.delimg,'');render();return;}
+    if(t.dataset.catup||t.dataset.catdn){
+      const id=+(t.dataset.catup||t.dataset.catdn),k=S.cat.findIndex(c=>c.id===id),k2=t.dataset.catup?k-1:k+1;if(k<0||k2<0||k2>=S.cat.length)return;
+      const a=S.cat[k],b=S.cat[k2];const oa=a.Ordre,ob=b.Ordre;
+      await act([['UpdateRecord','Categories',a.id,{Ordre:ob===oa?ob+(t.dataset.catup?-1:1):ob}],['UpdateRecord','Categories',b.id,{Ordre:oa}]]);
+      S.cat=(await fetchRows('Categories')).sort((x,y)=>(x.Ordre||0)-(y.Ordre||0)||x.id-y.id);render();return;}
+    if(t.dataset.rapnew){const r=S.rep.find(x=>x.id===+t.dataset.rapnew);const f=Object.assign({Email:s_(r.Email).trim(),Categorie:'',Nom:s_(r.Email).trim()},respFields(r));await act([['AddRecord','Invites',null,f]]);await loadAll();const inv=findInviteByEmail(r.Email);if(inv)await act([['UpdateRecord','Reponses',r.id,{Traitee:true,Invite:inv.id}]]);r.Traitee=true;toast('Invité créé : complétez sa fiche');openRap();render();return;}
+    if(t.dataset.rapign){const r=S.rep.find(x=>x.id===+t.dataset.rapign);await act([['UpdateRecord','Reponses',r.id,{Traitee:true}]]);r.Traitee=true;openRap();render();return;}
+    if(t.dataset.pick){await assignResp(+t.dataset.rid,+t.dataset.pick);return;}
+    switch(t.dataset.act){
+      case 'refresh':await refresh();break;
+      case 'close':closeModal();break;
+      case 'new':openInvite(null);break;
+      case 'rap':openRap();break;
+      case 'goto-sansmail':UI.tab='inv';UI.fstat='sansmail';render();break;
+      case 'save-inv':await saveInvite(t.dataset.id?+t.dataset.id:null);break;
+      case 'del-ask':modal('<h2>Supprimer cet invité ?</h2><p>Cette action est définitive.</p><div class="row"><button class="b red" data-act="del-ok" data-id="'+t.dataset.id+'">Oui, supprimer</button><button class="b sec" data-act="close">Non</button></div>');break;
+      case 'del-ok':await act([['RemoveRecord','Invites',+t.dataset.id]]);await loadAll();closeModal();render();toast('Invité supprimé');break;
+      case 'confirm-sent':await confirmSent();break;
+      case 'cancel-sent':UI.pending=null;render();break;
+      case 'xlsx':try{await exportXlsx();toast('Export généré');}catch(e){toast(e.message,true);}break;
+      case 'emarg':showPrint(docEmargement(),'Emargement_'+todayIso()+'.html','Liste d’émargement');break;
+      case 'pl-close':$('#printLayer').style.display='none';break;
+      case 'pl-print':try{$('#plFrame').contentWindow.focus();$('#plFrame').contentWindow.print();}catch(e){toast('Impression bloquée : téléchargez le fichier .html et imprimez-le depuis le navigateur.',true);}break;
+      case 'pl-dl':download(new Blob([UI.printHtml],{type:'text/html'}),UI.printName);break;
+      case 'imp-ok':{const plan=UI.impPlan;closeModal();toast('Import en cours…');await applyImport(plan);render();toast('Import terminé : '+plan.add.length+' ajout(s), '+plan.upd.length+' mise(s) à jour');break;}
+    }
+  }catch(e){console.error(e);toast('Erreur : '+(e.message||e),true);}
+});
+document.addEventListener('input',ev=>{
+  const t=ev.target;
+  if(t.id==='q'){UI.q=t.value;invRows();}
+  else if(t.id==='jq'){UI.jq=t.value;const pos=t.selectionStart;rDay($('#main'));const n=$('#jq');n.focus();n.setSelectionRange(pos,pos);}
+  else if(t.dataset.rapq){
+    const q=norm(t.value),box=document.querySelector('[data-rapres="'+t.dataset.rapq+'"]');
+    const L=q.length<2?[]:S.inv.filter(i=>norm(i.Nom+' '+i.Prenom+' '+i.Email).includes(q)).slice(0,6);
+    box.innerHTML=L.map(i=>'<button class="b sec sm" style="margin:2px" data-pick="'+i.id+'" data-rid="'+t.dataset.rapq+'">'+esc(dispName(i))+' <span class="muted">('+esc(i.Categorie)+')</span></button>').join('');
+  }
+});
+document.addEventListener('change',async ev=>{
+  const t=ev.target;
+  try{
+    if(t.id==='fcat'){UI.fcat=t.value;invRows();}
+    else if(t.id==='fstat'){UI.fstat=t.value;invRows();}
+    else if(t.id==='fdup'){UI.dup=t.checked;invRows();}
+    else if(t.id==='incAll'){UI.incAll=t.checked;render();}
+    else if(t.dataset.quick){
+      const id=+t.dataset.quick,v=t.value;const f=v?{Reponse:v,SourceReponse:'Saisie manuelle',DateReponse:todayIso()}:{Reponse:'',NbAccompagnants:0,Accompagnants:'',RepresentePar:'',DateReponse:'',SourceReponse:''};
+      if(v==='Excusé'){f.NbAccompagnants=0;f.Accompagnants='';}await updInv(id,f);invRows();renderTabs();
+    }
+    else if(t.dataset.arr){await updInv(+t.dataset.arr,{Arrive:t.checked});rDay($('#main'));}
+    else if(t.dataset.par){await setPar(t.dataset.par,t.value.trim());if(t.dataset.par==='titre')renderTabs();}
+    else if(t.dataset.catname){
+      const c=S.cat.find(x=>x.id===+t.dataset.catname),nv=t.value.trim();if(!nv||nv===c.Nom)return;
+      const acts=S.inv.filter(i=>s_(i.Categorie)===c.Nom).map(i=>['UpdateRecord','Invites',i.id,{Categorie:nv}]);
+      const other=S.cat.find(x=>x.Nom===nv&&x.id!==c.id);
+      if(other)acts.push(['RemoveRecord','Categories',c.id]);else acts.push(['UpdateRecord','Categories',c.id,{Nom:nv}]);
+      await act(acts);await loadAll();render();toast(other?'Catégories fusionnées':'Catégorie renommée');
+    }
+    else if(t.dataset.att){UI.att[t.dataset.att]=t.files[0]||null;}
+    else if(t.dataset.img){const f=t.files[0];if(f){const d=await readImage(f,1200);await setPar(t.dataset.img,d);render();toast('Image enregistrée');}}
+    else if(t.id==='fimp'){
+      const f=t.files[0];t.value='';if(!f)return;toast('Lecture du fichier…');
+      const {rows,sheet}=await parseExcel(f);const plan=planImport(rows);UI.impPlan=plan;
+      const cats=new Set(rows.map(r=>r.Categorie).filter(Boolean));
+      modal('<h2>Importer « '+esc(f.name)+' »</h2><p>Feuille lue : <b>'+esc(sheet)+'</b> — '+rows.length+' ligne(s) avec contenu, '+cats.size+' catégorie(s).</p>'+
+       (plan.dupRows?'<div class="warn"><b>'+plan.dupRows+' ligne(s)</b> semblent en doublon dans le fichier (même nom + prénom ou même e-mail). Elles sont importées quand même ; repérez-les ensuite avec le filtre « Doublons possibles » de l’onglet Invités.</div>':'')+(plan.noCat?'<div class="warn"><b>'+plan.noCat+' ligne(s) sans catégorie</b> : elles apparaîtront sous « (sans catégorie) ».</div>':'')+'<div class="ok"><b>'+plan.add.length+'</b> nouvel(le)(s) invité(s) seront ajouté(e)s.<br><b>'+plan.upd.length+'</b> invité(s) déjà présents (même e-mail ou même nom + prénom) seront mis à jour (coordonnées et catégorie ; les réponses déjà enregistrées sont conservées).</div>'+
+       '<div class="row"><button class="b" data-act="imp-ok">Lancer l’import</button><button class="b sec" data-act="close">Annuler</button></div>');
+    }
+  }catch(e){console.error(e);toast('Erreur : '+(e.message||e),true);}
+});
+
+/* ----------------------------- Démarrage ----------------------------- */
+(async function init(){
+  try{
+    grist.ready({requiredAccess:'full'});
+    const n=await ensureSchema();
+    await refresh(true);
+    if(n)toast('Tables créées dans le document Grist ('+n+' opération(s))');
+    setInterval(()=>{if(document.visibilityState==='visible'&&$('#modalBg').style.display!=='flex'&&$('#printLayer').style.display!=='flex'&&!/^(INPUT|SELECT|TEXTAREA)$/.test((document.activeElement||{}).tagName||''))refresh(true);},60000);
+  }catch(e){console.error(e);$('#main').innerHTML='<div class="warn"><b>Impossible d’initialiser le widget.</b><br>'+esc(e.message||e)+'<br>Vérifiez que le widget est ajouté à une vue Grist avec l’accès « Accès complet au document ».</div>';}
+})();
+</script>
+</body>
+</html>
