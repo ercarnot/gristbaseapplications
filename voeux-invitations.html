@@ -131,7 +131,8 @@ const DEF={
  introRelance:'Nous n’avons pas encore reçu votre réponse à l’invitation à',
  texteBouton:'Répondre à l’invitation',
  signature:'Le cabinet de la Préfète',
- couleur:'#000091',imgEntete:'',imgCarton:''
+ couleur:'#000091',imgEntete:'',imgCarton:'',imgLogo:'',enteteNom:'Préfète des Alpes-de-Haute-Provence',lieuEdition:'Digne-les-Bains',
+ pied:'Préfecture des Alpes-de-Haute-Provence – Cabinet de la Préfète\n8 rue du Docteur Romieu – 04000 Digne-les-Bains\nwww.alpes-de-haute-provence.gouv.fr'
 };
 const STAT_LABEL={ainviter:'À inviter',invite:'Invité, sans réponse',relance:'Relancé, sans réponse',present:'Présent',excuse:'Excusé',represente:'Excusé, représenté',sansmail:'Sans e-mail',attente:'Liste d’attente'};
 
@@ -397,6 +398,11 @@ async function exportXlsx(){
   const buf=await wb.xlsx.writeBuffer();
   download(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'Liste_invites_voeux_'+todayIso()+'.xlsx');
 }
+function respCell(i){
+  const t=respText(i),st=status(i);
+  if(!t)return '<span class="na">—</span>';
+  return '<span class="'+(st==='present'?'ok':'ko')+'">'+esc(t)+'</span>';
+}
 function respText(i){
   const st=status(i);
   if(st==='present')return 'Présent'+((+i.NbAccompagnants)?' (+'+i.NbAccompagnants+')':'');
@@ -408,28 +414,47 @@ function respText(i){
 
 /* ----------------------------- Documents imprimables ----------------------------- */
 function printShell(title,sub,body){
+  const p=P();
+  const mois=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];const d=new Date();
+  const dateFr=(p.lieuEdition?p.lieuEdition+', le ':'Le ')+d.getDate()+(d.getDate()===1?'er':'')+' '+mois[d.getMonth()]+' '+d.getFullYear();
+  const bloc=p.imgLogo?'<img class="logo" src="'+p.imgLogo+'" alt="">':'<div class="bm"><b>'+esc(s_(p.enteteNom).toUpperCase())+'</b><i>Liberté<br>Égalité<br>Fraternité</i></div>';
+  const foot=esc(p.pied).replace(/\n/g,'<br>');
   return '<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>'+
-  '@page{size:A4 portrait;margin:14mm 12mm}body{font:11px/1.35 Arial,Helvetica,sans-serif;color:#000;margin:0}@media screen{body{padding:14px 18px}}'+
-  'h1{font-size:17px;margin:0 0 2px;color:#000091}.sub{color:#555;margin:0 0 10px}'+
-  'h2{font-size:12.5px;margin:14px 0 3px;padding:3px 6px;background:#e3e3fd;color:#000091;break-after:avoid;page-break-after:avoid}h2 span{font-weight:normal;color:#333;font-size:11px}'+
-  'table{border-collapse:collapse;width:100%}th,td{border:1px solid #888;padding:3px 5px;text-align:left;vertical-align:top}th{background:#f0f0f0;font-size:10px}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}'+
-  'td.r{width:26%}td.c{width:7%;text-align:center}td.num,th.num{text-align:right;width:12%}tr.tot td{font-weight:bold;background:#f0f0f0}.sum{margin-bottom:8px}.bx{display:inline-block;width:11px;height:11px;border:1px solid #000;vertical-align:middle}'+
-  '.pb{break-after:page;page-break-after:always}'+
-  '</style></head><body><h1>'+esc(title)+'</h1><p class="sub">'+esc(sub)+'</p>'+body+'</body></html>';
+  '@page{size:A4 portrait;margin:13mm 14mm 10mm 14mm}'+
+  '*{box-sizing:border-box}body{font:10.5px/1.4 Marianne,"Segoe UI",Arial,Helvetica,sans-serif;color:#161616;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+  '@media screen{body{padding:14px 20px;max-width:210mm;margin:0 auto}}'+
+  'table.lay{width:100%;border-collapse:collapse}table.lay>thead>tr>td,table.lay>tbody>tr>td,table.lay>tfoot>tr>td{padding:0;border:0}'+
+  '.hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:9mm}'+
+  '.logo{height:24mm;width:auto;display:block}.bm{border-left:4px solid #000091;padding:2px 0 2px 8px;font-size:9px;line-height:1.25}.bm b{display:block;font-size:11px;color:#000091;max-width:62mm}.bm i{display:block;margin-top:5px;font-style:normal;font-weight:bold;font-size:9px}'+
+  '.dt{font-size:10px;color:#3a3a3a;padding-top:3mm}'+
+  'h1{font-size:19px;line-height:1.2;margin:0;color:#000091}.bar{width:38mm;height:3px;background:#e1000f;margin:5px 0 6px}.sub{margin:0 0 6mm;color:#555;font-size:10.5px}'+
+  'h2{font-size:12px;margin:6mm 0 1.5mm;padding:0 0 2px;color:#000091;border-bottom:1.5px solid #000091;display:flex;justify-content:space-between;gap:10px;break-after:avoid;page-break-after:avoid}h2 span{font-weight:normal;color:#444;font-size:10px;text-align:right}'+
+  'table.d{border-collapse:collapse;width:100%;table-layout:fixed}table.d th:nth-child(1),table.d td:nth-child(1){width:31%}table.d th:nth-child(3),table.d td:nth-child(3){width:26%}'+
+  'table.d th{font-size:8.5px;text-transform:uppercase;letter-spacing:.04em;color:#666;text-align:left;padding:2px 5px;border-bottom:1px solid #999;font-weight:bold}'+
+  'table.d td{padding:3px 5px;border-bottom:1px solid #e3e3e3;vertical-align:top}table.d thead{display:table-header-group}table.d tr{break-inside:avoid;page-break-inside:avoid}'+
+  'td.r{width:27%}td.c{width:12%;text-align:center}.num{text-align:right;font-variant-numeric:tabular-nums}th.num{text-align:right}'+
+  'table.d td.num{width:15%}.ok{color:#18753c;font-weight:bold}.ko{color:#555}.na{color:#aaa}'+
+  'tr.tot td{font-weight:bold;border-top:1.5px solid #000091;border-bottom:0;background:#f6f6f6}.pb{break-after:page;page-break-after:always}'+
+  '.bx{display:inline-block;width:11px;height:11px;border:1px solid #000;vertical-align:middle}'+
+  '.foot{margin-top:5mm;border-top:1px solid #000091;padding-top:2mm;font-size:8.5px;line-height:1.35;color:#3a3a3a;text-align:center}'+
+  '</style></head><body><table class="lay"><tbody><tr><td>'+
+  '<div class="hd">'+bloc+'<div class="dt">'+esc(dateFr)+'</div></div>'+
+  '<h1>'+esc(title)+'</h1><div class="bar"></div><p class="sub">'+esc(sub)+'</p>'+body+
+  '</td></tr></tbody><tfoot><tr><td><div class="foot">'+foot+'</div></td></tr></tfoot></table></body></html>';
 }
 function docPrefete(mode,onlyPres){
   const p=P();let inv=sortedInv();const st=stats();
   const aval=mode==='aval';
   if(aval&&onlyPres)inv=inv.filter(i=>['present','represente'].includes(status(i)));
-  let sum='<table class="sum"><thead><tr><th>Catégorie</th><th class="num">Invités</th>'+(aval?'<th class="num">Présents (pers.)</th><th class="num">Excusés</th><th class="num">Sans réponse</th>':'')+'</tr></thead><tbody>';
+  let sum='<table class="d"><thead><tr><th>Catégorie</th><th class="num">Invités</th>'+(aval?'<th class="num">Présents (pers.)</th><th class="num">Excusés</th><th class="num">Sans réponse</th>':'')+'</tr></thead><tbody>';
   st.cats.forEach(c=>{const r=st.per[c];sum+='<tr><td>'+esc(c)+'</td><td class="num">'+r.n+'</td>'+(aval?'<td class="num">'+r.pres+'</td><td class="num">'+r.exc+'</td><td class="num">'+(r.n-r.rep)+'</td>':'')+'</tr>';});
   const T=st.T;sum+='<tr class="tot"><td>TOTAL</td><td class="num">'+T.n+'</td>'+(aval?'<td class="num">'+T.pres+'</td><td class="num">'+T.exc+'</td><td class="num">'+(T.n-T.rep)+'</td>':'')+'</tr></tbody></table>';
-  let body='<h2>Synthèse</h2>'+sum+'<div class="pb"></div>';
+  let body='<h2><div>Synthèse</div><span></span></h2>'+sum+'<div class="pb"></div>';
   const groups={};inv.forEach(i=>{const c=s_(i.Categorie)||'(sans catégorie)';(groups[c]=groups[c]||[]).push(i);});
   Object.keys(groups).sort((a,b)=>catRank(a)-catRank(b)||a.localeCompare(b,'fr')).forEach(c=>{
     const list=groups[c],r=st.per[c]||{n:list.length,pres:0,exc:0,rep:0};
     const cnt=aval?(' — '+r.n+' invités · '+r.pres+' présent(s) · '+r.exc+' excusé(s) · '+(r.n-r.rep)+' sans réponse'):(' — '+list.length+' invité(s)');
-    body+='<h2>'+esc(c)+'<span>'+cnt+'</span></h2><table><thead><tr><th>Nom</th><th>Fonction</th><th>Réponse</th></tr></thead><tbody>';
+    body+='<h2><div>'+esc(c)+'</div><span>'+cnt.replace(/^ — /,'')+'</span></h2><table class="d"><thead><tr><th>Nom</th><th>Fonction</th><th>Réponse</th></tr></thead><tbody>';
     list.forEach(i=>{body+='<tr><td><b>'+esc(dispName(i))+'</b></td><td>'+esc(fonctions(i))+'</td><td class="r">'+(aval?esc(respText(i)||'—'):'')+'</td></tr>';});
     body+='</tbody></table>';
   });
@@ -438,7 +463,7 @@ function docPrefete(mode,onlyPres){
 }
 function docEmargement(){
   const p=P();const list=sortedInv(S.inv.filter(i=>['present','represente'].includes(status(i))));
-  let body='<table><thead><tr><th>Nom</th><th>Fonction</th><th>Accompagnant(s)</th><th class="c">Arrivé(e)</th></tr></thead><tbody>';
+  let body='<table class="d"><thead><tr><th>Nom</th><th>Fonction</th><th>Accompagnant(s)</th><th class="c">Arrivé(e)</th></tr></thead><tbody>';
   list.forEach(i=>{const acc=status(i)==='represente'?('Représenté(e) par '+i.RepresentePar):((+i.NbAccompagnants)?('+'+i.NbAccompagnants+(i.Accompagnants?' : '+i.Accompagnants:'')):'');
     body+='<tr><td><b>'+esc(dispName(i))+'</b><br><span style="color:#555">'+esc(i.Categorie)+'</span></td><td>'+esc(fonctions(i))+'</td><td>'+esc(acc)+'</td><td class="c"><span class="bx"></span></td></tr>';});
   body+='</tbody></table>';
@@ -646,6 +671,9 @@ function rCfg(m){
   '<div class="panel"><h2>Graphisme du mail</h2><p class="muted small">Le graphisme définitif viendra ensuite ; en attendant, un gabarit sobre aux couleurs ci-dessous. Les images sont intégrées au mail (pièces inline).</p><div class="fields">'+f('couleur','Couleur principale','color')+
   '<div class="field"><label>Image d’en-tête (bandeau)</label>'+(p.imgEntete?'<img class="thumb" src="'+p.imgEntete+'" alt="">':'')+'<input type="file" accept="image/*" data-img="imgEntete">'+(p.imgEntete?'<button class="b sec sm" data-delimg="imgEntete">Retirer</button>':'')+'</div>'+
   '<div class="field"><label>Image du carton d’invitation</label>'+(p.imgCarton?'<img class="thumb" src="'+p.imgCarton+'" alt="">':'')+'<input type="file" accept="image/*" data-img="imgCarton">'+(p.imgCarton?'<button class="b sec sm" data-delimg="imgCarton">Retirer</button>':'')+'</div></div></div>'+
+  '<div class="panel"><h2>Documents imprimés (charte État)</h2><p class="muted small">En-tête et pied de page des listes pour la Préfète et de l’émargement. Importez le logo (bloc-marque) tel qu’il figure dans vos modèles de correspondance.</p><div class="fields">'+
+  '<div class="field"><label>Logo / bloc-marque (image)</label>'+(p.imgLogo?'<img class="thumb" src="'+p.imgLogo+'" alt="">':'')+'<input type="file" accept="image/*" data-img="imgLogo">'+(p.imgLogo?'<button class="b sec sm" data-delimg="imgLogo">Retirer</button>':'')+'</div>'+
+  f('enteteNom','Texte d’en-tête (si pas de logo)')+f('lieuEdition','Lieu d’édition (« Digne-les-Bains, le … »)')+f('pied','Pied de page','area')+'</div></div>'+
   '<div class="panel"><h2>Catégories</h2><p class="muted small">Ordre d’affichage dans les documents. Pour fusionner deux catégories (ex. « Magitrats » et « Magistrats »), renommez-en une avec le nom exact de l’autre.</p>'+cats+'</div>';
 }
 
