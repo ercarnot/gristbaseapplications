@@ -435,6 +435,7 @@ function printShell(title,sub,body){
   'td.r{width:27%}td.c{width:12%;text-align:center}.num{text-align:right;font-variant-numeric:tabular-nums}th.num{text-align:right}'+
   'table.d td.num{width:15%}.ok{color:#18753c;font-weight:bold}.ko{color:#555}.na{color:#aaa}'+
   'tr.tot td{font-weight:bold;border-top:1.5px solid #000091;border-bottom:0;background:#f6f6f6}.pb{break-after:page;page-break-after:always}'+
+  'tr.pl td{border-bottom:0;padding-top:5px;font-size:8.5px;text-transform:uppercase;letter-spacing:.04em;color:#666;font-style:italic;break-after:avoid;page-break-after:avoid}tr.bl td{height:8mm;border-bottom:1px dotted #888}'+
   '.bx{display:inline-block;width:11px;height:11px;border:1px solid #000;vertical-align:middle}'+
   '.foot{margin-top:5mm;border-top:1px solid #000091;padding-top:2mm;font-size:8.5px;line-height:1.35;color:#3a3a3a;text-align:center}'+
   '</style></head><body><table class="lay"><tbody><tr><td>'+
@@ -442,7 +443,7 @@ function printShell(title,sub,body){
   '<h1>'+esc(title)+'</h1><div class="bar"></div><p class="sub">'+esc(sub)+'</p>'+body+
   '</td></tr></tbody><tfoot><tr><td><div class="foot">'+foot+'</div></td></tr></tfoot></table></body></html>';
 }
-function docPrefete(mode,onlyPres){
+function docPrefete(mode,onlyPres,blanks){
   const p=P();let inv=sortedInv();const st=stats();
   const aval=mode==='aval';
   if(aval&&onlyPres)inv=inv.filter(i=>['present','represente'].includes(status(i)));
@@ -456,6 +457,10 @@ function docPrefete(mode,onlyPres){
     const cnt=aval?(' — '+r.n+' invités · '+r.pres+' présent(s) · '+r.exc+' excusé(s) · '+(r.n-r.rep)+' sans réponse'):(' — '+list.length+' invité(s)');
     body+='<h2><div>'+esc(c)+'</div><span>'+cnt.replace(/^ — /,'')+'</span></h2><table class="d"><thead><tr><th>Nom</th><th>Fonction</th><th>Réponse</th></tr></thead><tbody>';
     list.forEach(i=>{body+='<tr><td><b>'+esc(dispName(i))+'</b></td><td>'+esc(fonctions(i))+'</td><td class="r">'+(aval?esc(respText(i)||'—'):'')+'</td></tr>';});
+    if(!aval&&blanks>0){
+      body+='<tr class="pl"><td colspan="3">Nouveaux noms proposés</td></tr>';
+      for(let k=0;k<blanks;k++)body+='<tr class="bl"><td></td><td></td><td></td></tr>';
+    }
     body+='</tbody></table>';
   });
   const title=(aval?'Réponses – ':'Invités – ')+p.titre;
@@ -646,7 +651,7 @@ function rSend(m){
 }
 function rExp(m){
   m.innerHTML='<div class="grid2"><div class="panel"><h2>Document pour la Préfète</h2><p class="muted">Liste organisée par catégorie, avec synthèse. À imprimer (ou enregistrer en PDF).</p>'+
-  '<div class="row"><button class="b" data-doc="amont">En amont : qui pourrait être invité</button></div>'+
+  '<div class="row"><button class="b" data-doc="amont">En amont : qui pourrait être invité</button><label class="small">lignes vierges « nouveaux noms » par catégorie : <select id="nbBlank">'+[0,3,4,5,6,8,10].map(n=>'<option'+(n===5?' selected':'')+'>'+n+'</option>').join('')+'</select></label></div>'+
   '<div class="row"><button class="b" data-doc="aval">En aval : qui a répondu</button><label class="small"><input type="checkbox" id="onlyPres"> présents uniquement</label></div></div>'+
   '<div class="panel"><h2>Export de la base (Excel)</h2><p class="muted">Classeur à 2 feuilles, dans la même organisation que votre modèle : « Liste complète » (colonnes A à M + détail des réponses, total des présents) et « liste Préfète pour impression ».</p>'+
   '<div class="row"><button class="b" data-act="xlsx">Exporter en .xlsx</button></div></div></div>';
@@ -728,7 +733,7 @@ document.addEventListener('click',async ev=>{
     if(t.dataset.gen){await generate(t.dataset.gen,false);return;}
     if(t.dataset.genTest){await generate(t.dataset.genTest,true);return;}
     if(t.dataset.prev){const m=buildMail(t.dataset.prev,true);modal('<h2>Aperçu – '+(t.dataset.prev==='relance'?'relance':'invitation')+'</h2><iframe style="width:100%;height:560px;border:1px solid #ddd" srcdoc="'+esc(m.html)+'"></iframe><div class="row"><button class="b" data-act="close">Fermer</button></div>');return;}
-    if(t.dataset.doc){const m=t.dataset.doc;showPrint(docPrefete(m,m==='aval'&&$('#onlyPres')&&$('#onlyPres').checked),'Liste_Prefete_'+m+'_'+todayIso()+'.html',m==='aval'?'Réponses par catégorie':'Invités par catégorie');return;}
+    if(t.dataset.doc){const m=t.dataset.doc;showPrint(docPrefete(m,m==='aval'&&$('#onlyPres')&&$('#onlyPres').checked,m==='amont'?(+($('#nbBlank')||{}).value||0):0),'Liste_Prefete_'+m+'_'+todayIso()+'.html',m==='aval'?'Réponses par catégorie':'Invités par catégorie');return;}
     if(t.dataset.delimg){await setPar(t.dataset.delimg,'');render();return;}
     if(t.dataset.catup||t.dataset.catdn){
       const id=+(t.dataset.catup||t.dataset.catdn),k=S.cat.findIndex(c=>c.id===id),k2=t.dataset.catup?k-1:k+1;if(k<0||k2<0||k2>=S.cat.length)return;
